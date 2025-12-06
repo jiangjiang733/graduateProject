@@ -1,0 +1,71 @@
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 0 20px;
+    height: 60px;
+}
+
+.logo {
+    font-size: 24px;
+    font-weight: bold;
+    color: #20B486;
+    margin-right: 30px;
+}
+
+.nav-tabs {
+    flex: 1;
+    margin: 0;
+    border-bottom: none;
+    padding: 0;
+}
+
+.nav-tabs .el-tabs__item {
+    padding: 0 15px;
+    height: 60px;
+    line-height: 60px;
+    font-size: 14px;
+    color: #666;
+    border: none;
+    border-bottom: 2px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.nav-tabs .el-tabs__item.is-active {
+    color: #20B486;
+    border-bottom: 2px solid #20B486;
+    font-weight: bold;
+}
+
+.nav-tabs .el-tabs__item:hover {
+    color: #20B486;
+    cursor: pointer;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: #333;
+}
+
+.user-info .avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.username {
+    font-weight: 500;
+}
+.el-dropdown-link {
+    cursor: pointer;
+    color: #409EFF;
+}
+.el-icon-arrow-down {
+    font-size: 12px;
+}

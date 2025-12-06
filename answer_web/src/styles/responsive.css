@@ -1,0 +1,346 @@
+/* 响应式布局工具类 */
+@import './variables.css';
+
+/* 显示/隐藏工具类 */
+.hidden-xs {
+  display: none !important;
+}
+
+.hidden-sm {
+  display: none !important;
+}
+
+.hidden-md {
+  display: none !important;
+}
+
+.hidden-lg {
+  display: none !important;
+}
+
+.hidden-xl {
+  display: none !important;
+}
+
+/* 小屏幕 (手机) < 576px */
+@media (max-width: 575px) {
+  .hidden-xs {
+    display: block !important;
+  }
+  
+  .visible-xs {
+    display: block !important;
+  }
+  
+  .visible-sm,
+  .visible-md,
+  .visible-lg,
+  .visible-xl {
+    display: none !important;
+  }
+  
+  /* 栅格系统 */
+  .col-xs-12 {
+    width: 100%;
+  }
+  
+  .col-xs-6 {
+    width: 50%;
+  }
+  
+  .col-xs-4 {
+    width: 33.333%;
+  }
+  
+  .col-xs-3 {
+    width: 25%;
+  }
+}
+
+/* 中小屏幕 (平板竖屏) >= 576px */
+@media (min-width: 576px) {
+  .hidden-sm {
+    display: block !important;
+  }
+  
+  .visible-sm {
+    display: block !important;
+  }
+  
+  .visible-xs,
+  .visible-md,
+  .visible-lg,
+  .visible-xl {
+    display: none !important;
+  }
+  
+  /* 栅格系统 */
+  .col-sm-12 {
+    width: 100%;
+  }
+  
+  .col-sm-6 {
+    width: 50%;
+  }
+  
+  .col-sm-4 {
+    width: 33.333%;
+  }
+  
+  .col-sm-3 {
+    width: 25%;
+  }
+}
+
+/* 中等屏幕 (平板横屏) >= 768px */
+@media (min-width: 768px) {
+  .hidden-md {
+    display: block !important;
+  }
+  
+  .visible-md {
+    display: block !important;
+  }
+  
+  .visible-xs,
+  .visible-sm,
+  .visible-lg,
+  .visible-xl {
+    display: none !important;
+  }
+  
+  /* 栅格系统 */
+  .col-md-12 {
+    width: 100%;
+  }
+  
+  .col-md-6 {
+    width: 50%;
+  }
+  
+  .col-md-4 {
+    width: 33.333%;
+  }
+  
+  .col-md-3 {
+    width: 25%;
+  }
+}
+
+/* 大屏幕 (桌面) >= 992px */
+@media (min-width: 992px) {
+  .hidden-lg {
+    display: block !important;
+  }
+  
+  .visible-lg {
+    display: block !important;
+  }
+  
+  .visible-xs,
+  .visible-sm,
+  .visible-md,
+  .visible-xl {
+    display: none !important;
+  }
+  
+  /* 栅格系统 */
+  .col-lg-12 {
+    width: 100%;
+  }
+  
+  .col-lg-6 {
+    width: 50%;
+  }
+  
+  .col-lg-4 {
+    width: 33.333%;
+  }
+  
+  .col-lg-3 {
+    width: 25%;
+  }
+}
+
+/* 超大屏幕 (大桌面) >= 1200px */
+@media (min-width: 1200px) {
+  .hidden-xl {
+    display: block !important;
+  }
+  
+  .visible-xl {
+    display: block !important;
+  }
+  
+  .visible-xs,
+  .visible-sm,
+  .visible-md,
+  .visible-lg {
+    display: none !important;
+  }
+  
+  /* 栅格系统 */
+  .col-xl-12 {
+    width: 100%;
+  }
+  
+  .col-xl-6 {
+    width: 50%;
+  }
+  
+  .col-xl-4 {
+    width: 33.333%;
+  }
+  
+  .col-xl-3 {
+    width: 25%;
+  }
+}
+
+/* 容器响应式 */
+.container {
+  width: 100%;
+  padding-right: var(--spacing-lg);
+  padding-left: var(--spacing-lg);
+  margin-right: auto;
+  margin-left: auto;
+}
+
+@media (min-width: 576px) {
+  .container {
+    max-width: 540px;
+  }
+}
+
+@media (min-width: 768px) {
+  .container {
+    max-width: 720px;
+  }
+}
+
+@media (min-width: 992px) {
+  .container {
+    max-width: 960px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .container {
+    max-width: 1140px;
+  }
+}
+
+/* 流式容器 */
+.container-fluid {
+  width: 100%;
+  padding-right: var(--spacing-lg);
+  padding-left: var(--spacing-lg);
+  margin-right: auto;
+  margin-left: auto;
+}
+
+/* 行 */
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  margin-right: calc(var(--spacing-md) * -1);
+  margin-left: calc(var(--spacing-md) * -1);
+}
+
+/* 列 */
+[class*="col-"] {
+  position: relative;
+  width: 100%;
+  padding-right: var(--spacing-md);
+  padding-left: var(--spacing-md);
+}
+
+/* 响应式文字大小 */
+@media (max-width: 768px) {
+  .responsive-text-lg {
+    font-size: var(--font-size-large);
+  }
+  
+  .responsive-text-xl {
+    font-size: var(--font-size-extra-large);
+  }
+  
+  .responsive-text-xxl {
+    font-size: 20px;
+  }
+}
+
+@media (min-width: 769px) {
+  .responsive-text-lg {
+    font-size: var(--font-size-extra-large);
+  }
+  
+  .responsive-text-xl {
+    font-size: 20px;
+  }
+  
+  .responsive-text-xxl {
+    font-size: 24px;
+  }
+}
+
+/* 响应式间距 */
+@media (max-width: 768px) {
+  .responsive-padding {
+    padding: var(--spacing-md);
+  }
+  
+  .responsive-margin {
+    margin: var(--spacing-md);
+  }
+}
+
+@media (min-width: 769px) {
+  .responsive-padding {
+    padding: var(--spacing-xl);
+  }
+  
+  .responsive-margin {
+    margin: var(--spacing-xl);
+  }
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+  /* 隐藏桌面端元素 */
+  .desktop-only {
+    display: none !important;
+  }
+  
+  /* 显示移动端元素 */
+  .mobile-only {
+    display: block !important;
+  }
+  
+  /* 全宽按钮 */
+  .mobile-full-width {
+    width: 100% !important;
+  }
+  
+  /* 堆叠布局 */
+  .mobile-stack {
+    flex-direction: column !important;
+  }
+  
+  /* 移动端文字居中 */
+  .mobile-text-center {
+    text-align: center !important;
+  }
+}
+
+@media (min-width: 769px) {
+  /* 显示桌面端元素 */
+  .desktop-only {
+    display: block !important;
+  }
+  
+  /* 隐藏移动端元素 */
+  .mobile-only {
+    display: none !important;
+  }
+}

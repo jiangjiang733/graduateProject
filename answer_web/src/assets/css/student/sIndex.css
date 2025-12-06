@@ -1,0 +1,34 @@
+.sIndex-root { background: #f5faf7; min-height: 100vh; }
+.sIndex-appbar { background: linear-gradient(90deg, #39a95c, #6bc47d); color: #fff; height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; }
+.sIndex-brand { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+.sIndex-nav .el-button { color: #eaffef; }
+.sIndex-user { display: flex; align-items: center; gap: 12px; }
+
+.sIndex-hero { background: #eef9f0; padding: 16px 16px 0; }
+.sIndex-profile { border-radius: 12px; margin: 0 auto; transform: translateY(20px); }
+.sIndex-profile-left { display: flex; align-items: center; gap: 12px; }
+.sIndex-avatar { background: #67c23a; color: #fff; }
+.sIndex-name { font-weight: 700; }
+.sIndex-meta { color: #6b8a74; }
+.sIndex-stats { display: flex; gap: 24px; }
+.sIndex-stat { text-align: center; }
+.sIndex-stat-label { color: #6b8a74; font-size: 12px; }
+.sIndex-stat-value { color: #39a95c; font-size: 22px; font-weight: 800; }
+
+.sIndex-main { padding: 40px 16px 16px; }
+.sIndex-section-title { font-weight: 800; color: #2f6b3a; margin: 12px 0; }
+.sIndex-course-card, .sIndex-score-card { border-radius: 12px; border: 1px solid #e6f0ea; }
+.sIndex-card-header { background: #eaf6ec; padding: 10px 12px; border-radius: 8px; color: #2f6b3a; display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.sIndex-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 4px; border-bottom: 1px solid #edf2ef; }
+.sIndex-item:last-child { border-bottom: none; }
+.sIndex-item-title { font-weight: 600; }
+.sIndex-item-sub { color: #6b8a74; font-size: 12px; }
+.sIndex-progress { height: 6px; background: #edf5ef; border-radius: 3px; width: 120px; }
+.sIndex-progress-fill { height: 6px; background: #39a95c; border-radius: 3px; }
+
+.sIndex-score-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 4px; }
+.sIndex-score { font-size: 22px; font-weight: 800; }
+.sIndex-score.green { color: #39a95c; }
+.sIndex-score.orange { color: #ff9800; }
+.sIndex-score.red { color: #f44336; }
+

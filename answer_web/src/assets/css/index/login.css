@@ -1,0 +1,122 @@
+.login-component {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.auth-form {
+    width: 100%;
+    max-width: 400px;
+    padding: 20px;
+}
+
+.form-title {
+    font-size: 24px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 25px;
+    text-align: center;
+}
+
+.tabs {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.tab {
+    padding: 8px 25px;
+    border-radius: 20px;
+    background-color: #f0f4f8;
+    color: #606266;
+    border: none;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.tab.active {
+    background: linear-gradient(135deg, #4a6fa5, #6b8cb7);
+    color: white;
+}
+
+.tab:hover:not(.active) {
+    background-color: #e6eaf2;
+}
+
+.input-group {
+    margin-bottom: 20px;
+}
+
+.input-group input {
+    width: 100%;
+    height: 42px;
+    padding: 0 15px;
+    border: 1px solid #dcdfe6;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.input-group input:focus {
+    outline: none;
+    border-color: #4a6fa5;
+    box-shadow: 0 0 0 1px #4a6fa5;
+}
+.forgot-rem{
+    display: flex;
+    justify-content: space-between;
+}
+.forgot,.rem {
+    display: block;
+    text-align: center;
+    color: #4a6fa5;
+    text-decoration: none;
+    font-size: 14px;
+    margin-bottom: 20px;
+    transition: color 0.3s ease;
+}
+
+.forgot:hover,.rem:hover {
+    color: #6b8cb7;
+    text-decoration: underline;
+}
+
+.btn {
+    border: none;
+    border-radius: 8px;
+    padding: 12px 20px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #4a6fa5, #6b8cb7);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #5a7fb5, #7c9cc7);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(74, 111, 165, 0.3);
+}
+
+.full {
+    width: 100%;
+    height: 44px;
+}
+
+.social-wrap {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.muted {
+    color: #909399;
+    font-size: 14px;
+}

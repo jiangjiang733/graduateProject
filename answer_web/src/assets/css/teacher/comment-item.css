@@ -1,0 +1,96 @@
+/* 一级评论容器 */
+.comment-item-container {
+    display: flex;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px dashed #ebeef5;
+    /* 虚线分隔 */
+}
+
+/* 回复的样式 */
+.comment-item-container.is-reply {
+    /* 移除左侧边框，让子回复自然嵌套 */
+    padding-left: 0;
+    margin-top: 10px;
+    margin-left: 55px;
+    /* 缩进 */
+    border-bottom: none;
+}
+
+.comment-avatar {
+    flex-shrink: 0;
+    margin-right: 15px;
+}
+
+.comment-body {
+    flex-grow: 1;
+}
+
+.comment-meta {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.comment-author {
+    font-weight: 700;
+    color: #303133;
+    font-size: 15px;
+    margin-right: 10px;
+}
+
+.comment-time {
+    color: #909399;
+    font-size: 12px;
+    margin-left: 10px;
+}
+
+.comment-content {
+    font-size: 14px;
+    color: #303133;
+    /* 评论内容颜色加深 */
+    line-height: 1.6;
+    margin: 8px 0;
+    white-space: pre-wrap;
+}
+
+.reply-target {
+    font-weight: 600;
+    color: #409eff;
+    /* 蓝色突出被回复人 */
+    margin-right: 5px;
+}
+
+/* 评论操作区域 */
+.comment-actions {
+    display: flex;
+    gap: 10px;
+    font-size: 13px;
+    margin-bottom: 10px;
+}
+
+.comment-actions .el-button {
+    height: auto;
+    padding: 0;
+}
+
+/* 回复表单样式 */
+.reply-form-wrapper {
+    margin-top: 10px;
+    padding: 10px;
+    border: 1px solid #dcdfe6;
+    border-radius: 4px;
+    background-color: #fcfcfc;
+}
+
+.reply-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+}
+
+/* 子回复列表 */
+.replies-list {
+    margin-top: 15px;
+    /* 子回复将通过递归的 .is-reply 样式进行缩进 */
+}

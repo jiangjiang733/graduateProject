@@ -1,0 +1,401 @@
+/* 个人中心全屏容器 */
+.tProfile-fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(135deg, #e3f2fd 0%, #ffffff 100%);
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+/* 顶部导航栏 */
+.tProfile-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.95);
+  border-bottom: 1px solid #e0e6ed;
+  padding: 15px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 12px rgba(33, 150, 243, 0.1);
+  z-index: 1001;
+}
+
+.return-btn {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  color: #1976d2;
+  font-size: 16px;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.return-btn:hover {
+  color: #2196f3;
+}
+
+.return-btn .el-icon {
+  margin-right: 8px;
+  font-size: 18px;
+}
+
+.profile-title {
+  color: #1976d2;
+  font-size: 28px;
+  font-weight: 600;
+  margin: 0;
+  text-align: center;
+  flex: 1;
+}
+
+/* 主要内容区域 */
+.tProfile-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  padding-top: 80px; /* 为顶部导航栏留出空间 */
+}/* 个人资料卡片 */
+.tProfile-card {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 40px;
+  box-shadow: 0 8px 32px rgba(33, 150, 243, 0.1);
+  border: 1px solid rgba(33, 150, 243, 0.1);
+}
+
+/* 头像区域 */
+avatar-uploader {
+  display: inline-block;
+  margin-top: 10px;
+}
+
+.avatar-uploader .el-button {
+  font-size: 12px;
+  padding: 5px 10px;
+}
+
+.user-avatar {
+  border: 2px solid #e4e7ed;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.user-avatar:hover {
+  border-color: #409eff;
+  box-shadow: 0 2px 12px rgba(64, 158, 255, 0.3);
+}
+.avatar-section {
+  display: flex;
+  align-items: center;
+  margin-bottom: 40px;
+  padding-bottom: 30px;
+  border-bottom: 2px solid rgba(33, 150, 243, 0.1);
+}
+
+.user-avatar {
+  background: linear-gradient(135deg, #1976d2, #2196f3);
+  color: white;
+  font-size: 32px;
+  margin-right: 20px;
+}
+
+.user-info {
+  flex: 1;
+}
+
+.user-name {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1976d2;
+  margin: 0 0 8px 0;
+}
+
+.user-level {
+  font-size: 16px;
+  color: #666;
+  margin: 0;
+}
+
+/* 个人信息区域 */
+.info-section {
+  margin-bottom: 40px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  padding: 16px 0;
+  border-bottom: 1px solid rgba(33, 150, 243, 0.1);
+}
+
+.info-item:last-child {
+  border-bottom: none;
+}
+
+.info-icon {
+  color: #2196f3;
+  font-size: 20px;
+  margin-right: 12px;
+  width: 24px;
+  text-align: center;
+}
+
+.info-label {
+  font-weight: 500;
+  color: #333;
+  margin-right: 8px;
+  min-width: 60px;
+}
+
+.info-value {
+  color: #666;
+  flex: 1;
+}
+
+/* 课程表区域 */
+.tProfile-course-section {
+  margin-bottom: 40px;
+}
+
+.section-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1976d2;
+  margin: 0 0 20px 0;
+  display: flex;
+  align-items: center;
+}
+
+.section-title::before {
+  content: '';
+  width: 4px;
+  height: 20px;
+  background: #2196f3;
+  margin-right: 12px;
+  border-radius: 2px;
+}
+
+.course-table {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.course-table .el-table {
+  border-radius: 12px;
+}
+
+.course-table .el-table th {
+  background: linear-gradient(135deg, #1976d2, #2196f3) !important;
+  color: white !important;
+  font-weight: 600;
+  border: none !important;
+}
+
+.course-table .el-table th .cell {
+  color: white !important;
+}
+
+.course-table .el-table td {
+  border-bottom: 1px solid rgba(33, 150, 243, 0.1) !important;
+}
+
+.course-table .el-table tr:hover {
+  background-color: rgba(33, 150, 243, 0.05) !important;
+}
+
+/* 操作按钮区域 */
+.edit-btn {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
+
+.edit-btn .el-button {
+  padding: 12px 24px;
+  font-size: 16px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.edit-btn .el-button--primary {
+  background: linear-gradient(135deg, #1976d2, #2196f3);
+  border: none;
+}
+
+.edit-btn .el-button--primary:hover {
+  background: linear-gradient(135deg, #1565c0, #1976d2);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(33, 150, 243, 0.3);
+}
+
+.edit-btn .el-button:not(.el-button--primary) {
+  border: 2px solid #2196f3;
+  color: #2196f3;
+  background: transparent;
+}
+
+.edit-btn .el-button:not(.el-button--primary):hover {
+  background: #2196f3;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(33, 150, 243, 0.3);
+}
+
+/* 编辑资料对话框样式 */
+.el-dialog {
+  border-radius: 16px !important;
+  background: rgba(255, 255, 255, 0.98) !important;
+}
+
+.el-dialog__header {
+  padding: 24px 24px 16px !important;
+  border-bottom: 1px solid rgba(33, 150, 243, 0.1) !important;
+  margin: 0 !important;
+}
+
+.el-dialog__title {
+  color: #1976d2 !important;
+  font-size: 20px !important;
+  font-weight: 600 !important;
+}
+
+.el-dialog__body {
+  padding: 24px !important;
+}
+
+.el-form-item__label {
+  color: #333 !important;
+  font-weight: 500 !important;
+}
+
+.el-input__inner,
+.el-textarea__inner {
+  border-radius: 8px !important;
+  border: 2px solid rgba(33, 150, 243, 0.2) !important;
+  transition: all 0.3s ease !important;
+}
+
+.el-input__inner:focus,
+.el-textarea__inner:focus {
+  border-color: #2196f3 !important;
+  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1) !important;
+}
+
+.el-select .el-input__inner {
+  border-radius: 8px !important;
+}
+
+.el-dialog__footer {
+  padding: 16px 24px 24px !important;
+  border-top: 1px solid rgba(33, 150, 243, 0.1) !important;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .tProfile-container {
+    padding: 15px;
+  }
+  
+  .tProfile-card {
+    padding: 25px;
+  }
+  
+  .avatar-section {
+    flex-direction: column;
+    text-align: center;
+    gap: 15px;
+  }
+  
+  .user-avatar {
+    margin-right: 0;
+  }
+  
+  .info-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .info-label {
+    min-width: auto;
+  }
+  
+  .edit-btn {
+    flex-direction: column;
+  }
+  
+  .edit-btn .el-button {
+    width: 100%;
+  }
+  
+  .el-dialog {
+    width: 90vw !important;
+    margin: 0 auto !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .profile-title {
+    font-size: 24px;
+  }
+  
+  .tProfile-card {
+    padding: 20px;
+  }
+  
+  .section-title {
+    font-size: 18px;
+  }
+  
+  .user-name {
+    font-size: 20px;
+  }
+}
+
+/* 加载动画 */
+.v-loading {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.el-loading-spinner .circular {
+  stroke: #2196f3 !important;
+}
+
+.el-loading-spinner .el-loading-text {
+  color: #2196f3 !important;
+}
+
+/* 表格滚动条样式 */
+.course-table .el-table__body-wrapper::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.course-table .el-table__body-wrapper::-webkit-scrollbar-track {
+  background: rgba(33, 150, 243, 0.1);
+  border-radius: 4px;
+}
+
+.course-table .el-table__body-wrapper::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #1976d2, #2196f3);
+  border-radius: 4px;
+}
+
+.course-table .el-table__body-wrapper::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #1565c0, #1976d2);
+}

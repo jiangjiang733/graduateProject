@@ -1,0 +1,200 @@
+.course-detail-page {
+    background-color: #f5f7fa;
+    min-height: 100vh;
+}
+
+/* 顶部 Banner */
+.course-banner {
+    background-color: #2a2e3a;
+    color: white;
+    padding: 40px 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.banner-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+    display: flex;
+    gap: 40px;
+}
+
+.banner-cover {
+    width: 400px;
+    height: 250px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    flex-shrink: 0;
+}
+
+.banner-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.banner-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.course-title {
+    font-size: 32px;
+    font-weight: 700;
+    margin: 0 0 16px 0;
+}
+
+.course-subtitle {
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.8);
+    margin: 0 0 24px 0;
+    line-height: 1.6;
+}
+
+.course-meta {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin-top: auto;
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.rating-score {
+    font-size: 18px;
+    font-weight: 700;
+    color: #ff9900;
+}
+
+/* 主体内容 */
+.main-container {
+    max-width: 1200px;
+    margin: 24px auto;
+    padding: 0 24px;
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 24px;
+}
+
+/* 左侧内容 */
+.content-wrapper {
+    background-color: white;
+    border-radius: 12px;
+    padding: 24px;
+    min-height: 500px;
+}
+
+.chapter-list {
+    margin-top: 20px;
+}
+
+.chapter-item {
+    border-bottom: 1px solid #ebeef5;
+}
+
+.chapter-item:last-child {
+    border-bottom: none;
+}
+
+.chapter-header {
+    padding: 16px;
+    font-weight: 600;
+    background-color: #fafafa;
+}
+
+.sub-chapter-list {
+    padding: 0;
+}
+
+.sub-chapter-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 24px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.sub-chapter-item:hover {
+    background-color: #f5f7fa;
+}
+
+.sub-chapter-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #606266;
+}
+
+/* 右侧侧边栏 */
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.enroll-card {
+    border-radius: 12px;
+    border: none;
+    text-align: center;
+    padding: 24px;
+}
+
+.price-tag {
+    font-size: 32px;
+    font-weight: 700;
+    color: #f56c6c;
+    margin-bottom: 24px;
+}
+
+.price-tag.free {
+    color: #67c23a;
+}
+
+.enroll-btn {
+    width: 100%;
+    height: 48px;
+    font-size: 18px;
+    border-radius: 24px;
+}
+
+.teacher-card {
+    border-radius: 12px;
+    border: none;
+}
+
+.teacher-info {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.teacher-desc {
+    font-size: 14px;
+    color: #606266;
+    line-height: 1.6;
+}
+
+/* 响应式 */
+@media (max-width: 1024px) {
+    .banner-content {
+        flex-direction: column;
+    }
+
+    .banner-cover {
+        width: 100%;
+        height: 300px;
+    }
+
+    .main-container {
+        grid-template-columns: 1fr;
+    }
+}

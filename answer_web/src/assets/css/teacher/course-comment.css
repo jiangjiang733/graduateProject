@@ -1,0 +1,41 @@
+/* 评论区域基础容器 */
+.course-comment-section {
+    padding: 10px 0;
+}
+
+/* 评论发布卡片 */
+.comment-post-card {
+    border-radius: 8px;
+    border: 1px solid #e4e7ed;
+    transition: all 0.3s;
+}
+
+.comment-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.comment-user-name {
+    margin-left: 10px;
+    font-weight: 600;
+    color: #303133;
+}
+
+.post-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 15px;
+}
+
+/* 评论列表区域 */
+.comment-list-container h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #303133;
+    margin-bottom: 20px;
+}
+
+.empty-comment {
+    margin: 40px 0;
+}
