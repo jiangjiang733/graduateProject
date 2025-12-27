@@ -2,11 +2,11 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getCourseList } from '@/api/course.js'
-import { 
-  createExam, 
-  getExamsByCourse, 
-  publishExam as publishExamApi, 
-  deleteExam as deleteExamApi 
+import {
+    createExam,
+    getExamsByCourse,
+    publishExam as publishExamApi,
+    deleteExam as deleteExamApi
 } from '@/api/exam.js'
 
 export function useExamManagement() {
@@ -161,7 +161,7 @@ export function useExamManagement() {
     const editExam = (exam) => {
         router.push(`/teacher/exam/edit/${exam.examId}`)
     }
-    
+
     const createExamPage = () => {
         router.push('/teacher/exam/create')
     }
@@ -239,7 +239,7 @@ export function useExamManagement() {
         }
         return texts[statusStr] || '未知'
     }
-    
+
     const getStatusTextFromNumber = (status) => {
         if (status === 0) return 'DRAFT'
         if (status === 1) return 'PUBLISHED'

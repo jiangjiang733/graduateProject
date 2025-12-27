@@ -1,0 +1,1199 @@
+<template>
+  <div class="course-form-page">
+    <!-- 页面头部 -->
+    <div class="page-header">
+      <el-button :icon="ArrowLeft" @click="goBack">返回</el-button>
+      <h2 class="page-title">{{ isEdit ? '编辑课程' : '创建课程' }}</h2>
+    </div>
+
+    <!-- 表单内容 -->
+    <el-card class="form-card" shadow="never">
+      <!-- 标签页 -->
+      <el-tabs v-model="activeTab" type="border-card">
+        <!-- 基本信息标签 -->
+        <el-tab-pane label="基本信息" name="basic">
+          <el-form
+            ref="formRef"
+            :model="formData"
+            :rules="rules"
+            label-width="120px"
+            label-position="right"
+          >
+        <!-- 课程名称 -->
+        <el-form-item label="课程名称" prop="courseName">
+          <el-input
+            v-model="formData.courseName"
+            placeholder="请输入课程名称"
+            maxlength="100"
+            show-word-limit
+          />
+        </el-form-item>
+
+        <!-- 课程描述 -->
+        <el-form-item label="课程描述" prop="courseDescription">
+          <el-input
+            v-model="formData.courseDescription"
+            type="textarea"
+            :rows="4"
+            placeholder="请输入课程描述"
+            maxlength="500"
+            show-word-limit
+          />
+        </el-form-item>
+
+        <!-- 专业 -->
+        <el-form-item label="专业" prop="major">
+          <el-select v-model="formData.major" placeholder="请选择专业" style="width: 100%">
+            <el-option label="计算机科学与技术" value="计算机科学与技术" />
+            <el-option label="软件工程" value="软件工程" />
+            <el-option label="信息安全" value="信息安全" />
+            <el-option label="数据科学与大数据技术" value="数据科学与大数据技术" />
+            <el-option label="人工智能" value="人工智能" />
+            <el-option label="其他" value="其他" />
+          </el-select>
+        </el-form-item>
+
+        <!-- 分类 -->
+        <el-form-item label="课程分类" prop="classification">
+          <el-select v-model="formData.classification" placeholder="请选择分类" style="width: 100%">
+            <el-option label="必修课" value="必修课" />
+            <el-option label="选修课" value="选修课" />
+            <el-option label="公共课" value="公共课" />
+            <el-option label="专业课" value="专业课" />
+          </el-select>
+        </el-form-item>
+
+        <!-- 课程时间 -->
+        <el-form-item label="课程时间">
+          <el-date-picker
+            v-model="dateRange"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            style="width: 100%"
+          />
+        </el-form-item>
+
+        <!-- 课程封面 -->
+        <el-form-item label="课程封面">
+          <el-upload
+            class="cover-uploader"
+            :show-file-list="false"
+            :before-upload="beforeCoverUpload"
+            :on-change="handleCoverChange"
+            :auto-upload="false"
+            accept="image/*"
+          >
+            <img v-if="coverPreview" :src="coverPreview" class="cover-preview" />
+            <el-icon v-else class="cover-uploader-icon"><Plus /></el-icon>
+          </el-upload>
+          <div class="upload-tip">建议尺寸：800x450px，支持jpg、png格式，大小不超过2MB</div>
+        </el-form-item>
+
+            <!-- 提交按钮 -->
+            <el-form-item>
+              <el-button type="primary" @click="submitForm" :loading="submitting">
+                {{ isEdit ? '保存修改' : '创建课程' }}
+              </el-button>
+              <el-button @click="goBack">取消</el-button>
+            </el-form-item>
+          </el-form>
+        </el-tab-pane>
+
+        <!-- 章节管理标签 -->
+        <el-tab-pane label="章节管理" name="chapters" v-if="isEdit" :disabled="!courseId">
+          <div v-loading="chaptersLoading">
+            <div class="chapters-header">
+              <el-button type="primary" :icon="Plus" @click="openAddDialog(null)">
+                添加章节
+              </el-button>
+            </div>
+
+            <el-empty v-if="treeData.length === 0" description="暂无章节，点击上方按钮添加" />
+            
+            <!-- 树形章节列表 -->
+            <el-tree
+              v-else
+              :data="treeData"
+              node-key="chapterId"
+              :props="treeProps"
+              :expand-on-click-node="false"
+              default-expand-all
+              class="chapter-tree"
+            >
+              <template #default="{ node, data }">
+                <div class="tree-node">
+                  <span class="node-label">
+                    <el-icon v-if="data.chapterType === 'FOLDER'" color="#409eff"><Folder /></el-icon>
+                    <el-icon v-else-if="data.chapterType === 'VIDEO'" color="#67c23a"><VideoPlay /></el-icon>
+                    <el-icon v-else-if="data.chapterType === 'PDF'" color="#e6a23c"><Document /></el-icon>
+                    <el-icon v-else color="#909399"><Edit /></el-icon>
+                    {{ data.chapterTitle }}
+                  </span>
+                  <span class="node-actions">
+                    <el-button
+                      v-if="data.chapterType === 'FOLDER'"
+                      size="small"
+                      type="primary"
+                      link
+                      @click.stop="openAddDialog(data)"
+                    >
+                      <el-icon><Plus /></el-icon>
+                      添加子章节
+                    </el-button>
+                    <el-button size="small" link @click.stop="viewChapter(data)">
+                      <el-icon><View /></el-icon>
+                      查看
+                    </el-button>
+                    <el-button size="small" type="danger" link @click.stop="deleteChapter(data)">
+                      <el-icon><Delete /></el-icon>
+                      删除
+                    </el-button>
+                  </span>
+                </div>
+              </template>
+            </el-tree>
+          </div>
+        </el-tab-pane>
+      </el-tabs>
+    </el-card>
+
+    <!-- 添加章节对话框 -->
+    <el-dialog
+      v-model="addDialogVisible"
+      :title="currentParent ? `添加子章节到: ${currentParent.chapterTitle}` : '添加章节'"
+      width="600px"
+    >
+      <el-form :model="chapterForm" label-width="100px">
+        <el-form-item label="章节类型">
+          <el-radio-group v-model="chapterForm.type">
+            <el-radio label="FOLDER">📁 文件夹</el-radio>
+            <el-radio label="MIXED">📚 混合内容（视频+PDF+文本）</el-radio>
+            <el-radio label="VIDEO">🎬 仅视频</el-radio>
+            <el-radio label="PDF">📄 仅PDF</el-radio>
+            <el-radio label="TEXT">📝 仅文本</el-radio>
+          </el-radio-group>
+        </el-form-item>
+
+        <el-form-item label="章节名称" required>
+          <el-input v-model="chapterForm.title" placeholder="请输入章节名称" />
+        </el-form-item>
+
+        <el-form-item label="章节顺序">
+          <el-input-number v-model="chapterForm.order" :min="1" />
+        </el-form-item>
+
+        <!-- 混合内容 - 视频上传 -->
+        <el-form-item v-if="chapterForm.type === 'MIXED' || chapterForm.type === 'VIDEO'" label="视频文件">
+          <el-upload
+              ref="videoUploadRef" :auto-upload="false"
+            :limit="1"
+            :on-change="handleVideoChange"
+            accept="video/*"
+          >
+            <el-button>选择视频（可选）</el-button>
+            <template #tip>
+              <div class="el-upload__tip">支持 mp4、avi、mov、wmv 格式，最大 500MB</div>
+            </template>
+          </el-upload>
+        </el-form-item>
+
+        <!-- 混合内容 - PDF上传 -->
+        <el-form-item v-if="chapterForm.type === 'MIXED' || chapterForm.type === 'PDF'" label="PDF文件">
+          <el-upload
+            :auto-upload="false"
+            :limit="1"
+            :on-change="handlePdfChange"
+            accept=".pdf"
+          >
+            <el-button>选择PDF（可选）</el-button>
+            <template #tip>
+              <div class="el-upload__tip">支持 PDF 格式，最大 50MB</div>
+            </template>
+          </el-upload>
+        </el-form-item>
+
+        <!-- 混合内容 - 文本内容 -->
+        <el-form-item v-if="chapterForm.type === 'MIXED' || chapterForm.type === 'TEXT'" label="文本内容">
+          <el-input
+            v-model="chapterForm.content"
+            type="textarea"
+            :rows="4"
+            placeholder="请输入文本内容（可选）"
+          />
+        </el-form-item>
+      </el-form>
+
+      <template #footer>
+        <el-button @click="addDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitChapter" :loading="chaptersLoading">
+          创建
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 章节详情全屏页面 -->
+    <el-dialog 
+      v-model="detailDialogVisible" 
+      :title="currentChapter?.chapterTitle || '章节详情'" 
+      width="95%"
+      top="3vh"
+      :close-on-click-modal="false"
+      class="chapter-detail-dialog"
+    >
+      <div v-if="currentChapter" class="chapter-detail-container">
+        <!-- 左侧章节目录 -->
+        <div class="chapter-sidebar">
+          <div class="sidebar-header">
+            <h3>目录</h3>
+          </div>
+          <div class="sidebar-search">
+            <el-input 
+              v-model="chapterSearchText" 
+              placeholder="搜索" 
+              :prefix-icon="Search"
+              clearable
+            />
+          </div>
+          <div class="sidebar-tree">
+            <el-tree
+              :data="treeData"
+              node-key="chapterId"
+              :props="treeProps"
+              :expand-on-click-node="false"
+              :highlight-current="true"
+              :current-node-key="currentChapter.chapterId"
+              @node-click="handleChapterClick"
+              default-expand-all
+            >
+              <template #default="{ node, data }">
+                <div class="sidebar-tree-node">
+                  <el-icon v-if="data.chapterType === 'FOLDER'" color="#409eff"><Folder /></el-icon>
+                  <el-icon v-else-if="data.chapterType === 'VIDEO'" color="#67c23a"><VideoPlay /></el-icon>
+                  <el-icon v-else-if="data.chapterType === 'PDF'" color="#e6a23c"><Document /></el-icon>
+                  <el-icon v-else color="#909399"><Edit /></el-icon>
+                  <span class="tree-node-title">{{ data.chapterTitle }}</span>
+                  <el-icon v-if="data.chapterId === currentChapter.chapterId" color="#67c23a" class="check-icon">
+                    <Check />
+                  </el-icon>
+                </div>
+              </template>
+            </el-tree>
+          </div>
+        </div>
+
+        <!-- 右侧章节内容 -->
+        <div class="chapter-content">
+          <div class="content-header">
+            <div class="content-title">
+              <h2>{{ currentChapter.chapterTitle }}</h2>
+              <el-tag :type="getChapterTypeTag(currentChapter.chapterType)">
+                {{ getTypeLabel(currentChapter.chapterType) }}
+              </el-tag>
+            </div>
+            <div class="content-meta">
+              <span>创建时间：{{ formatTime(currentChapter.createTime) }}</span>
+            </div>
+          </div>
+
+          <div class="content-body">
+            <!-- 视频播放 -->
+            <div v-if="currentChapter.videoUrl" class="media-section">
+              <div class="media-wrapper">
+                <video 
+                  :src="getMediaUrl(currentChapter.videoUrl)" 
+                  controls 
+                  controlslist="nodownload"
+                  class="video-player"
+                >
+                  您的浏览器不支持视频播放
+                </video>
+              </div>
+            </div>
+
+            <!-- PDF内容 -->
+            <div v-if="currentChapter.pdfUrl" class="media-section">
+              <div class="pdf-viewer">
+                <div class="pdf-header">
+                  <h3>
+                    <el-icon><Document /></el-icon>
+                    PDF文档
+                  </h3>
+                  <el-button 
+                    type="primary" 
+                    :icon="Download" 
+                    @click="downloadPdf(currentChapter.pdfUrl)"
+                  >
+                    下载PDF
+                  </el-button>
+                </div>
+                <iframe 
+                  v-if="currentChapter.pdfUrl"
+                  :src="getMediaUrl(currentChapter.pdfUrl)" 
+                  class="pdf-frame"
+                  frameborder="0"
+                ></iframe>
+              </div>
+            </div>
+
+            <!-- 文本内容 -->
+            <div v-if="currentChapter.textContent" class="text-section">
+              <div class="text-content-box">
+                <div class="text-content-inner" v-html="formatTextContent(currentChapter.textContent)"></div>
+              </div>
+            </div>
+
+            <!-- 空状态 -->
+            <el-empty 
+              v-if="!currentChapter.videoUrl && !currentChapter.pdfUrl && !currentChapter.textContent"
+              description="该章节暂无内容"
+            />
+          </div>
+        </div>
+      </div>
+    </el-dialog>
+  </div>
+</template>
+
+<script setup>
+import { ref, reactive, onMounted, computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { ArrowLeft, Plus, Folder, VideoPlay, Document, Edit, View, Delete, Search, Check, Download } from '@element-plus/icons-vue'
+import { 
+  createCourse, 
+  getCourseDetail, 
+  updateCourse,
+  getCourseChapters,
+  createFolderChapter,
+  createVideoChapter,
+  createPdfChapter,
+  createTextChapter,
+  createMixedChapter,
+  getChapterDetail,
+  deleteChapter as deleteChapterApi
+} from '@/api/course.js'
+import { API_BASE_URL } from '@/api/request.js'
+const videoUploadRef = ref()
+// 获取基础URL (去除/api后缀)
+const BASE_URL = API_BASE_URL.replace('/api', '')
+
+const route = useRoute()
+const router = useRouter()
+const formRef = ref()
+
+// 判断是编辑还是创建
+const isEdit = computed(() => route.params.id && route.params.id !== 'create')
+const courseId = computed(() => route.params.id)
+
+// 标签页
+const activeTab = ref('basic')
+
+// 表单数据
+const formData = reactive({
+  courseName: '',
+  courseDescription: '',
+  major: '',
+  classification: '',
+  image: null
+})
+
+// 日期范围
+const dateRange = ref([])
+
+// 封面预览
+const coverPreview = ref('')
+const coverFile = ref(null)
+
+// 提交状态
+const submitting = ref(false)
+
+// ==================== 章节管理相关 ====================
+const treeData = ref([])
+const chaptersLoading = ref(false)
+const addDialogVisible = ref(false)
+const detailDialogVisible = ref(false)
+const currentParent = ref(null)
+const currentChapter = ref(null)
+const chapterSearchText = ref('')
+
+const treeProps = {
+  children: 'children',
+  label: 'chapterTitle'
+}
+
+const chapterForm = ref({
+  type: 'MIXED',
+  title: '',
+  order: 1,
+  video: null,
+  pdf: null,
+  content: ''
+})
+
+// 表单验证规则
+const rules = {
+  courseName: [
+    { required: true, message: '请输入课程名称', trigger: 'blur' },
+    { min: 2, max: 100, message: '课程名称长度在2-100个字符', trigger: 'blur' }
+  ],
+  courseDescription: [
+    { max: 500, message: '课程描述不能超过500个字符', trigger: 'blur' }
+  ]
+}
+
+// 加载课程详情（编辑模式）
+const loadCourseDetail = async () => {
+  try {
+    const response = await getCourseDetail(route.params.id)
+    if (response.success && response.data) {
+      const course = response.data
+      formData.courseName = course.courseName || course.name
+      formData.courseDescription = course.courseDescription || course.taskDescribe
+      formData.major = course.major || ''
+      formData.classification = course.classification || ''
+      
+      // 设置日期范围
+      if (course.startTime && course.endTime) {
+        dateRange.value = [course.startTime, course.endTime]
+      }
+      
+      // 设置封面预览
+      if (course.image) {
+        coverPreview.value = getCourseImage(course.image)
+      }
+    }
+  } catch (error) {
+    console.error('加载课程详情失败:', error)
+    ElMessage.error('加载课程详情失败')
+  }
+}
+
+// 获取课程图片URL
+const getCourseImage = (image) => {
+  if (!image) return ''
+  if (image.startsWith('http://') || image.startsWith('https://')) {
+    return image
+  }
+  return `${BASE_URL}${image}`
+}
+
+// 封面上传前验证
+const beforeCoverUpload = (file) => {
+  const isImage = file.type.startsWith('image/')
+  const isLt2M = file.size / 1024 / 1024 < 2
+
+  if (!isImage) {
+    ElMessage.error('只能上传图片文件!')
+    return false
+  }
+  if (!isLt2M) {
+    ElMessage.error('图片大小不能超过 2MB!')
+    return false
+  }
+  return true
+}
+
+// 封面选择
+const handleCoverChange = (file) => {
+  coverFile.value = file.raw
+  
+  // 预览
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    coverPreview.value = e.target.result
+  }
+  reader.readAsDataURL(file.raw)
+}
+
+// 提交表单
+const submitForm = async () => {
+  try {
+    // 表单验证
+    await formRef.value.validate()
+    
+    submitting.value = true
+    
+    // 获取教师信息
+    const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
+    const teacherName = localStorage.getItem('teacherName') || '教师'
+    
+    if (!teacherId) {
+      ElMessage.warning('请先登录')
+      router.push('/login')
+      return
+    }
+    
+    // 准备提交数据
+    const submitData = {
+      courseName: formData.courseName,
+      teacherId: teacherId,
+      teacherName: teacherName,
+      courseDescription: formData.courseDescription,
+      major: formData.major,
+      classification: formData.classification,
+      creatorUsername: teacherName
+    }
+    
+    // 添加日期范围
+    if (dateRange.value && dateRange.value.length === 2) {
+      submitData.startTime = dateRange.value[0]
+      submitData.endTime = dateRange.value[1]
+    }
+    
+    // 添加封面
+    if (coverFile.value) {
+      submitData.image = coverFile.value
+    }
+    
+    let response
+    if (isEdit.value) {
+      // 编辑模式
+      response = await updateCourse(route.params.id, submitData)
+    } else {
+      // 创建模式
+      response = await createCourse(submitData)
+    }
+    
+    if (response.success) {
+      ElMessage.success(isEdit.value ? '课程更新成功' : '课程创建成功')
+      router.push('/teacher/courses')
+    } else {
+      ElMessage.error(response.message || '操作失败')
+    }
+  } catch (error) {
+    if (error.errors) {
+      // 表单验证错误
+      return
+    }
+    console.error('提交失败:', error)
+    ElMessage.error('操作失败，请重试')
+  } finally {
+    submitting.value = false
+  }
+}
+
+// 返回
+const goBack = () => {
+  router.push('/teacher/courses')
+}
+
+// ==================== 章节管理功能 ====================
+
+// 获取章节列表并构建树形结构
+const fetchChapters = async () => {
+  if (!courseId.value || courseId.value === 'create') return
+  
+  chaptersLoading.value = true
+  try {
+    const response = await getCourseChapters(courseId.value)
+    if (response.success) {
+      treeData.value = buildTree(response.data)
+    }
+  } catch (error) {
+    console.error('获取章节失败:', error)
+    ElMessage.error('获取章节失败')
+  } finally {
+    chaptersLoading.value = false
+  }
+}
+
+// 构建树形结构
+const buildTree = (chapters) => {
+  const map = {}
+  const roots = []
+
+  chapters.forEach(chapter => {
+    map[chapter.chapterId] = { ...chapter, children: [] }
+  })
+
+  chapters.forEach(chapter => {
+    if (chapter.parentId) {
+      if (map[chapter.parentId]) {
+        map[chapter.parentId].children.push(map[chapter.chapterId])
+      }
+    } else {
+      roots.push(map[chapter.chapterId])
+    }
+  })
+
+  return roots
+}
+
+// 打开添加对话框
+const openAddDialog = (parent) => {
+  currentParent.value = parent
+  chapterForm.value = {
+    type: 'MIXED',
+    title: '',
+    order: parent ? parent.children.length + 1 : treeData.value.length + 1,
+    video: null,
+    pdf: null,
+    content: ''
+  }
+  if (videoUploadRef.value) {
+    videoUploadRef.value.clearFiles()
+  }
+  addDialogVisible.value = true
+}
+
+// 文件选择
+const handleVideoChange = (file) => {
+  console.log('📁 视频文件选择事件触发')
+  console.log('  file参数:', file)
+  console.log('  file.raw:', file.raw)
+  console.log('  file.raw类型:', file.raw instanceof File)
+  
+  if (file.raw) {
+    chapterForm.value.video = file.raw
+    console.log('✅ 视频文件已保存到chapterForm.value.video')
+    console.log('  文件名:', chapterForm.value.video.name)
+    console.log('  文件大小:', chapterForm.value.video.size, 'bytes')
+    console.log('  文件类型:', chapterForm.value.video.type)
+  } else {
+    console.error('❌ file.raw 为空!')
+  }
+}
+
+const handlePdfChange = (file) => {
+  if (file.raw) {
+    chapterForm.value.pdf = file.raw
+    console.log('✅ PDF文件已保存:', file.raw.name)
+  }
+}
+
+// 提交章节
+const submitChapter = async () => {
+  if (!chapterForm.value.title) {
+    ElMessage.warning('请输入章节名称')
+    return
+  }
+
+  // ========== 文件验证 ==========
+  if (chapterForm.value.type === 'VIDEO') {
+    if (!chapterForm.value.video) {
+      ElMessage.warning('视频章节必须上传视频文件')
+      return
+    }
+    console.log('✅ 视频文件已选择:', {
+      name: chapterForm.value.video.name,
+      size: chapterForm.value.video.size,
+      type: chapterForm.value.video.type
+    })
+  }
+  
+  if (chapterForm.value.type === 'MIXED') {
+    const hasVideo = !!chapterForm.value.video
+    const hasPdf = !!chapterForm.value.pdf
+    const hasContent = !!chapterForm.value.content
+    
+    if (!hasVideo && !hasPdf && !hasContent) {
+      ElMessage.warning('混合内容至少需要上传一种内容(视频/PDF/文本)')
+      return
+    }
+    
+    console.log('✅ 混合内容验证:', {
+      视频: hasVideo ? chapterForm.value.video.name : '无',
+      PDF: hasPdf ? chapterForm.value.pdf.name : '无',
+      文本: hasContent ? '有' : '无'
+    })
+  }
+
+  chaptersLoading.value = true
+  try {
+    const data = {
+      courseId: courseId.value,
+      parentId: currentParent.value?.chapterId,
+      title: chapterForm.value.title,
+      order: chapterForm.value.order
+    }
+    
+    // ========== 详细日志 ==========
+    console.log('\n=== 前端提交章节 ===')
+    console.log('章节类型:', chapterForm.value.type)
+    console.log('章节标题:', chapterForm.value.title)
+    console.log('课程ID:', data.courseId)
+    
+    let response
+    switch (chapterForm.value.type) {
+      case 'FOLDER':
+        console.log('📁 创建文件夹章节')
+        response = await createFolderChapter(data)
+        break
+      case 'VIDEO':
+        data.video = chapterForm.value.video
+        console.log('🎬 创建视频章节')
+        console.log('  chapterForm.value.video:', chapterForm.value.video)
+        console.log('  data.video:', data.video)
+        console.log('  data.video 是File对象:', data.video instanceof File)
+        if (data.video) {
+          console.log('  视频文件详情:', {
+            name: data.video.name,
+            size: data.video.size + ' bytes',
+            type: data.video.type,
+            lastModified: data.video.lastModified
+          })
+        } else {
+          console.error('❌ data.video 为 null 或 undefined!')
+        }
+        response = await createVideoChapter(data)
+        break
+      case 'PDF':
+        data.pdf = chapterForm.value.pdf
+        console.log('📄 创建PDF章节')
+        console.log('  PDF文件:', data.pdf ? data.pdf.name : '无')
+        response = await createPdfChapter(data)
+        break
+      case 'TEXT':
+        data.content = chapterForm.value.content
+        console.log('📝 创建文本章节')
+        response = await createTextChapter(data)
+        break
+      case 'MIXED':
+        data.video = chapterForm.value.video
+        data.pdf = chapterForm.value.pdf
+        data.content = chapterForm.value.content
+        console.log('📚 创建混合章节')
+        console.log('  视频:', data.video ? data.video.name : '无')
+        console.log('  PDF:', data.pdf ? data.pdf.name : '无')
+        console.log('  文本:', data.content ? '有' : '无')
+        response = await createMixedChapter(data)
+        break
+    }
+
+    console.log('服务器响应:', response)
+    console.log('=== 请求完成 ===\n')
+    
+    if (response.success) {
+      ElMessage.success('章节创建成功')
+      addDialogVisible.value = false
+      fetchChapters()
+    } else {
+      ElMessage.error(response.message || '创建失败')
+    }
+  } catch (error) {
+    console.error('❌ 创建失败:', error)
+    console.error('错误详情:', error.response?.data || error.message)
+    ElMessage.error('创建失败: ' + (error.response?.data?.message || error.message))
+  } finally {
+    chaptersLoading.value = false
+  }
+}
+
+// 查看章节
+const viewChapter = async (chapter) => {
+  try {
+    const response = await getChapterDetail(chapter.chapterId)
+    if (response.success) {
+      currentChapter.value = response.data
+      detailDialogVisible.value = true
+    }
+  } catch (error) {
+    console.error('获取详情失败:', error)
+    ElMessage.error('获取详情失败')
+  }
+}
+
+// 删除章节
+const deleteChapter = async (chapter) => {
+  try {
+    await ElMessageBox.confirm('确定要删除这个章节吗？', '确认删除', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+
+    const response = await deleteChapterApi(chapter.chapterId)
+    if (response.success) {
+      ElMessage.success('删除成功')
+      fetchChapters()
+    } else {
+      ElMessage.error(response.message || '删除失败')
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除失败:', error)
+      ElMessage.error('删除失败')
+    }
+  }
+}
+
+// 处理章节点击
+const handleChapterClick = async (chapter) => {
+  if (chapter.chapterType === 'FOLDER') {
+    return // 文件夹不加载详情
+  }
+  await viewChapter(chapter)
+}
+
+// 获取媒体URL
+const getMediaUrl = (url) => {
+  if (!url) return ''
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url
+  }
+  return `${BASE_URL}${url}`
+}
+
+// 下载PDF
+const downloadPdf = (url) => {
+  const fullUrl = getMediaUrl(url)
+  window.open(fullUrl, '_blank')
+}
+
+// 格式化文本内容（支持换行）
+const formatTextContent = (text) => {
+  if (!text) return ''
+  return text.replace(/\n/g, '<br>')
+}
+
+// 获取章节类型标签颜色
+const getChapterTypeTag = (type) => {
+  const tags = {
+    FOLDER: 'info',
+    VIDEO: 'success',
+    PDF: 'warning',
+    TEXT: '',
+    MIXED: 'primary'
+  }
+  return tags[type] || ''
+}
+
+// 工具函数
+const getTypeLabel = (type) => {
+  const types = {
+    FOLDER: '文件夹',
+    VIDEO: '视频',
+    PDF: 'PDF',
+    TEXT: '文本',
+    MIXED: '混合内容'
+  }
+  return types[type] || type
+}
+
+const formatTime = (time) => {
+  if (!time) return ''
+  return new Date(time).toLocaleString('zh-CN')
+}
+
+// 监听标签页切换，加载章节数据
+watch(activeTab, (newTab) => {
+  if (newTab === 'chapters' && isEdit.value) {
+    fetchChapters()
+  }
+})
+
+// 生命周期
+onMounted(() => {
+  if (isEdit.value) {
+    loadCourseDetail()
+  }
+})
+</script>
+
+<style scoped>
+.course-form-page {
+  padding: 20px;
+  background-color: #f5f7fa;
+  min-height: 100vh;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background-color: #fff;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.page-title {
+  flex: 1;
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.form-card {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.cover-uploader {
+  width: 300px;
+  height: 180px;
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s;
+}
+
+.cover-uploader:hover {
+  border-color: #409eff;
+}
+
+.cover-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cover-uploader-icon {
+  font-size: 28px;
+  color: #8c939d;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.upload-tip {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #909399;
+  line-height: 1.5;
+}
+
+/* 章节管理样式 */
+.chapters-header {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.chapter-tree {
+  margin-top: 20px;
+}
+
+.tree-node {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 20px;
+}
+
+.node-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.node-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.el-upload__tip {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 4px;
+}
+
+/* 章节详情全屏样式 */
+.chapter-detail-dialog :deep(.el-dialog__body) {
+  padding: 0;
+  height: 85vh;
+}
+
+.chapter-detail-container {
+  display: flex;
+  height: 100%;
+  background-color: #f5f7fa;
+}
+
+/* 左侧章节目录 */
+.chapter-sidebar {
+  width: 300px;
+  background-color: #fff;
+  border-right: 1px solid #e4e7ed;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sidebar-header {
+  padding: 20px;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.sidebar-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.sidebar-search {
+  padding: 15px;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.sidebar-tree {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.sidebar-tree-node {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  padding: 5px 0;
+}
+
+.tree-node-title {
+  flex: 1;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.check-icon {
+  margin-left: auto;
+}
+
+.sidebar-tree :deep(.el-tree-node__content) {
+  height: auto;
+  padding: 8px 0;
+}
+
+.sidebar-tree :deep(.el-tree-node__content:hover) {
+  background-color: #f5f7fa;
+}
+
+.sidebar-tree :deep(.is-current > .el-tree-node__content) {
+  background-color: #ecf5ff;
+  color: #409eff;
+}
+
+/* 右侧章节内容 */
+.chapter-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: #fff;
+  margin: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+.content-header {
+  padding: 24px;
+  border-bottom: 1px solid #e4e7ed;
+  background-color: #fff;
+}
+
+.content-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.content-title h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.content-meta {
+  font-size: 14px;
+  color: #909399;
+}
+
+.content-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+/* 媒体区域 */
+.media-section {
+  margin-bottom: 24px;
+}
+
+.media-wrapper {
+  background-color: #000;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.video-player {
+  width: 100%;
+  max-height: 600px;
+  display: block;
+}
+
+/* PDF查看器 */
+.pdf-viewer {
+  background-color: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e4e7ed;
+}
+
+.pdf-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background-color: #f5f7fa;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.pdf-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pdf-frame {
+  width: 100%;
+  height: 700px;
+  border: none;
+  background-color: #fff;
+}
+
+/* 文本内容 */
+.text-section {
+  margin-bottom: 24px;
+}
+
+.text-content-box {
+  background-color: #fff;
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+  padding: 24px;
+}
+
+.text-content-inner {
+  font-size: 15px;
+  line-height: 1.8;
+  color: #303133;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+</style>

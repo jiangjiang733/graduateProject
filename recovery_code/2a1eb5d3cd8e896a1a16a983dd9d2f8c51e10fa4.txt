@@ -1,0 +1,441 @@
+<template>
+  <div class="course-detail-page">
+    <div v-if="loading" class="loading-container">
+      <el-skeleton :rows="8" animated />
+    </div>
+    <div v-else-if="course" class="course-detail">
+      <div class="course-header">
+        <el-button :icon="ArrowLeft" @click="goBack">返回</el-button>
+        <div class="header-content">
+          <div class="course-cover">
+            <img :src="getCourseImage(course.image)" :alt="course.courseName || course.name" />
+          </div>
+          <div class="course-info">
+            <h1 class="course-title">{{ course.courseName || course.name }}</h1>
+            <div class="course-meta">
+              <el-tag type="primary">{{ course.major || '未分类' }}</el-tag>
+              <el-tag type="success">{{ course.classification || '未分类' }}</el-tag>
+              <span class="meta-item">
+                <el-icon><User /></el-icon>
+                教师：{{ course.teacherName }}
+              </span>
+              <span class="meta-item">
+                <el-icon><Calendar /></el-icon>
+                创建时间：{{ formatDate(course.createTime) }}
+              </span>
+              <span class="meta-item">
+                <el-icon><Star /></el-icon>
+                评分：<el-rate v-model="course.averageRating" disabled text-color="#ff9900" :score-template="`${course.averageRating} 分`" />
+              </span>
+            </div>
+            <div class="course-description">
+              {{ course.courseDescription }}
+            </div>
+
+            <div v-if="permission.isOwner" class="course-actions">
+              <el-button type="primary" :icon="Edit" @click="editCourse">编辑课程</el-button>
+              <el-button type="danger" :icon="Delete" @click="confirmDelete">删除课程</el-button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="course-body">
+        <el-card class="course-main-card" shadow="never">
+          <el-tabs v-model="activeTab" class="course-tabs-modern">
+            <el-tab-pane label="课程介绍" name="intro">
+              <div class="tab-content-wrapper">
+                <h3>详细描述</h3>
+                <p class="course-description-full">{{ course.courseDescription }}</p>
+              </div>
+            </el-tab-pane>
+
+            <el-tab-pane label="课程目录" name="chapters">
+              <div class="tab-content-wrapper chapters-container">
+                <div class="chapters-header">
+                  <h3>课程章节</h3>
+                  <el-button v-if="permission.canEdit" type="primary" :icon="Edit" @click="manageChapters">管理目录</el-button>
+                </div>
+
+                <el-tree
+                    :data="chapters"
+                    :props="chapterProps"
+                    :default-expand-all="true"
+                    class="course-chapter-tree"
+                >
+                  <template #default="{ node, data }">
+                    <span class="custom-tree-node">
+                      <el-icon class="chapter-icon" :size="18">
+                        <component :is="getChapterIcon(data.chapterType || data.type)" />
+                      </el-icon>
+                      <span class="chapter-title-text">{{ data.chapterTitle || data.title }}</span>
+                      <span v-if="data.videoUrl" class="chapter-link">
+                        <el-button link type="primary" size="small" @click="viewContent(data)">观看</el-button>
+                      </span>
+                    </span>
+                  </template>
+                </el-tree>
+              </div>
+            </el-tab-pane>
+
+            <el-tab-pane label="课程评论" name="comments">
+              <div class="tab-content-wrapper comments-container">
+                <CourseComment :courseId="courseId" />
+              </div>
+            </el-tab-pane>
+          </el-tabs>
+        </el-card>
+
+      </div>
+    </div>
+
+    <div v-else-if="error" class="error-container">
+      <el-alert :title="error" type="error" show-icon />
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted, computed } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import { ArrowLeft, User, Calendar, Star, Document, List, ChatDotSquare, Edit, Delete, Folder, VideoPlay, Files } from '@element-plus/icons-vue';
+// 导入新增的评论组件
+import CourseComment from './CourseComment.vue';
+// 导入 API
+import { getCourseDetail, getCourseChapters, deleteCourse, checkCoursePermission } from '@/api/course.js';
+import { formatDate } from '@/utils/date.js';
+import { getCourseImage } from '@/utils/resource.js';
+import { useUserInfo } from '@/stores/user.js';
+
+const course = ref(null);
+const chapters = ref([]);
+const loading = ref(true);
+const error = ref(null);
+const route = useRoute();
+const router = useRouter();
+const courseId = route.params.id;
+const activeTab = ref('intro'); // 默认选中介绍页
+
+const userInfoStore = useUserInfo();
+userInfoStore.initUserInfo();
+const userId = computed(() => userInfoStore.userId);
+const permission = ref({ isOwner: false, canEdit: false, canView: false });
+
+const chapterProps = {
+  children: 'children',
+  label: 'chapterTitle'
+};
+
+const goBack = () => {
+  router.back();
+};
+
+const fetchCourseDetail = async () => {
+  try {
+    const res = await getCourseDetail(courseId);
+    if (res.success && res.data) {
+      course.value = res.data;
+      // 检查权限
+      const permRes = await checkCoursePermission(courseId, userId.value);
+      if (permRes.success) {
+        permission.value = permRes.data;
+      }
+    } else {
+      error.value = res.message || '课程信息获取失败。';
+    }
+  } catch (err) {
+    error.value = '加载课程详情时发生错误。';
+    console.error(err);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const fetchCourseChapters = async () => {
+  try {
+    const res = await getCourseChapters(courseId);
+    if (res.success && res.data) {
+      chapters.value = buildChapterTree(res.data);
+    }
+  } catch (err) {
+    console.error('加载章节目录时发生错误:', err);
+  }
+};
+
+const buildChapterTree = (flatList) => {
+  const map = {};
+  const tree = [];
+
+  flatList.forEach(item => {
+    map[item.id] = item;
+    item.children = item.children || [];
+    item.chapterTitle = item.chapterTitle || item.title;
+    item.chapterType = item.chapterType || item.type;
+  });
+
+  flatList.forEach(item => {
+    if (item.parentId && map[item.parentId]) {
+      map[item.parentId].children.push(item);
+    } else {
+      tree.push(item);
+    }
+  });
+
+  // 确保顶层节点排序正确 (假设后端未排序)
+  tree.sort((a, b) => (a.chapterOrder || 0) - (b.chapterOrder || 0));
+
+  return tree;
+};
+
+
+const confirmDelete = () => {
+  ElMessageBox.confirm(
+      '确定要删除这门课程吗？所有章节和数据都将丢失！',
+      '警告',
+      {
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+  ).then(async () => {
+    try {
+      const res = await deleteCourse(courseId);
+      if (res.success) {
+        ElMessage.success('课程删除成功！');
+        router.push({ name: 'CourseList' }); // 跳转回课程列表
+      } else {
+        ElMessage.error(res.message || '删除失败。');
+      }
+    } catch (err) {
+      ElMessage.error('删除课程时发生错误。');
+      console.error(err);
+    }
+  }).catch(() => {
+    ElMessage.info('已取消删除');
+  });
+};
+
+const editCourse = () => {
+  router.push({ name: 'CourseForm', params: { id: courseId } });
+};
+
+const manageChapters = () => {
+  // 假设有一个专门的章节管理页面
+  router.push({ name: 'ChapterManage', params: { courseId: courseId } });
+};
+
+const viewContent = (chapter) => {
+  // 假设有一个内容查看路由，例如：/course/:courseId/chapter/:chapterId
+  router.push({ name: 'ChapterContent', params: { courseId: courseId, chapterId: chapter.id } });
+};
+
+
+const getChapterIcon = (type) => {
+  const upperType = (type || '').toUpperCase();
+  switch (upperType) {
+    case 'FOLDER':
+      return Folder;
+    case 'VIDEO':
+      return VideoPlay;
+    case 'PDF':
+    case 'TEXT':
+      return Document;
+    case 'MIXED':
+      return Files;
+    default:
+      return List;
+  }
+};
+
+onMounted(() => {
+  fetchCourseDetail();
+  fetchCourseChapters();
+});
+</script>
+
+<style scoped>
+/* ======================== 整体布局样式 (美化) ======================== */
+.course-detail-page {
+  background-color: #f5f7fa; /* 浅背景色 */
+  min-height: 100vh;
+  padding: 0;
+}
+
+.course-detail {
+  width: 100%;
+  max-width: 1200px; /* 限制最大宽度，居中显示 */
+  margin: 0 auto;
+  padding: 30px 20px;
+}
+
+/* 课程头部区域 (更现代的卡片风格) */
+.course-header {
+  display: flex;
+  flex-direction: column;
+  background-color: #fff;
+  border-radius: 12px;
+  padding: 30px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); /* 轻微阴影 */
+}
+
+.course-header > .el-button {
+  width: fit-content;
+  margin-bottom: 20px;
+}
+
+.header-content {
+  display: flex;
+  gap: 30px;
+  align-items: flex-start;
+}
+
+.course-cover {
+  width: 280px;
+  height: 180px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.course-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.course-info {
+  flex-grow: 1;
+}
+
+.course-title {
+  margin: 0 0 10px 0;
+  font-size: 32px; /* 标题字号增大 */
+  font-weight: 700;
+  color: #303133;
+}
+
+.course-meta {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 15px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6px; /* 增加图标和文本的间距 */
+  font-size: 14px;
+  color: #606266;
+}
+
+.el-tag {
+  font-weight: 600; /* Tag 字体加粗 */
+}
+
+.course-description {
+  font-size: 16px; /* 描述字号微增 */
+  line-height: 1.8; /* 增加行高，提升阅读性 */
+  color: #404040;
+  margin-bottom: 20px;
+}
+
+.course-description-full {
+  font-size: 15px;
+  line-height: 1.8;
+  color: #404040;
+}
+
+.course-actions {
+  display: flex;
+  gap: 12px;
+}
+
+/* ======================== 课程主体和标签页样式 (美化) ======================== */
+.course-body {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.course-main-card {
+  flex: 3; /* 占据更多空间 */
+  border-radius: 12px;
+  padding: 0; /* 移除 ElCard 默认 padding */
+  border: none;
+}
+
+/* 现代标签页容器 */
+.course-tabs-modern {
+  border: none;
+}
+
+/* 标签页内容区域 */
+.tab-content-wrapper {
+  padding: 20px;
+}
+
+.tab-content-wrapper h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #303133;
+  margin-top: 0;
+  margin-bottom: 15px;
+  border-left: 4px solid #409eff; /* 蓝色左边框作为强调 */
+  padding-left: 10px;
+}
+
+/* 课程目录样式 (优化) */
+.chapters-container {
+  min-height: 400px;
+}
+
+.chapters-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+/* 章节树节点样式 */
+.custom-tree-node {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 15px;
+  padding-right: 8px;
+}
+
+.chapter-title-text {
+  flex: 1;
+  padding-left: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chapter-icon {
+  color: #409eff;
+}
+
+.chapter-link .el-button {
+  font-weight: 600;
+}
+
+/* 评论区域样式 */
+.comments-container {
+  min-height: 300px;
+}
+
+/* 加载和错误状态样式 */
+.loading-container, .error-container {
+  max-width: 1200px;
+  margin: 20px auto;
+  padding: 20px;
+}
+</style>

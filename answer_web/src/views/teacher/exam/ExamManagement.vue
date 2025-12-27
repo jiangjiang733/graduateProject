@@ -211,5 +211,5 @@ const {
 </script>
 
 <style scoped>
-@import '@/assets/css/teacher/exam-management.css';
+/* @import '@/assets/css/teacher/exam-management.css'; */
 </style>

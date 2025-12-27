@@ -25,6 +25,7 @@
     "vue": "^3.5.18",
     "vue-router": "^4.5.1",
     "vue-video-player": "^6.0.0",
+    "vue3-count-to": "^1.1.2",
     "wordcloud": "^1.2.3"
   },
   "devDependencies": {

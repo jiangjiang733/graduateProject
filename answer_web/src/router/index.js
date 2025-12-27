@@ -28,7 +28,6 @@ const admin = () => import('../components/Admin.vue')
 // 教师模块 - 使用懒加载
 const TeacherLayout = () => import('../views/teacher/Personal/Layout.vue')
 const TeacherDashboard = () => import('../views/teacher/Public/Dashboard.vue')
-const TeacherCourseDashboard = () => import('../views/teacher/course/CourseDashboard.vue')
 const TeacherProfile = () => import('../views/teacher/Personal/Profile.vue')
 const TeacherCourseManagement = () => import('../views/teacher/course/CourseManagement.vue')
 const TeacherCourseDetail = () => import('../views/teacher/course/CourseDetail.vue')
@@ -84,12 +83,6 @@ const router = createRouter({
           name: 'teacher_dashboard',
           component: TeacherDashboard,
           meta: { title: '教师仪表盘', requiresAuth: true, role: 'teacher' }
-        },
-        {
-          path: 'course-dashboard',
-          name: 'teacher_course_dashboard',
-          component: TeacherCourseDashboard,
-          meta: { title: '课程仪表盘', requiresAuth: true, role: 'teacher' }
         },
         {
           path: 'profile',
@@ -225,7 +218,7 @@ const router = createRouter({
         // }
       ]
     },
-    // 保留旧路由以兼容现有代码
+    
     {
       path: '/tIndex',
       redirect: '/teacher/dashboard'

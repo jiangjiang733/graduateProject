@@ -236,5 +236,5 @@ const {
 </script>
 
 <style scoped>
-@import '@/assets/css/teacher/homework-management.css';
+/* @import '@/assets/css/teacher/homework-management.css'; */
 </style>

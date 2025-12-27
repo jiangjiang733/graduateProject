@@ -398,7 +398,7 @@ export function useCourseForm() {
 
     // 返回
     const goBack = () => {
-        router.push('/teacher/course-dashboard')
+        router.push('/teacher/courses')
     }
     // 获取章节列表并构建树形结构
     const fetchChapters = async () => {

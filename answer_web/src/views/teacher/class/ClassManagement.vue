@@ -343,5 +343,5 @@ const getScoreColor = (score) => {
 </script>
 
 <style scoped>
-@import '@/assets/css/teacher/class-management.css';
+/* @import '@/assets/css/teacher/class-management.css'; */
 </style>
