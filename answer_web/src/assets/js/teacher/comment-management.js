@@ -140,11 +140,15 @@ export function useCommentManagement() {
 
             const replyData = {
                 courseId: currentComment.value.courseId,
-                userId: userInfoStore.userId,
-                userName: userInfoStore.userName,
-                userType: userInfoStore.userType,
+                chapterId: currentComment.value.chapterId,
+                userId: userInfoStore.userId || localStorage.getItem('teacherId') || localStorage.getItem('t_id'),
+                userName: userInfoStore.userName || localStorage.getItem('teacherName') || '教师',
+                userType: userInfoStore.userType || 'TEACHER',
+                userAvatar: userInfoStore.userAvatar,
                 content: replyContent.value,
-                parentId: currentComment.value.commentId
+                parentId: currentComment.value.commentId,
+                targetUserId: currentComment.value.userId,
+                targetUserName: currentComment.value.userName
             }
 
             const response = await addComment(replyData)

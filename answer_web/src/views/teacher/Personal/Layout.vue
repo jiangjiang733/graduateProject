@@ -1,97 +1,74 @@
 <template>
-  <div class="teacher-layout">
+  <div class="modern-layout">
+    <!-- 动态背景 -->
+    <div class="modern-bg">
+      <div class="bg-blob-1"></div>
+      <div class="bg-blob-2"></div>
+      <div class="bg-blob-3"></div>
+    </div>
+
     <el-container class="layout-container">
-      <!-- 顶部导航栏 -->
-      <el-header class="header">
-        <div class="header-content">
-          <div class="logo">
-            <el-icon class="logo-icon" color="#409EFF"><School /></el-icon>
-            <span class="logo-text">教师端---智慧教学平台</span>
+      <!-- 顶部 Header & Nav -->
+      <el-header class="top-header glass-panel">
+        <div class="header-inner">
+          <!-- Logo -->
+          <div class="brand" @click="$router.push('/teacher/dashboard')">
+            <div class="logo-box">
+              <el-icon :size="20"><Reading /></el-icon>
+            </div>
+            <h1 class="brand-text">智慧课堂</h1>
           </div>
-          
+
           <!-- 顶部水平菜单 -->
-          <el-menu
-            :default-active="activeMenu"
-            mode="horizontal"
-            class="top-menu"
-            :ellipsis="false"
-            router
-          >
-            <el-menu-item index="/teacher/dashboard">
-              <el-icon><Odometer /></el-icon>
-              <span>首页概览</span>
-            </el-menu-item>
+          <nav class="top-nav">
+            <div 
+              v-for="item in menuItems" 
+              :key="item.path"
+              class="nav-item"
+              :class="{ active: isActive(item.path) }"
+              @click="navigate(item.path)"
+            >
+              <el-icon :size="16" class="nav-icon"><component :is="item.icon" /></el-icon>
+              <span class="nav-label">{{ item.label }}</span>
+            </div>
+          </nav>
 
-            <el-sub-menu index="teaching">
-              <template #title>
-                <el-icon><Reading /></el-icon>
-                <span>教学管理</span>
-              </template>
-              <el-menu-item index="/teacher/courses">我的课程</el-menu-item>
-              <el-menu-item index="/teacher/classes">班级管理</el-menu-item>
-              <el-menu-item index="/teacher/enrollments">报名审核</el-menu-item>
-            </el-sub-menu>
+          <!-- 右侧操作区 -->
+          <div class="header-actions">
+            <!-- 搜索框 -->
+            <div class="search-box glass-input">
+              <el-icon class="search-icon"><Search /></el-icon>
+              <input type="text" placeholder="快速查找..." class="search-input" />
+            </div>
 
-            <el-sub-menu index="exam">
-              <template #title>
-                <el-icon><EditPen /></el-icon>
-                <span>考试作业</span>
-              </template>
-              <el-menu-item index="/teacher/exams">考试管理</el-menu-item>
-              <el-menu-item index="/teacher/homework">作业管理</el-menu-item>
-            </el-sub-menu>
+            <!-- 通知 / 答疑入口 -->
+            <div class="action-btn" @click="$router.push('/teacher/messages')" title="消息与答疑">
+              <el-badge :value="3" class="notification-badge" is-dot>
+                <el-icon :size="20"><Bell /></el-icon>
+              </el-badge>
+            </div>
 
-            <el-menu-item index="/teacher/analytics">
-               <el-icon><DataLine /></el-icon>
-               <span>数据分析</span>
-            </el-menu-item>
-          </el-menu>
-
-          <!-- 右侧用户信息 -->
-          <div class="header-right">
-            <!-- 互动消息铃铛 -->
-            <el-dropdown @command="handleMessageCommand" class="message-dropdown">
-              <div class="action-item">
-                <el-badge :value="unreadCount" :hidden="unreadCount === 0" class="item">
-                  <el-icon size="20"><Bell /></el-icon>
-                </el-badge>
+            <!-- 用户下拉 -->
+            <el-dropdown trigger="click" @command="handleUserCommand">
+              <div class="user-profile">
+                <el-avatar :size="36" :src="teacherStore.avatarUrl" class="user-avatar">
+                   {{ teacherStore.teacherName?.charAt(0) || '教' }}
+                </el-avatar>
+                <div class="user-info">
+                  <span class="user-name">{{ teacherStore.teacherName }}</span>
+                  <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+                </div>
               </div>
               <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="messages">
-                    <el-icon><Message /></el-icon>
-                    消息通知
-                  </el-dropdown-item>
-                  <el-dropdown-item command="comments">
-                    <el-icon><ChatDotRound /></el-icon>
-                    评论管理
-                  </el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
-
-            <!-- 用户头像和姓名 -->
-            <el-dropdown @command="handleUserCommand">
-              <span class="user-dropdown">
-                <el-avatar 
-                  :size="32" 
-                  :src="teacherStore.avatarUrl" 
-                  style="margin-right: 8px;"
-                >
-                  <el-icon><UserFilled /></el-icon>
-                </el-avatar>
-                <span class="username">{{ teacherStore.teacherName }}</span>
-                <el-icon class="el-icon--right"><ArrowDown /></el-icon>
-              </span>
-              <template #dropdown>
-                <el-dropdown-menu>
+                <el-dropdown-menu class="modern-dropdown">
                   <el-dropdown-item command="profile">
-                    <el-icon><User /></el-icon>
-                    个人中心
+                    <el-icon><User /></el-icon>个人中心
                   </el-dropdown-item>
-                  <el-dropdown-item command="logout" divided>
-                    <el-icon><SwitchButton /></el-icon>
-                    退出登录
+                  <el-dropdown-item command="settings">
+                    <el-icon><Setting /></el-icon>系统设置
+                  </el-dropdown-item>
+                  <el-dropdown-item divided command="logout">
+                    <el-icon><SwitchButton /></el-icon>退出登录
                   </el-dropdown-item>
                 </el-dropdown-menu>
               </template>
@@ -99,73 +76,65 @@
           </div>
         </div>
       </el-header>
-      
-      <!-- 主要内容区域 -->
-      <el-main class="main-content">
-        <!-- 面包屑导航 -->
-        <div class="breadcrumb-container">
-           <el-breadcrumb separator="/">
-             <el-breadcrumb-item :to="{ path: '/teacher/dashboard' }">首页</el-breadcrumb-item>
-             <el-breadcrumb-item>{{ currentRouteName }}</el-breadcrumb-item>
-           </el-breadcrumb>
-        </div>
 
-        <router-view v-slot="{ Component }">
-           <component :is="Component" />
-        </router-view>
+      <!-- 主内容区域 -->
+      <el-main class="main-content">
+        <!-- 页面标题/面包屑 -->
+
+
+        <!-- 路由视图 -->
+        <div class="content-view animate-slide-up">
+          <router-view v-slot="{ Component }">
+            <transition name="fade-slide" mode="out-in">
+              <component :is="Component" />
+            </transition>
+          </router-view>
+        </div>
       </el-main>
     </el-container>
   </div>
 </template>
 
 <script setup>
-import { computed, ref, onMounted } from 'vue'
+import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import { useTeacherStore } from '@/stores/teacher.js'
+import { ElMessage } from 'element-plus'
+import '@/assets/css/teacher/modern-theme.css'
+import {
+  Reading, Odometer, User, EditPen, ChatDotRound, 
+  Setting, ArrowRight, Search, Bell, Plus, ArrowDown, SwitchButton,
+  Collection, List, Folder
+} from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
 const teacherStore = useTeacherStore()
 
-const activeMenu = computed(() => route.path)
-const currentRouteName = computed(() => route.meta.title || '当前页面')
+const currentRouteName = computed(() => route.meta.title || '主页')
+const showQuickCreate = computed(() => route.path === '/teacher/dashboard' || route.path === '/teacher/courses')
 
-// 未读消息数量
-const unreadCount = ref(0)
+const menuItems = [
+  { path: '/teacher/dashboard', label: '主页', icon: 'Odometer' },
+  { path: '/teacher/courses', label: '课程中心', icon: 'Reading' },
+  { path: '/teacher/exams', label: '考试管理', icon: 'Collection' },
+  { path: '/teacher/homework', label: '作业管理', icon: 'EditPen' },
+  { path: '/teacher/questions', label: '题库', icon: 'List' },
+  { path: '/teacher/resources', label: '资料库', icon: 'Folder' },
+  { path: '/teacher/enrollments', label: '报名管理', icon: 'User' },
+]
 
-onMounted(() => {
-  // 获取未读消息数量
-  loadUnreadCount()
-})
-
-// 加载未读消息数量
-const loadUnreadCount = async () => {
-  try {
-    // 这里可以调用API获取未读消息数量
-    // const response = await getUnreadMessageCount()
-    // unreadCount.value = response.data || 0
-    unreadCount.value = 3 // 临时数据
-  } catch (error) {
-    console.error('获取未读消息数量失败:', error)
-  }
+const isActive = (path) => {
+  return route.path.startsWith(path)
 }
 
-// 处理消息相关命令
-const handleMessageCommand = (command) => {
-  if (command === 'messages') {
-    router.push('/teacher/messages')
-  } else if (command === 'comments') {
-    router.push('/teacher/comments')
-  }
+const navigate = (path) => {
+  router.push(path)
 }
 
-// 处理用户相关命令
 const handleUserCommand = (command) => {
   if (command === 'logout') {
-    // 使用store的清除方法
     teacherStore.clearTeacherInfo()
-    
     ElMessage.success('已退出登录')
     router.push('/login')
   } else if (command === 'profile') {
@@ -175,136 +144,283 @@ const handleUserCommand = (command) => {
 </script>
 
 <style scoped>
-.teacher-layout {
-  width: 100%;
+.modern-layout {
   min-height: 100vh;
-  display: flex;
-  background-color: #f5f7fa;
+  position: relative;
 }
 
 .layout-container {
-  width: 100%;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
-.header {
-  background-color: #fff;
-  border-bottom: 1px solid #e6e6e6;
-  padding: 0;
-  height: 60px;
+/* Header */
+.top-header {
+  height: 72px;
   position: sticky;
   top: 0;
-  z-index: 1000;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  z-index: 100;
+  padding: 0 40px;
+  border-radius: 0 0 24px 24px;
+  border-top: none;
+  background-color: rgba(255, 255, 255, 0.7);
 }
 
-.header-content {
-  max-width: 1440px;
-  margin: 0 auto;
+.header-inner {
   height: 100%;
   display: flex;
   align-items: center;
-  padding: 0 20px;
+  justify-content: space-between;
+  max-width: 1440px;
+  margin: 0 auto;
 }
 
-.logo {
+/* Brand */
+.brand {
   display: flex;
   align-items: center;
-  margin-right: 40px;
+  gap: 12px;
+  cursor: pointer;
   min-width: 200px;
 }
 
-.logo-icon {
-  font-size: 28px;
-  margin-right: 10px;
-}
-
-.logo-text {
-  font-size: 20px;
-  font-weight: 600;
-  color: #303133;
-  letter-spacing: 0.5px;
-}
-
-.top-menu {
-  flex: 1;
-  border-bottom: none;
-  background-color: transparent;
-}
-
-:deep(.el-menu--horizontal > .el-menu-item),
-:deep(.el-menu--horizontal > .el-sub-menu .el-sub-menu__title) {
-  height: 60px;
-  line-height: 60px;
-  border-bottom: 2px solid transparent;
-  color: #606266;
-  font-size: 15px;
-}
-
-:deep(.el-menu--horizontal > .el-menu-item.is-active),
-:deep(.el-menu--horizontal > .el-sub-menu.is-active .el-sub-menu__title) {
-  border-bottom: 2px solid #409EFF;
-  color: #409EFF !important;
-  font-weight: 500;
-}
-
-.header-right {
+.logo-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   display: flex;
   align-items: center;
-  gap: 25px;
-  margin-left: 20px;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
 }
 
-.message-dropdown {
-  cursor: pointer;
+.brand-text {
+  font-size: 18px;
+  font-weight: 800;
+  color: #1f2937;
+  margin: 0;
+  background: linear-gradient(90deg, #1f2937, #4b5563);
+  -webkit-background-clip: text;
+  background-clip: text;
 }
 
-.action-item {
-  cursor: pointer;
-  color: #606266;
+/* Nav */
+.top-nav {
   display: flex;
   align-items: center;
-  transition: color 0.3s;
-  padding: 8px;
-  border-radius: 4px;
+  gap: 8px;
+  padding: 6px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
 }
 
-.action-item:hover {
-  color: #409EFF;
-  background-color: #f0f9ff;
-}
-
-.user-dropdown {
-  cursor: pointer;
+.nav-item {
   display: flex;
   align-items: center;
-  color: #606266;
-  transition: color 0.3s;
-  padding: 4px 8px;
-  border-radius: 4px;
-}
-
-.user-dropdown:hover {
-  color: #409EFF;
-  background-color: #f0f9ff;
-}
-
-.username {
-  font-weight: 500;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #6b7280;
   font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s;
 }
 
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.5);
+  color: #10b981;
+}
+
+.nav-item.active {
+  background: white;
+  color: #059669;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.nav-icon {
+  margin-top: -1px;
+}
+
+/* Actions */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  width: 200px;
+  transition: all 0.3s;
+}
+
+.search-box:focus-within {
+  background: white;
+  width: 240px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.search-input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 13px;
+  width: 100%;
+  margin-left: 8px;
+  color: #374151;
+}
+
+.notification-badge :deep(.el-badge__content) {
+  background-color: #ef4444;
+  border: 2px solid white;
+}
+
+.action-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  cursor: pointer;
+  color: #6b7280;
+  transition: all 0.2s;
+}
+
+.action-btn:hover {
+  background: rgba(255, 255, 255, 0.5);
+  color: #1f2937;
+}
+
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 20px;
+  transition: all 0.2s;
+}
+
+.user-profile:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.user-avatar {
+  background: #dbeafe;
+  color: #2563eb;
+  font-weight: 700;
+  border: 2px solid white;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.user-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+/* Main Content */
 .main-content {
-  padding: 24px;
   max-width: 1440px;
   margin: 0 auto;
   width: 100%;
-  box-sizing: border-box;
+  padding: 32px 40px;
 }
 
-.breadcrumb-container {
-  margin-bottom: 20px;
-  padding: 0 4px;
+.page-header {
+  margin-bottom: 32px;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #059669;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.8;
+  margin-bottom: 8px;
+}
+
+.flex-between {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #1f2937;
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.quick-btn {
+  background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.4);
+  transition: all 0.3s;
+}
+
+.quick-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 25px -5px rgba(16, 185, 129, 0.5);
+}
+
+/* Animations */
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.5s ease-out 0.1s backwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 1024px) {
+  .top-header { padding: 0 20px; }
+  .logo-box, .brand-text { display: none; }
+  .brand { min-width: auto; }
+  .search-box { display: none; }
+  .main-content { padding: 24px; }
 }
 </style>

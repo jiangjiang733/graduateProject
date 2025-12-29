@@ -5,6 +5,7 @@ import { getCourseDetail } from '@/api/course.js'
 import { checkEnrollmentStatus } from '@/api/enrollment.js'
 import { getCourseChapters, getChapterDetail } from '@/api/chapter.js'
 import { getChapterComments, addComment } from '@/api/comment.js'
+import { getUserAvatar } from '@/utils/resource.js'
 
 export function useCourseLearn() {
     const router = useRouter()
@@ -66,7 +67,7 @@ export function useCourseLearn() {
 
             // 1. 检查报名状态
             const enrollmentResponse = await checkEnrollmentStatus(studentId, courseId)
-            
+
             if (!enrollmentResponse.success || !enrollmentResponse.data || !enrollmentResponse.data.enrolled) {
                 canLearn.value = false
                 accessMessage.value = '您还未报名该课程，请先报名'
@@ -173,16 +174,25 @@ export function useCourseLearn() {
 
     // 加载章节评论
     const loadChapterComments = async (chapterId) => {
-        if (!chapterId) return
+        if (!chapterId) {
+            comments.value = []
+            return
+        }
 
         commentsLoading.value = true
         try {
+            console.log('开始加载章节评论:', chapterId)
             const response = await getChapterComments(chapterId)
-            if (response.code === 200 && response.data) {
-                comments.value = response.data
+            console.log('获取评论成功:', response)
+            if (response && response.code === 200) {
+                comments.value = response.data || []
+            } else {
+                comments.value = []
+                console.warn('评论接口返回异常:', response)
             }
         } catch (error) {
-            console.error('加载评论失败:', error)
+            console.error('加载评论发生错误:', error)
+            comments.value = []
         } finally {
             commentsLoading.value = false
         }
@@ -410,6 +420,7 @@ export function useCourseLearn() {
         showReplyInput,
         cancelReply,
         submitReply,
-        formatCommentTime
+        formatCommentTime,
+        getUserAvatar
     }
 }

@@ -1,7 +1,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getCourseList } from '@/api/course.js'
-import { getCourseEnrollments, reviewEnrollment } from '@/api/enrollment.js'
+import { getCourseEnrollments, reviewEnrollment, getTeacherEnrollments } from '@/api/enrollment.js'
 
 export function useEnrollmentManagement() {
     const loading = ref(false)
@@ -37,13 +37,41 @@ export function useEnrollmentManagement() {
         }
     })
 
+    const searchKeyword = ref('')
+
     // 筛选后的报名列表
     const filteredEnrollments = computed(() => {
-        if (currentStatus.value === 'all') {
-            return enrollments.value
+        let result = enrollments.value
+
+        // Status Filter
+        if (currentStatus.value !== 'all') {
+            result = result.filter(e => e.status === currentStatus.value)
         }
-        return enrollments.value.filter(e => e.status === currentStatus.value)
+
+        // Keyword Filter
+        if (searchKeyword.value) {
+            const lower = searchKeyword.value.toLowerCase()
+            result = result.filter(e =>
+                (e.studentName && e.studentName.toLowerCase().includes(lower)) ||
+                (e.studentId && e.studentId.includes(lower)) ||
+                (e.courseName && e.courseName.toLowerCase().includes(lower))
+            )
+        }
+
+        return result
     })
+
+    const formatTimeAgo = (dateStr) => {
+        if (!dateStr) return '-'
+        const date = new Date(dateStr)
+        const now = new Date()
+        const diff = now - date
+        if (diff < 60000) return '刚刚'
+        if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前'
+        if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前'
+        if (diff < 604800000) return Math.floor(diff / 86400000) + '天前'
+        return date.toLocaleDateString()
+    }
 
     // 分页后的报名列表
     const paginatedEnrollments = computed(() => {
@@ -72,15 +100,18 @@ export function useEnrollmentManagement() {
 
     // 加载报名列表
     const loadEnrollments = async () => {
-        if (!selectedCourseId.value) {
-            enrollments.value = []
-            return
-        }
-
         loading.value = true
         try {
-            const response = await getCourseEnrollments(selectedCourseId.value)
-            
+            const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
+            let response;
+
+            if (!selectedCourseId.value) {
+                // Fetch all teacher enrollments if no course selected
+                response = await getTeacherEnrollments(teacherId)
+            } else {
+                response = await getCourseEnrollments(selectedCourseId.value)
+            }
+
             if (response.success) {
                 enrollments.value = (response.data || []).map(item => ({
                     ...item,
@@ -217,8 +248,9 @@ export function useEnrollmentManagement() {
         }
     }
 
-    onMounted(() => {
-        loadCourses()
+    onMounted(async () => {
+        await loadCourses()
+        loadEnrollments()
     })
 
     return {
@@ -247,6 +279,10 @@ export function useEnrollmentManagement() {
         submitReject,
         getStatusType,
         getStatusText,
-        formatDate
+        getStatusType,
+        getStatusText,
+        formatDate,
+        searchKeyword,
+        formatTimeAgo
     }
 }

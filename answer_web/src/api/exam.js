@@ -57,6 +57,16 @@ export const createExamWithAi = (examData) => {
   return request.post('/exam/ai', examData)
 }
 /**
+ * 保存考试试题
+ * @param {number} examId - 考试ID
+ * @param {Array} questions - 题目列表
+ * @returns {Promise}
+ */
+export const saveExamQuestions = (examId, questions) => {
+  return request.post(`/exam/${examId}/questions`, questions)
+}
+
+/**
  * 更新考试
  * @param {number} examId - 考试ID
  * @param {Object} examData - 考试数据
@@ -142,6 +152,7 @@ export default {
   // AI生成
   generateQuestionsWithAi,
   createExamWithAi,
+  saveExamQuestions,
   // 试卷批改
   getPendingExams,
   getStudentExamDetail,

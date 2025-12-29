@@ -2,6 +2,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getCourseList } from '@/api/course.js'
+import { getQuestionList } from '@/api/question.js'
 import {
     getCourseLabReportList,
     createLabReport,
@@ -17,6 +18,13 @@ export function useHomeworkManagement() {
     const isEdit = ref(false)
     const submitting = ref(false)
     const formRef = ref()
+
+    // 题库选择相关状态
+    const bankDialogVisible = ref(false)
+    const bankLoading = ref(false)
+    const bankQuestions = ref([])
+    const bankSearchKeyword = ref('')
+    const selectedQuestions = ref([])
 
     // 课程列表
     const courses = ref([])
@@ -47,7 +55,10 @@ export function useHomeworkManagement() {
     // 表单验证规则
     const rules = {
         title: [
-            { required: true, message: '请输入作业标题', trigger: 'blur' }
+            { required: true, message: '请输入作业题目/名称', trigger: 'blur' }
+        ],
+        description: [
+            { required: true, message: '请输入作业要求/内容', trigger: 'blur' }
         ],
         courseId: [
             { required: true, message: '请选择课程', trigger: 'change' }
@@ -55,6 +66,67 @@ export function useHomeworkManagement() {
         deadline: [
             { required: true, message: '请选择截止时间', trigger: 'change' }
         ]
+    }
+
+    // 题库相关方法
+    const openQuestionBank = async () => {
+        bankDialogVisible.value = true
+        await searchBank()
+    }
+
+    const searchBank = async () => {
+        bankLoading.value = true
+        try {
+            const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
+            const response = await getQuestionList({
+                teacherId: teacherId,
+                keyword: bankSearchKeyword.value,
+                pageNum: 1,
+                pageSize: 50
+            })
+            if (response.success && response.data) {
+                bankQuestions.value = response.data.list || []
+            }
+        } catch (error) {
+            console.error('获取题库失败:', error)
+            ElMessage.error('获取题库失败')
+        } finally {
+            bankLoading.value = false
+        }
+    }
+
+    const handleBankSelection = (selection) => {
+        selectedQuestions.value = selection
+    }
+
+    const confirmImportQuestions = () => {
+        if (selectedQuestions.value.length === 0) return
+
+        let importText = '\n--- 题目内容 ---\n'
+        selectedQuestions.value.forEach((q, index) => {
+            const typeText = getQuestionTypeText(q.type)
+            importText += `【第 ${index + 1} 题 - ${typeText}】\n${q.content}\n`
+
+            if (q.type === 1 || q.type === 2) { // 单选或多选
+                const options = ['A', 'B', 'C', 'D', 'E', 'F']
+                const items = [q.optionA, q.optionB, q.optionC, q.optionD, q.optionE, q.optionF]
+                items.forEach((item, i) => {
+                    if (item) importText += `  ${options[i]}. ${item}\n`
+                })
+            } else if (q.type === 3) { // 判断
+                importText += `  A. 正确\n  B. 错误\n`
+            }
+            importText += '\n'
+        })
+
+        homeworkForm.description = (homeworkForm.description || '') + importText
+        bankDialogVisible.value = false
+        ElMessage.success(`成功导入 ${selectedQuestions.value.length} 道题目`)
+    }
+
+    const getQuestionTypeText = (type) => {
+        const types = { 1: '单选题', 2: '多选题', 3: '判断题', 4: '填空题', 5: '简答题' }
+        return types[type] || '未知'
     }
 
     // 加载课程列表
@@ -108,7 +180,7 @@ export function useHomeworkManagement() {
                         description: report.reportDescription || report.description,
                         deadline: report.deadline,
                         totalScore: report.totalScore,
-                        status: report.status || 'ONGOING',
+                        status: report.status || 1,
                         submittedCount: report.submittedCount || 0,
                         gradedCount: report.gradedCount || 0,
                         totalStudents: report.totalStudents || 0
@@ -131,7 +203,7 @@ export function useHomeworkManagement() {
                                 description: report.reportDescription || report.description,
                                 deadline: report.deadline,
                                 totalScore: report.totalScore,
-                                status: report.status || 'ONGOING',
+                                status: report.status || 1,
                                 submittedCount: report.submittedCount || 0,
                                 gradedCount: report.gradedCount || 0,
                                 totalStudents: report.totalStudents || 0
@@ -202,14 +274,13 @@ export function useHomeworkManagement() {
             formData.append('reportDescription', homeworkForm.description)
             formData.append('deadline', homeworkForm.deadline)
             formData.append('totalScore', homeworkForm.totalScore)
-            formData.append('status', 'DRAFT') // 设置状态为草稿
-
+            formData.append('status', 0) // 设置状态为草稿
             // 添加附件（如果有）
             if (fileList.value.length > 0) {
                 formData.append('attachment', fileList.value[0].raw)
             }
 
-            // 调用保存草稿API（使用相同的创建接口，但状态为DRAFT）
+            // 调用保存草稿API (使用相同的创建接口，但状态为DRAFT)
             const response = await createLabReport(formData)
 
             if (response.success) {
@@ -238,9 +309,7 @@ export function useHomeworkManagement() {
         try {
             await formRef.value.validate()
             submitting.value = true
-
             const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
-
             // 创建FormData对象
             const formData = new FormData()
             formData.append('courseId', homeworkForm.courseId)
@@ -252,7 +321,6 @@ export function useHomeworkManagement() {
 
             // 添加附件（如果有）
             if (fileList.value.length > 0) {
-                // 只上传第一个文件（根据后端API限制）
                 formData.append('attachment', fileList.value[0].raw)
             }
 
@@ -264,6 +332,7 @@ export function useHomeworkManagement() {
                 dialogVisible.value = false
                 loadHomeworks()
             } else {
+                console.log(response.message)
                 ElMessage.error(response.message || '作业发布失败')
             }
         } catch (error) {
@@ -404,9 +473,9 @@ export function useHomeworkManagement() {
     // 获取状态类型
     const getStatusType = (status) => {
         const types = {
-            ONGOING: 'success',
-            CLOSED: 'info',
-            DRAFT: 'warning'
+            1: 'success',
+            2: 'info',
+            0: 'warning'
         }
         return types[status] || 'info'
     }
@@ -414,11 +483,11 @@ export function useHomeworkManagement() {
     // 获取状态文本
     const getStatusText = (status) => {
         const texts = {
-            ONGOING: '进行中',
-            CLOSED: '已截止',
-            DRAFT: '草稿'
+            1: '进行中',
+            2: '已截止',
+            0: '草稿'
         }
-        return texts[status] || '未知'
+        return texts[status] || '进行中'
     }
 
     // 格式化日期
@@ -459,6 +528,11 @@ export function useHomeworkManagement() {
         homeworkForm,
         fileList,
         rules,
+        bankDialogVisible,
+        bankLoading,
+        bankQuestions,
+        bankSearchKeyword,
+        selectedQuestions,
         loadCourses,
         loadHomeworks,
         showCreateDialog,
@@ -474,6 +548,11 @@ export function useHomeworkManagement() {
         getStatusText,
         formatDate,
         getSubmitProgress,
-        getProgressColor
+        getProgressColor,
+        openQuestionBank,
+        searchBank,
+        handleBankSelection,
+        confirmImportQuestions,
+        getQuestionTypeText
     }
 }

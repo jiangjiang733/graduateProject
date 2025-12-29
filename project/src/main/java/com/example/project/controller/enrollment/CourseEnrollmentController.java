@@ -17,10 +17,10 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/enrollment")
 public class CourseEnrollmentController {
-    
+
     @Autowired
     private CourseEnrollmentService enrollmentService;
-    
+
     /**
      * 学生申请报名
      * POST /api/enrollment/apply
@@ -34,7 +34,7 @@ public class CourseEnrollmentController {
             return Result.error(e.getMessage());
         }
     }
-    
+
     /**
      * 检查学生是否已报名某课程
      * GET /api/enrollment/check?studentId={studentId}&courseId={courseId}
@@ -50,7 +50,7 @@ public class CourseEnrollmentController {
             return Result.error(e.getMessage());
         }
     }
-    
+
     /**
      * 获取学生的报名列表
      * GET /api/enrollment/student/{studentId}
@@ -64,7 +64,7 @@ public class CourseEnrollmentController {
             return Result.error(e.getMessage());
         }
     }
-    
+
     /**
      * 获取课程的报名列表（教师用）
      * GET /api/enrollment/course/{courseId}
@@ -78,7 +78,21 @@ public class CourseEnrollmentController {
             return Result.error(e.getMessage());
         }
     }
-    
+
+    /**
+     * 获取教师所有课程的报名列表
+     * GET /api/enrollment/teacher/{teacherId}
+     */
+    @GetMapping("/teacher/{teacherId}")
+    public Result<List<Map<String, Object>>> getTeacherEnrollments(@PathVariable String teacherId) {
+        try {
+            List<Map<String, Object>> enrollments = enrollmentService.getTeacherEnrollments(teacherId);
+            return Result.success(enrollments);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
     /**
      * 教师审核报名申请
      * PUT /api/enrollment/{enrollmentId}/review
@@ -89,20 +103,18 @@ public class CourseEnrollmentController {
             @RequestBody EnrollmentReviewDTO reviewDTO) {
         try {
             enrollmentService.reviewEnrollment(
-                enrollmentId, 
-                reviewDTO.getStatus(), 
-                reviewDTO.getReason()
-            );
-            
-            String message = "approved".equals(reviewDTO.getStatus()) ? 
-                "报名申请已通过" : "报名申请已拒绝";
-            
+                    enrollmentId,
+                    reviewDTO.getStatus(),
+                    reviewDTO.getReason());
+
+            String message = "approved".equals(reviewDTO.getStatus()) ? "报名申请已通过" : "报名申请已拒绝";
+
             return Result.success(message);
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }
     }
-    
+
     /**
      * 取消报名
      * DELETE /api/enrollment/{enrollmentId}

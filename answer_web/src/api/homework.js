@@ -11,28 +11,23 @@ import { API_BASE_URL } from './request'
  * @returns {Promise}
  */
 export const createLabReport = (formData) => {
-  const token = localStorage.getItem('token') || localStorage.getItem('teacherToken') || localStorage.getItem('t_token')
-  
-  return axios.post(`${API_BASE_URL}/lab-report`, formData, {
+  return request.post('/lab-report', formData, {
     headers: {
-      'Authorization': token ? `Bearer ${token}` : ''
-      // 不要手动设置 Content-Type，让浏览器自动设置 multipart/form-data 和 boundary
+      'Content-Type': 'multipart/form-data'
     }
   })
 }
 
 /**
- * 更新实验报告/作业
+ * 更新作业
  * @param {number} reportId - 报告ID
  * @param {FormData} formData - 表单数据
  * @returns {Promise}
  */
 export const updateLabReport = (reportId, formData) => {
-  const token = localStorage.getItem('token') || localStorage.getItem('teacherToken') || localStorage.getItem('t_token')
-  
-  return axios.put(`${API_BASE_URL}/lab-report/${reportId}`, formData, {
+  return request.put(`/lab-report/${reportId}`, formData, {
     headers: {
-      'Authorization': token ? `Bearer ${token}` : ''
+      'Content-Type': 'multipart/form-data'
     }
   })
 }
@@ -106,7 +101,7 @@ export const submitLabReport = (reportId, submissionData, attachment) => {
     formData.append('attachment', attachment)
   }
 
-  return axios.post(`${API_BASE_URL}/lab-report/submit`, formData, {
+  return request.post('/lab-report/submit', formData, {
     headers: {
       'Content-Type': 'multipart/form-data'
     }
@@ -146,7 +141,7 @@ export const updateSubmission = (studentReportId, content, attachment) => {
     formData.append('attachment', attachment)
   }
 
-  return axios.put(`${API_BASE_URL}/lab-report/submission/${studentReportId}`, formData, {
+  return request.put(`/lab-report/submission/${studentReportId}`, formData, {
     headers: {
       'Content-Type': 'multipart/form-data'
     }

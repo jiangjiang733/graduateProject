@@ -225,98 +225,73 @@
                 <div class="comments-list" v-loading="commentsLoading">
                   <el-empty 
                     v-if="comments.length === 0" 
-                    description="暂无评论，快来发表第一条评论吧"
-                    :image-size="80"
+                    description="暂无讨论，快来发表你的见解吧"
+                    :image-size="100"
                   />
+                  
                   <div 
                     v-else
                     v-for="comment in comments" 
                     :key="comment.commentId"
-                    class="comment-item"
+                    class="comment-card glass-panel"
                   >
-                    <div class="comment-avatar">
-                      <el-avatar :size="40">
-                        {{ comment.userName?.charAt(0) || 'U' }}
-                      </el-avatar>
-                    </div>
-                    <div class="comment-content">
-                      <div class="comment-header">
-                        <span class="comment-author">{{ comment.userName }}</span>
-                        <el-tag 
-                          v-if="comment.userType === 'TEACHER'" 
-                          type="warning" 
-                          size="small"
-                        >
-                          教师
-                        </el-tag>
-                        <span class="comment-time">{{ formatCommentTime(comment.createTime) }}</span>
+                    <div class="comment-main">
+                      <div class="user-avatar-wrapper">
+                         <el-avatar :size="48" :src="getUserAvatar(comment.userAvatar)" class="premium-avatar" />
+                         <div v-if="comment.userType === 'TEACHER'" class="teacher-badge-glow"></div>
                       </div>
-                      <div class="comment-text">{{ comment.content }}</div>
-                      <div class="comment-actions">
-                        <el-button 
-                          text 
-                          size="small"
-                          @click="showReplyInput(comment)"
-                        >
-                          <el-icon><ChatLineRound /></el-icon>
-                          回复
-                        </el-button>
-                      </div>
+                      
+                      <div class="comment-body-rich">
+                        <div class="comment-header-row">
+                          <span class="author-name" :class="{ 'is-teacher': comment.userType === 'TEACHER' }">
+                            {{ comment.userName }}
+                            <el-tag v-if="comment.userType === 'TEACHER'" type="danger" size="small" effect="dark" class="role-tag">教师</el-tag>
+                          </span>
+                          <span class="post-time">{{ formatCommentTime(comment.createTime) }}</span>
+                        </div>
+                        
+                        <div class="comment-text-content">{{ comment.content }}</div>
+                        
+                        <div class="comment-footer-actions">
+                          <el-button link class="action-btn" @click="showReplyInput(comment)">
+                            <el-icon><ChatDotRound /></el-icon> 回复
+                          </el-button>
+                        </div>
 
-                      <!-- 回复列表 -->
-                      <div 
-                        v-if="comment.replies && comment.replies.length > 0"
-                        class="replies-list"
-                      >
-                        <div 
-                          v-for="reply in comment.replies"
-                          :key="reply.commentId"
-                          class="reply-item"
-                        >
-                          <div class="reply-avatar">
-                            <el-avatar :size="32">
-                              {{ reply.userName?.charAt(0) || 'U' }}
-                            </el-avatar>
-                          </div>
-                          <div class="reply-content">
-                            <div class="reply-header">
-                              <span class="reply-author">{{ reply.userName }}</span>
-                              <el-tag 
-                                v-if="reply.userType === 'TEACHER'" 
-                                type="warning" 
-                                size="small"
-                              >
-                                教师
-                              </el-tag>
-                              <span class="reply-time">{{ formatCommentTime(reply.createTime) }}</span>
+                        <!-- Nested Replies (Standard Layout) -->
+                        <div v-if="comment.replies && comment.replies.length > 0" class="replies-container-modern">
+                          <div 
+                            v-for="reply in comment.replies"
+                            :key="reply.commentId"
+                            class="reply-item-modern"
+                          >
+                            <el-avatar :size="32" :src="getUserAvatar(reply.userAvatar)" class="small-avatar" />
+                            <div class="reply-detail">
+                              <div class="reply-user-info">
+                                <span class="reply-name" :class="{ 'is-teacher': reply.userType === 'TEACHER' }">
+                                  {{ reply.userName }}
+                                  <el-tag v-if="reply.userType === 'TEACHER'" type="danger" size="small" effect="plain">教师</el-tag>
+                                </span>
+                                <span class="reply-time-text">{{ formatCommentTime(reply.createTime) }}</span>
+                              </div>
+                              <div class="reply-message">{{ reply.content }}</div>
                             </div>
-                            <div class="reply-text">{{ reply.content }}</div>
                           </div>
                         </div>
-                      </div>
 
-                      <!-- 回复输入框 -->
-                      <div 
-                        v-if="replyingTo === comment.commentId"
-                        class="reply-input-area"
-                      >
-                        <el-input
-                          v-model="replyContent"
-                          type="textarea"
-                          :rows="2"
-                          :placeholder="`回复 ${comment.userName}...`"
-                          maxlength="500"
-                        />
-                        <div class="reply-actions">
-                          <el-button size="small" @click="cancelReply">取消</el-button>
-                          <el-button 
-                            type="primary" 
-                            size="small"
-                            :loading="replySubmitting"
-                            @click="submitReply(comment.commentId)"
-                          >
-                            回复
-                          </el-button>
+                        <!-- Quick Reply Input -->
+                        <div v-if="replyingTo === comment.commentId" class="quick-reply-box slide-down">
+                          <el-input
+                            v-model="replyContent"
+                            type="textarea"
+                            :rows="2"
+                            :placeholder="`回复 @${comment.userName}...`"
+                            maxlength="200"
+                          />
+                          <div class="reply-submit-row">
+                             <el-button size="small" rounded @click="cancelReply">取消</el-button>
+                             <el-button type="primary" size="small" rounded :loading="replySubmitting" @click="submitReply(comment.commentId)">发送回复</el-button>
+                          </div>
                         </div>
                       </div>
                     </div>

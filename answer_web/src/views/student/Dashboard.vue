@@ -1,10 +1,10 @@
 <template>
-  <div class="student-dashboard">
-    <!-- 欢迎区域 -->
-    <div class="welcome-section">
-      <div class="welcome-text">
-        <h1>你好，{{ userInfo.username || '同学' }} 👋</h1>
-        <p>准备好开始今天的学习了吗？你还有 {{ todoList.length }} 项待办事项。</p>
+  <div class="dashboard-container">
+    <!-- 欢迎横幅 -->
+    <div class="welcome-banner">
+      <div class="welcome-content">
+        <h1 class="welcome-title">你好，{{ userInfo.username || '同学' }} 👋</h1>
+        <p class="welcome-subtitle">准备好开始今天的学习了吗？你还有 {{ todoList.length }} 项待办事项。</p>
       </div>
       <div class="search-box">
         <el-input
@@ -16,122 +16,110 @@
       </div>
     </div>
 
-    <div class="dashboard-layout">
-      <!-- 左侧主内容 -->
-      <div class="main-content">
-        <!-- 我的课程 -->
-        <div class="section-container">
-          <div class="section-header">
-            <h2>
-              <el-icon><Reading /></el-icon>
-              最近课程
-            </h2>
-            <el-button link type="primary" @click="viewAllCourses">查看全部</el-button>
-          </div>
-          
-          <div v-if="loading" class="loading-skeleton">
-            <el-skeleton :rows="3" animated />
-          </div>
-          
-          <div v-else-if="courses.length === 0" class="empty-state">
-            <el-empty description="还没有加入任何课程">
-              <el-button type="primary" @click="viewAllCourses">去选课</el-button>
-            </el-empty>
-          </div>
-          
-          <div v-else class="course-grid">
-            <div 
-              v-for="course in courses" 
-              :key="course.id" 
-              class="course-card"
-              @click="continueLearning(course.id)"
-            >
-              <div class="course-cover">
-                <img :src="course.image || 'https://placeholder.com/300x200'" :alt="course.courseName">
-                <span class="course-tag">{{ course.classification || '综合' }}</span>
-              </div>
-              <div class="course-info">
-                <h3 class="course-title" :title="course.courseName">{{ course.courseName }}</h3>
-                <div class="course-teacher">
-                  <el-icon><User /></el-icon>
-                  {{ course.teacherName || '未知教师' }}
-                </div>
-                <div class="course-progress">
-                  <div class="progress-text">
-                    <span>学习进度</span>
-                    <span>{{ course.progress }}%</span>
-                  </div>
-                  <el-progress 
-                    :percentage="course.progress" 
-                    :show-text="false" 
-                    :stroke-width="6"
-                  />
-                </div>
-              </div>
-            </div>
+    <!-- 统计行 (新增，使用 Mock 数据或从 activities 提取) -->
+    <div class="statistics-row">
+      <div class="stat-card">
+        <div class="stat-content">
+          <div class="stat-icon course-icon"><el-icon><Reading /></el-icon></div>
+          <div class="stat-info">
+            <div class="stat-value">{{ courses.length }}</div>
+            <div class="stat-label">在修课程</div>
           </div>
         </div>
-
-        <!-- 最近活动 -->
-        <div class="section-container">
-          <div class="section-header">
-            <h2>
-              <el-icon><Clock /></el-icon>
-              最近活动
-            </h2>
+      </div>
+      <div class="stat-card">
+        <div class="stat-content">
+          <div class="stat-icon homework-icon"><el-icon><Edit /></el-icon></div>
+          <div class="stat-info">
+            <div class="stat-value">{{ todoList.length }}</div>
+            <div class="stat-label">待办事项</div>
           </div>
-          <el-card class="activity-card" shadow="hover">
-            <el-timeline class="activity-timeline">
-              <el-timeline-item
-                v-for="activity in activities"
-                :key="activity.id"
-                :timestamp="activity.timestamp"
-                :color="activity.color"
-              >
-                <div class="activity-content">
-                  <h4>{{ activity.content }}</h4>
-                  <p>{{ activity.type === 'homework' ? '作业提交' : '课程学习' }}</p>
-                </div>
-              </el-timeline-item>
-            </el-timeline>
-          </el-card>
+        </div>
+      </div>
+      <!-- 更多统计项可扩展 -->
+    </div>
+
+    <div class="content-row">
+      <!-- 左侧主内容：课程列表 -->
+      <div class="section-card">
+        <div class="card-header">
+          <div class="card-title">
+            <el-icon><Reading /></el-icon>
+            最近课程
+          </div>
+          <el-button link type="primary" class="card-action" @click="viewAllCourses">查看全部</el-button>
+        </div>
+        
+        <div v-if="loading" class="loading-skeleton">
+          <el-skeleton :rows="3" animated />
+        </div>
+        
+        <div v-else-if="courses.length === 0" class="empty-state">
+          <el-empty description="还没有加入任何课程">
+            <el-button type="primary" @click="viewAllCourses">去选课</el-button>
+          </el-empty>
+        </div>
+        
+        <div v-else class="course-list">
+          <div 
+            v-for="course in courses" 
+            :key="course.id" 
+            class="course-item"
+            @click="continueLearning(course.id)"
+          >
+            <div class="course-cover">
+              <img :src="course.image || 'https://placeholder.com/300x200'" :alt="course.courseName">
+            </div>
+            <div class="course-info">
+              <div class="course-name" :title="course.courseName">{{ course.courseName }}</div>
+              <div class="course-meta">
+                <span><el-icon><User /></el-icon> {{ course.teacherName || '未知教师' }}</span>
+                <span>{{ course.classification || '综合' }}</span>
+              </div>
+              <div class="course-progress">
+                <el-progress 
+                  :percentage="course.progress" 
+                  :stroke-width="6"
+                  style="width: 100px"
+                />
+                <span class="text-xs text-gray-500">{{ course.progress }}%</span>
+              </div>
+            </div>
+            <div class="course-action">
+               <el-icon><ArrowRight /></el-icon>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- 右侧侧边栏 -->
-      <div class="sidebar">
-        <!-- 待办事项 -->
-        <el-card class="todo-card" shadow="hover">
-          <template #header>
-            <div class="section-header" style="margin-bottom: 0;">
-              <h3>待办事项</h3>
-              <el-tag type="danger" effect="dark" round size="small">{{ todoList.length }}</el-tag>
+      <!-- 右侧侧边栏：待办事项 -->
+      <div class="sidebar-column">
+        <div class="section-card">
+          <div class="card-header">
+            <div class="card-title">
+              <el-icon><List /></el-icon>
+              待办事项
+              <el-tag type="danger" round size="small" style="margin-left: 8px">{{ todoList.length }}</el-tag>
             </div>
-          </template>
+          </div>
           <div class="todo-list">
             <div 
               v-for="item in todoList" 
               :key="item.id" 
               class="todo-item"
-              :class="{ urgent: item.urgent }"
             >
               <div class="todo-icon">
                 <el-icon v-if="item.type === 'homework'"><Edit /></el-icon>
-                <el-icon v-else-if="item.type === 'exam'"><document /></el-icon>
-                <el-icon v-else><collection /></el-icon>
+                <el-icon v-else-if="item.type === 'exam'"><Document /></el-icon>
+                <el-icon v-else><Collection /></el-icon>
               </div>
-              <div class="todo-info">
+              <div class="todo-content">
                 <div class="todo-title" :title="item.title">{{ item.title }}</div>
-                <div class="todo-deadline">截止: {{ item.deadline }}</div>
+                <div class="todo-desc">截止: {{ item.deadline }}</div>
               </div>
             </div>
           </div>
-        </el-card>
-
-        <!-- 日历 -->
-        <el-card class="calendar-card" shadow="hover">
-          <el-calendar v-model="currentDate" class="mini-calendar" />
-        </el-card>
+        </div>
       </div>
     </div>
   </div>
@@ -139,7 +127,7 @@
 
 <script setup>
 import { 
-  Search, Reading, User, Clock, Edit, Document, Collection 
+  Search, Reading, User, Clock, Edit, Document, Collection, List, ArrowRight
 } from '@element-plus/icons-vue'
 import { useStudentDashboard } from '@/assets/js/student/dashboard.js'
 
@@ -159,4 +147,10 @@ const {
 
 <style scoped>
 @import '@/assets/css/student/dashboard.css';
+
+.sidebar-column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
 </style>

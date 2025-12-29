@@ -17,13 +17,14 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/exam")
 public class ExamController {
-    
+
     @Autowired
     private ExamService examService;
     @Autowired
     private AiQuestionGeneratorService aiQuestionService;
+
     /**
-     手动创建考试
+     * 手动创建考试
      */
     @PostMapping
     public Result<Long> createExam(@RequestBody ExamCreateDTO examDTO) {
@@ -34,7 +35,7 @@ public class ExamController {
             return Result.error(e.getMessage());
         }
     }
-    
+
     /**
      * 获取课程考试列表
      */
@@ -47,7 +48,7 @@ public class ExamController {
             return Result.error(e.getMessage());
         }
     }
-    
+
     /**
      * 获取考试详情（包含试题）
      */
@@ -63,7 +64,7 @@ public class ExamController {
             return Result.error(e.getMessage());
         }
     }
-    
+
     /**
      * 更新考试
      */
@@ -76,7 +77,7 @@ public class ExamController {
             return Result.error(e.getMessage());
         }
     }
-    
+
     /**
      * 发布考试
      */
@@ -89,7 +90,7 @@ public class ExamController {
             return Result.error(e.getMessage());
         }
     }
-    
+
     /**
      * 删除考试
      */
@@ -102,7 +103,7 @@ public class ExamController {
             return Result.error(e.getMessage());
         }
     }
-    
+
     /**
      * 获取考试统计
      */
@@ -115,6 +116,20 @@ public class ExamController {
             return Result.error(e.getMessage());
         }
     }
+
+    /**
+     * 保存考试试题
+     */
+    @PostMapping("/{examId}/questions")
+    public Result<String> saveExamQuestions(@PathVariable Long examId, @RequestBody List<ExamQuestionDTO> questions) {
+        try {
+            examService.saveExamQuestions(examId, questions);
+            return Result.success("试题保存成功");
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
     /**
      * AI生成题目（仅生成，不保存）
      * 返回题目列表供前端预览和编辑
@@ -125,17 +140,17 @@ public class ExamController {
         System.out.println("课程名称: " + request.getCourseName());
         System.out.println("题目数量: " + request.getQuestionCount());
         System.out.println("题型: " + request.getQuestionTypes());
-        
+
         try {
             // 参数校验
             if (request.getCourseName() == null || request.getCourseName().trim().isEmpty()) {
                 return Result.error("课程名称不能为空");
             }
-            
+
             if (request.getQuestionCount() == null || request.getQuestionCount() <= 0) {
                 return Result.error("题目数量必须大于0");
             }
-            
+
             if (request.getQuestionTypes() == null || request.getQuestionTypes().trim().isEmpty()) {
                 return Result.error("请选择题型");
             }
@@ -144,8 +159,7 @@ public class ExamController {
             List<ExamQuestionDTO> aiQuestions = aiQuestionService.generateQuestions(
                     request.getCourseName(),
                     request.getQuestionCount(),
-                    request.getQuestionTypes()
-            );
+                    request.getQuestionTypes());
 
             if (aiQuestions.isEmpty()) {
                 return Result.error("AI 未生成有效题目，请重试");
@@ -153,7 +167,7 @@ public class ExamController {
 
             System.out.println("AI成功生成 " + aiQuestions.size() + " 道题目");
             System.out.println("=== AI生成题目完成 ===\n");
-            
+
             return Result.success("AI 题目生成成功", aiQuestions);
         } catch (Exception e) {
             System.err.println("AI生成题目失败: " + e.getMessage());
@@ -161,7 +175,7 @@ public class ExamController {
             return Result.error("AI 生成题目失败: " + e.getMessage());
         }
     }
-    
+
     /**
      * AI智能创建考试
      * 根据课程名称自动生成题目并创建考试
@@ -175,7 +189,7 @@ public class ExamController {
         System.out.println("课程名称: " + request.getCourseName());
         System.out.println("题目数量: " + request.getQuestionCount());
         System.out.println("题型: " + request.getQuestionTypes());
-        
+
         try {
             // 参数校验
             if (request.getCourseId() == null || request.getTeacherId() == null ||
@@ -183,23 +197,22 @@ public class ExamController {
                 System.err.println("参数校验失败：缺少必要参数");
                 return Result.error("缺少必要参数");
             }
-            
+
             if (request.getStartTime() == null || request.getEndTime() == null) {
                 System.err.println("参数校验失败：缺少考试时间");
                 return Result.error("请设置考试开始和结束时间");
             }
 
             System.out.println("开始调用AI生成题目...");
-            
+
             // 调用 AI 生成题目
             List<ExamQuestionDTO> aiQuestions = aiQuestionService.generateQuestions(
                     request.getCourseName(),
                     request.getQuestionCount(),
-                    request.getQuestionTypes()
-            );
+                    request.getQuestionTypes());
 
             System.out.println("AI生成题目数量: " + aiQuestions.size());
-            
+
             if (aiQuestions.isEmpty()) {
                 System.err.println("AI未生成有效题目");
                 return Result.error("AI 未生成有效题目，请重试");
@@ -221,15 +234,15 @@ public class ExamController {
             System.out.println("考试总分: " + examDTO.getTotalScore());
             System.out.println("及格分: " + examDTO.getPassScore());
             System.out.println("考试时长: " + examDTO.getDuration() + " 分钟");
-            
+
             System.out.println("开始创建考试...");
-            
+
             // 调用原有创建逻辑
             Long examId = examService.createExam(examDTO);
-            
+
             System.out.println("考试创建成功！考试ID: " + examId);
             System.out.println("=== AI创建考试完成 ===\n");
-            
+
             return Result.success("AI 考试创建成功", examId);
         } catch (Exception e) {
             System.err.println("AI创建考试失败: " + e.getMessage());

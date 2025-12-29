@@ -23,18 +23,19 @@
       <div class="filter-container">
         <div class="filter-tabs">
           <el-radio-group v-model="currentFilter" @change="handleFilterChange">
-            <el-radio-button value="draft">
-              <el-icon><Document /></el-icon>
-              草稿 ({{ stats.draftCourses }})
-            </el-radio-button>
-            <el-radio-button value="published">
-              <el-icon><VideoPlay /></el-icon>
-              已发布 ({{ stats.activeCourses }})
-            </el-radio-button>
             <el-radio-button value="all">
               <el-icon><Folder /></el-icon>
               全部 ({{ stats.totalCourses }})
             </el-radio-button>
+            <el-radio-button value="publish">
+              <el-icon><VideoPlay /></el-icon>
+              已发布 ({{ stats.activeCourses }})
+            </el-radio-button>
+            <el-radio-button value="draft">
+              <el-icon><Document/></el-icon>
+              草稿 ({{ stats.draftCourses }})
+            </el-radio-button>
+
           </el-radio-group>
         </div>
         <div class="stats-info">
@@ -42,7 +43,6 @@
         </div>
       </div>
     </el-card>
-
     <!-- 加载状态 -->
     <div v-if="loading" class="loading-container">
       <el-skeleton :rows="6" animated />
@@ -152,6 +152,7 @@
 
 <script setup>
 import { useCourseManagement } from '@/assets/js/teacher/course-management.js'
+import {Document} from "@element-plus/icons-vue";
 
 const {
   courses,

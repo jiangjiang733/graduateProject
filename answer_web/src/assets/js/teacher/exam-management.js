@@ -252,6 +252,10 @@ export function useExamManagement() {
         return date.toLocaleString('zh-CN')
     }
 
+    const manageQuestions = (exam) => {
+        router.push(`/teacher/exam/${exam.examId}/questions`)
+    }
+
     onMounted(() => {
         loadCourses()
     })
@@ -274,6 +278,7 @@ export function useExamManagement() {
         saveAsDraft,
         submitExam,
         viewExam,
+        manageQuestions,
         viewScores,
         editExam,
         publishExam,

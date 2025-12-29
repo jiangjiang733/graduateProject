@@ -1,0 +1,208 @@
+/* Modern Glassmorphism Theme for Teacher Dashboard */
+:root {
+    --glass-bg: rgba(255, 255, 255, 0.2);
+    --glass-border: rgba(255, 255, 255, 0.3);
+    --glass-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    --glass-radius: 1rem;
+
+    --primary-emerald: #10b981;
+    --primary-emerald-light: #d1fae5;
+    --text-primary: #1f2937;
+    --text-secondary: #6b7280;
+}
+
+body {
+    background-color: #f8fafc;
+    color: var(--text-primary);
+}
+
+/* Background Gradients */
+.modern-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -10;
+    background-color: #f8fafc;
+    pointer-events: none;
+}
+
+.bg-blob-1 {
+    position: absolute;
+    top: -10%;
+    left: -10%;
+    width: 45%;
+    height: 45%;
+    border-radius: 50%;
+    background-color: #a7f3d0;
+    /* emerald-200 */
+    filter: blur(120px);
+    opacity: 0.4;
+    animation: pulse 8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.bg-blob-2 {
+    position: absolute;
+    bottom: -10%;
+    right: -10%;
+    width: 55%;
+    height: 55%;
+    border-radius: 50%;
+    background-color: #bfdbfe;
+    filter: blur(150px);
+    opacity: 0.4;
+}
+
+.bg-blob-3 {
+    position: absolute;
+    top: 20%;
+    right: 10%;
+    width: 35%;
+    height: 35%;
+    border-radius: 50%;
+    background-color: #f3e8ff;
+    filter: blur(100px);
+    opacity: 0.3;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 0.4;
+    }
+
+    50% {
+        opacity: 0.6;
+    }
+}
+
+/* Glass Utilities */
+.glass-panel {
+    background-color: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: var(--glass-shadow);
+    border-radius: var(--glass-radius);
+    transition: all 0.3s ease;
+}
+
+.glass-panel:hover {
+    background-color: rgba(255, 255, 255, 0.25);
+}
+
+.glass-panel.active {
+    background-color: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(40px);
+    -webkit-backdrop-filter: blur(40px);
+    border-color: rgba(255, 255, 255, 0.5);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* Typography & Layout Helpers */
+.text-emerald {
+    color: var(--primary-emerald);
+}
+
+.text-gray-800 {
+    color: #1f2937;
+}
+
+.text-gray-600 {
+    color: #4b5563;
+}
+
+.text-gray-500 {
+    color: #6b7280;
+}
+
+.text-gray-400 {
+    color: #9ca3af;
+}
+
+.font-bold {
+    font-weight: 700;
+}
+
+.font-black {
+    font-weight: 900;
+}
+
+.flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.flex-between {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.gap-2 {
+    gap: 0.5rem;
+}
+
+.gap-4 {
+    gap: 1rem;
+}
+
+.gap-6 {
+    gap: 1.5rem;
+}
+
+.p-4 {
+    padding: 1rem;
+}
+
+.p-6 {
+    padding: 1.5rem;
+}
+
+.rounded-xl {
+    border-radius: 0.75rem;
+}
+
+.rounded-2xl {
+    border-radius: 1rem;
+}
+
+/* Grid Systems */
+.grid-cols-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+}
+
+.grid-cols-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+}
+
+.grid-cols-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .grid-cols-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .grid-cols-3 {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .grid-cols-4 {
+        grid-template-columns: 1fr;
+    }
+
+    .grid-cols-2 {
+        grid-template-columns: 1fr;
+    }
+}

@@ -1,96 +1,154 @@
-/* 一级评论容器 */
 .comment-item-container {
     display: flex;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 1px dashed #ebeef5;
-    /* 虚线分隔 */
+    padding: 16px 0;
+    border-bottom: 1px solid #f2f3f5;
+    transition: background-color 0.2s;
 }
 
-/* 回复的样式 */
-.comment-item-container.is-reply {
-    /* 移除左侧边框，让子回复自然嵌套 */
-    padding-left: 0;
-    margin-top: 10px;
-    margin-left: 55px;
-    /* 缩进 */
+.comment-item-container:not(.is-reply):last-child {
     border-bottom: none;
 }
 
 .comment-avatar {
     flex-shrink: 0;
-    margin-right: 15px;
+    margin-right: 16px;
+    border: 1px solid #e5e7eb;
 }
 
 .comment-body {
     flex-grow: 1;
+    min-width: 0;
 }
 
 .comment-meta {
     display: flex;
     align-items: center;
-    margin-bottom: 5px;
+    margin-bottom: 6px;
+    line-height: 1.2;
 }
 
 .comment-author {
-    font-weight: 700;
-    color: #303133;
-    font-size: 15px;
-    margin-right: 10px;
+    font-weight: 600;
+    color: #2c3e50;
+    font-size: 14px;
+    margin-right: 8px;
+    cursor: pointer;
+}
+
+.comment-author:hover {
+    color: #409eff;
+}
+
+.tag-teacher {
+    margin-right: 8px;
+    height: 18px;
+    line-height: 16px;
+    padding: 0 4px;
 }
 
 .comment-time {
-    color: #909399;
+    color: #9499a0;
     font-size: 12px;
-    margin-left: 10px;
 }
 
 .comment-content {
-    font-size: 14px;
-    color: #303133;
-    /* 评论内容颜色加深 */
+    font-size: 15px;
+    color: #18191c;
     line-height: 1.6;
-    margin: 8px 0;
-    white-space: pre-wrap;
+    margin: 4px 0 8px;
+    word-break: break-word;
+}
+
+.reply-separator {
+    color: #9499a0;
+    margin: 0 4px;
+    font-size: 13px;
 }
 
 .reply-target {
-    font-weight: 600;
     color: #409eff;
-    /* 蓝色突出被回复人 */
-    margin-right: 5px;
+    font-weight: 500;
+    margin-right: 4px;
+    cursor: pointer;
+    font-size: 13px;
 }
 
-/* 评论操作区域 */
+/* Actions */
 .comment-actions {
     display: flex;
-    gap: 10px;
-    font-size: 13px;
-    margin-bottom: 10px;
+    gap: 16px;
+    font-size: 12px;
+    color: #9499a0;
+    margin-bottom: 8px;
 }
 
-.comment-actions .el-button {
-    height: auto;
-    padding: 0;
+.action-btn {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: color 0.2s;
 }
 
-/* 回复表单样式 */
+.action-btn:hover {
+    color: #409eff;
+}
+
+.action-btn.delete:hover {
+    color: #f56c6c;
+}
+
+/* Reply Form */
 .reply-form-wrapper {
-    margin-top: 10px;
-    padding: 10px;
-    border: 1px solid #dcdfe6;
-    border-radius: 4px;
-    background-color: #fcfcfc;
+    margin: 12px 0;
+    padding: 12px;
+    background-color: #f1f2f5;
+    border-radius: 8px;
 }
 
 .reply-actions {
     display: flex;
     justify-content: flex-end;
-    margin-top: 10px;
+    margin-top: 8px;
 }
 
-/* 子回复列表 */
-.replies-list {
-    margin-top: 15px;
-    /* 子回复将通过递归的 .is-reply 样式进行缩进 */
+/* --- Child Replies (Mainstream "Gray Box" Style) --- */
+
+/* The wrapper for ALL sub-replies under a root comment */
+.replies-box {
+    margin-top: 12px;
+    background-color: #f9fafb;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+/* Individual Reply Item */
+.comment-item-container.is-reply {
+    padding: 8px 0;
+    margin-top: 0;
+    margin-left: 0;
+    /* Reset previous left margin */
+    border-bottom: none;
+}
+
+.comment-item-container.is-reply .comment-avatar {
+    margin-right: 12px;
+    /* CSS overrides specific size if element style exists, we'll fix in Vue too */
+}
+
+.comment-item-container.is-reply .comment-author {
+    font-size: 13px;
+}
+
+.comment-item-container.is-reply .comment-content {
+    font-size: 14px;
+    margin: 2px 0 4px;
+}
+
+/* Deeply nested replies (Level 2+) shouldn't have another gray box, just list them */
+.comment-item-container.is-reply .replies-box {
+    margin-top: 0;
+    padding: 0 0 0 36px;
+    /* Indent sub-replies slightly */
+    background-color: transparent;
 }

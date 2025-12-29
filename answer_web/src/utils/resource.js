@@ -23,7 +23,7 @@ export const getCourseImage = (image) => {
  * @returns {string} 完整的头像URL
  */
 export const getUserAvatar = (avatar) => {
-  if (!avatar) return 'https://cube.elemecdn.com/9/c2/f0ee8a3c7c9636ef921315944d5671d8.png'
+  if (!avatar) return 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
   if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
     return avatar
   }
@@ -59,11 +59,11 @@ export const getDownloadUrl = (url) => {
  */
 export const formatFileSize = (bytes) => {
   if (!bytes || bytes === 0) return '0 B'
-  
+
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
-  
+
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 

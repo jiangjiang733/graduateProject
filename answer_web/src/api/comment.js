@@ -43,6 +43,16 @@ export const getRecentComments = (courseId, limit = 10) => {
 }
 
 /**
+ * 获取教师相关的所有评论
+ * @param {string} teacherId - 教师ID
+ * @param {Object} params - 分页和筛选参数
+ * @returns {Promise}
+ */
+export const getTeacherComments = (teacherId, params) => {
+  return request.get(`/course/comment/teacher/${teacherId}`, { params })
+}
+
+/**
  * 删除评论
  * @param {number} commentId - 评论ID
  * @returns {Promise}
@@ -56,5 +66,6 @@ export default {
   getChapterComments,
   getCourseComments,
   getRecentComments,
+  getTeacherComments,
   deleteComment
 }

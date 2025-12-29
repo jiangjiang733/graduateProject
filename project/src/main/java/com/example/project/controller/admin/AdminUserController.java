@@ -15,7 +15,7 @@ import java.util.*;
 @CrossOrigin(origins = "*")
 public class AdminUserController {
 
-    // ==================== 学生管理 ====================
+    // 学生管理
 
     /**
      * 获取学生列表

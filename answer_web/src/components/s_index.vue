@@ -70,7 +70,6 @@ const handleLogout = () => {
 
       <el-main class="sIndex-main">
         <router-view></router-view>
-        <!-- 以下是默认主页内容，当路由为/sIndex/index时显示 -->
         <div v-if="$route.path === '/sIndex/index'" class="sIndex-section-title">进行中的课程</div>
         <el-row :gutter="16">
           <el-col :xs="24" :md="8">

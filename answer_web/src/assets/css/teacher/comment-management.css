@@ -63,8 +63,13 @@
 }
 
 @keyframes shimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
 }
 
 .stat-card:hover {
@@ -233,119 +238,109 @@
     gap: 8px;
 }
 
+/* ... existing code ... */
+
+/* 评论内容 */
 .comment-content {
     font-size: 15px;
-    line-height: 1.8;
-    color: #374151;
-    margin-bottom: 20px;
+    line-height: 1.6;
+    color: #18191c;
+    margin-bottom: 12px;
     padding-left: 56px;
-    font-weight: 500;
+    word-break: break-all;
 }
 
-/* 回复区域 */
+/* 回复区域 (Floor Mode) */
 .replies-section {
-    margin-top: 20px;
+    margin-top: 12px;
     padding-left: 56px;
 }
 
 .replies-header {
-    font-size: 15px;
-    color: #374151;
-    margin-bottom: 16px;
-    font-weight: 700;
-    letter-spacing: 0.3px;
+    display: none;
+    /* Hide explicit header in floor mode usually, or keep minimal */
 }
 
 .replies-list {
+    background-color: #f9fafb;
+    /* Gray Box floor */
+    border-radius: 8px;
+    padding: 12px 16px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 0;
+    /* Gap handled by padding/margin of items */
 }
 
 .reply-item {
-    padding: 16px 20px;
-    background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
-    border-radius: 12px;
-    border: 2px solid rgba(64, 158, 255, 0.1);
-    transition: all 0.3s ease;
+    padding: 8px 0;
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    transition: none;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
 }
 
 .reply-item:hover {
-    border-color: #409eff;
-    box-shadow: 0 4px 12px rgba(64, 158, 255, 0.1);
+    background: transparent;
+    transform: none;
+    box-shadow: none;
+    border: none;
+}
+
+.reply-item+.reply-item {
+    /* Optional separator */
+    /* border-top: 1px solid #eee; */
 }
 
 .reply-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
+    display: contents;
+    /* Flatten structure for inline flow if desired, or keep flex */
+    /* For standard floor: Avatar Name Content Time */
+}
+
+/* Custom Reply Layout for Floor Mode */
+.reply-item .el-avatar {
+    width: 24px !important;
+    height: 24px !important;
+    margin-top: 2px;
 }
 
 .reply-info {
+    flex: 1;
     display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
     gap: 8px;
-    align-items: center;
+    font-size: 14px;
 }
 
 .reply-user {
-    font-size: 14px;
-    font-weight: 500;
-    color: #303133;
+    font-weight: 600;
+    color: #61666d;
+    cursor: pointer;
 }
 
-.reply-time {
-    font-size: 12px;
-    color: #909399;
+.reply-user:hover {
+    color: #409eff;
 }
 
 .reply-content {
-    font-size: 14px;
-    color: #303133;
+    color: #18191c;
     line-height: 1.5;
 }
 
-/* 分页 */
-.pagination-container {
-    display: flex;
-    justify-content: center;
-    margin-top: 24px;
+.reply-time {
+    color: #9499a0;
+    font-size: 12px;
+    margin-left: auto;
+    /* Push time to right or keep inline */
 }
 
-/* 回复对话框 */
-.reply-dialog-content {
-    padding: 20px 0;
-}
-
-.original-comment {
-    padding: 20px 24px;
-    background: linear-gradient(135deg, #f8f9fb 0%, #f0f3f7 100%);
-    border-radius: 12px;
-    margin-bottom: 20px;
-    border: 2px solid rgba(64, 158, 255, 0.1);
-}
-
-.comment-user {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 16px;
-}
-
-.comment-user .user-name {
-    font-size: 16px;
-    font-weight: 700;
-    color: #1f2937;
-}
-
-.comment-text {
-    font-size: 15px;
-    color: #374151;
-    line-height: 1.8;
-    font-weight: 500;
-}
-
-/* 响应式设计 */
+/* Responsive */
 @media (max-width: 768px) {
     .comment-management {
         padding: 16px;
@@ -356,20 +351,7 @@
         align-items: stretch;
     }
 
-    .filter-left,
-    .filter-right {
-        width: 100%;
-    }
-
-    .comment-header {
-        flex-direction: column;
-        gap: 12px;
-    }
-
-    .comment-content {
-        padding-left: 0;
-    }
-
+    .comment-content,
     .replies-section {
         padding-left: 0;
     }

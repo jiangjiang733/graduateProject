@@ -35,9 +35,6 @@ export const getClassStudents = (classId) => {
 
 /**
  * 移除学生
- * @param {number} classId - 班级ID
- * @param {string} studentId - 学生ID
- * @returns {Promise}
  */
 export const removeStudent = (classId, studentId) => {
   return request.delete(`/class/${classId}/student/${studentId}`)

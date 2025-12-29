@@ -68,7 +68,7 @@ export const updateCourse = async (courseId, courseData) => {
   const token = localStorage.getItem('token') || localStorage.getItem('teacherToken') || localStorage.getItem('t_token')
 
   try {
-    // 修复：只保留 Authorization
+    // 只保留 Authorization
     const response = await axios.put(`${API_BASE_URL}/course/${courseId}`, formData, {
       headers: {
         'Authorization': token ? `Bearer ${token}` : ''
@@ -134,11 +134,11 @@ export const joinCourse = (studentId, courseId) => request.post('/course/analyti
 /**
  * 更新学生学习进度
  */
-export const updateStudentProgress = (studentId, courseId, progress, studyTime = 0) => 
+export const updateStudentProgress = (studentId, courseId, progress, studyTime = 0) =>
   request.post('/course/analytics/progress', null, { params: { studentId, courseId, progress, studyTime } })
 
 
-// ==================== 章节管理 API (重点修复区域) ====================
+// ==================== 章节管理 API  ====================
 
 export const getCourseChapters = (courseId) => request.get(`/course/chapter/list/${courseId}`)
 

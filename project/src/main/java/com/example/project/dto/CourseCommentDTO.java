@@ -13,28 +13,34 @@ import java.util.List;
  */
 @Data
 public class CourseCommentDTO implements Serializable {
-    
+
     private static final long serialVersionUID = 1L;
-    
+
     private Long commentId;
-    
+
     private String courseId;
-    
+
     private Long chapterId;
-    
+
     private String userId;
-    
+
     private String userName;
-    
+
     private String userType;
-    
+
+    private String userAvatar;
+
     private String content;
-    
+
     private Long parentId;
-    
+
+    private String targetUserId;
+
+    private String targetUserName;
+
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date createTime;
-    
+
     /**
      * 回复列表（子评论）
      */

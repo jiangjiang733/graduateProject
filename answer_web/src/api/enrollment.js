@@ -31,6 +31,15 @@ export const getCourseEnrollments = (courseId) => {
 }
 
 /**
+ * 获取教师所有课程的报名列表
+ * @param {string} teacherId - 教师ID
+ * @returns {Promise}
+ */
+export const getTeacherEnrollments = (teacherId) => {
+  return request.get(`/enrollment/teacher/${teacherId}`)
+}
+
+/**
  * 教师审核报名申请
  * @param {number} enrollmentId - 报名ID
  * @param {string} status - 状态 (approved/rejected)
@@ -69,6 +78,7 @@ export default {
   applyEnrollment,
   getStudentEnrollments,
   getCourseEnrollments,
+  getTeacherEnrollments,
   reviewEnrollment,
   cancelEnrollment,
   checkEnrollmentStatus

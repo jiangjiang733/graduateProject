@@ -1,115 +1,125 @@
 <template>
-  <div class="exam-management">
+  <div class="exam-management modern-page">
     <!-- 页面头部 -->
-    <div class="page-header">
-      <div class="header-content">
-        <div class="header-icon">
-          <el-icon :size="32"><Edit /></el-icon>
-        </div>
-        <div class="header-text">
-          <h2 class="page-title">考试管理</h2>
-          <p class="page-subtitle">创建考试、管理试题、查看成绩</p>
-        </div>
+    <div class="page-header animate-fade-in">
+      <div class="header-actions">
+        <!-- 统计或额外操作 -->
       </div>
-      <el-button type="primary" size="large" @click="showCreateDialog" class="create-btn">
-        <el-icon><Plus /></el-icon>
-        创建考试
-      </el-button>
     </div>
 
     <!-- 筛选和搜索 -->
-    <el-card class="filter-card" shadow="never">
-      <el-form :inline="true">
-        <el-form-item label="课程">
-          <el-select v-model="filterForm.courseId" placeholder="选择课程" style="width: 200px" @change="loadExams">
-            <el-option label="全部课程" value="" />
-            <el-option
-              v-for="course in courses"
-              :key="course.id"
-              :label="course.courseName || course.name"
-              :value="course.id"
-            />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="filterForm.status" placeholder="选择状态" style="width: 150px" @change="loadExams">
-            <el-option label="全部" value="" />
-            <el-option label="草稿" value="DRAFT" />
-            <el-option label="已发布" value="PUBLISHED" />
-            <el-option label="进行中" value="ONGOING" />
-            <el-option label="已结束" value="ENDED" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-input
-            v-model="filterForm.keyword"
-            placeholder="搜索考试标题"
-            style="width: 250px"
-            clearable
-            @keyup.enter="loadExams"
-          >
-            <template #prefix>
-              <el-icon><Search /></el-icon>
-            </template>
-          </el-input>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="loadExams">搜索</el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
+    <div class="filter-section glass-panel animate-slide-up">
+      <div class="filter-container">
+        <div class="filter-left">
+           <div class="filter-item">
+             <span class="filter-label">课程</span>
+             <el-select 
+               v-model="filterForm.courseId" 
+               placeholder="全部课程" 
+               class="glass-select stylish-select" 
+               @change="loadExams"
+               clearable
+             >
+              <el-option
+                v-for="course in courses"
+                :key="course.id"
+                :label="course.courseName || course.name"
+                :value="course.id"
+              />
+             </el-select>
+           </div>
+           <div class="filter-item">
+             <span class="filter-label">状态</span>
+             <el-select 
+               v-model="filterForm.status" 
+               placeholder="全部状态" 
+               class="glass-select stylish-select" 
+               @change="loadExams"
+               clearable
+             >
+              <el-option label="草稿" value="DRAFT" />
+              <el-option label="已发布" value="PUBLISHED" />
+              <el-option label="进行中" value="ONGOING" />
+              <el-option label="已结束" value="ENDED" />
+             </el-select>
+           </div>
+        </div>
+        
+        <div class="filter-right">
+          <div class="search-box">
+             <el-input
+              v-model="filterForm.keyword"
+              placeholder="搜索..."
+              class="glass-input stylish-input"
+              clearable
+              @keyup.enter="loadExams"
+            >
+              <template #prefix>
+                <el-icon class="search-icon"><Search /></el-icon>
+              </template>
+            </el-input>
+          </div>
+          <el-button class="glass-btn primary search-btn" @click="loadExams">
+             搜索
+          </el-button>
+          <el-button class="glass-btn create-btn" type="primary" @click="showCreateDialog">
+             <el-icon><Plus /></el-icon> 创建考试
+          </el-button>
+        </div>
+      </div>
+    </div>
 
     <!-- 考试列表 -->
-    <div v-loading="loading" class="exam-list">
-      <el-empty v-if="exams.length === 0" description="暂无考试，点击右上角创建考试" :image-size="200" />
-      
-      <el-card
+    <div v-loading="loading" class="content-list animate-slide-up" style="animation-delay: 0.1s">
+      <div v-if="exams.length === 0" class="empty-state glass-panel">
+        <el-empty description="暂无考试数据" :image-size="200" />
+      </div>
+
+      <div
         v-for="exam in exams"
         :key="exam.examId"
-        class="exam-card"
-        shadow="hover"
+        class="list-card glass-panel"
       >
-        <div class="exam-header">
-          <div class="exam-title-section">
-            <h3 class="exam-title">{{ exam.examTitle }}</h3>
-            <el-tag :type="getStatusType(exam.statusText || exam.status)" size="small">
+        <div class="card-header">
+          <div class="title-section">
+            <h3 class="card-title">{{ exam.examTitle }}</h3>
+            <el-tag :type="getStatusType(exam.statusText || exam.status)" effect="dark" round size="small">
               {{ getStatusText(exam.statusText || exam.status) }}
             </el-tag>
           </div>
-          <div class="exam-actions">
-            <el-button size="small" @click="viewExam(exam)">查看详情</el-button>
-            <el-button size="small" type="primary" @click="viewScores(exam)">查看成绩</el-button>
-            <el-button size="small" @click="editExam(exam)" v-if="exam.status === 'DRAFT'">编辑</el-button>
-            <el-button size="small" type="success" @click="publishExam(exam)" v-if="exam.status === 'DRAFT'">发布</el-button>
-            <el-button size="small" type="danger" @click="deleteExam(exam)">删除</el-button>
+          <div class="card-actions">
+             <el-button link type="primary" @click="viewExam(exam)">详情</el-button>
+             <el-button link type="success" @click="viewScores(exam)">成绩</el-button>
+             <el-button link type="primary" @click="manageQuestions(exam)">试题</el-button>
+             <template v-if="exam.status === 'DRAFT'">
+               <el-button link type="warning" @click="editExam(exam)">编辑</el-button>
+               <el-button link type="primary" @click="publishExam(exam)">发布</el-button>
+             </template>
+             <el-button link type="danger" @click="deleteExam(exam)">删除</el-button>
           </div>
         </div>
 
-        <div class="exam-content">
-          <div class="exam-info">
+        <div class="card-content">
+          <div class="info-grid">
             <div class="info-item">
               <el-icon><Reading /></el-icon>
-              <span>课程：{{ exam.courseName }}</span>
+              <span>{{ exam.courseName }}</span>
             </div>
             <div class="info-item">
               <el-icon><Clock /></el-icon>
-              <span>时长：{{ exam.duration }}分钟</span>
+              <span>{{ exam.duration }} 分钟</span>
             </div>
             <div class="info-item">
               <el-icon><Calendar /></el-icon>
-              <span>开始：{{ formatDate(exam.startTime) }}</span>
-            </div>
-            <div class="info-item">
-              <el-icon><Calendar /></el-icon>
-              <span>结束：{{ formatDate(exam.endTime) }}</span>
+              <span>{{ formatDate(exam.startTime) }} - {{ formatDate(exam.endTime) }}</span>
             </div>
             <div class="info-item">
               <el-icon><User /></el-icon>
-              <span>参考：{{ exam.submittedCount || 0 }} / {{ exam.totalStudents || 0 }}</span>
+              <span>参考: {{ exam.submittedCount || 0 }}/{{ exam.totalStudents || 0 }}</span>
             </div>
           </div>
         </div>
-      </el-card>
+      </div>
     </div>
 
     <!-- 创建/编辑考试对话框 -->
@@ -118,6 +128,7 @@
       :title="isEdit ? '编辑考试' : '创建考试'"
       width="700px"
       :close-on-click-modal="false"
+      class="glass-dialog"
     >
       <el-form ref="formRef" :model="examForm" :rules="rules" label-width="100px">
         <el-form-item label="考试标题" prop="examTitle">
@@ -163,9 +174,11 @@
       </el-form>
 
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button @click="saveAsDraft" :loading="submitting">保存草稿</el-button>
-        <el-button type="primary" @click="submitExam" :loading="submitting">创建并发布</el-button>
+        <span class="dialog-footer">
+          <el-button @click="dialogVisible = false">取消</el-button>
+          <el-button @click="saveAsDraft" :loading="submitting">保存草稿</el-button>
+          <el-button type="primary" @click="submitExam" :loading="submitting">创建并发布</el-button>
+        </span>
       </template>
     </el-dialog>
   </div>
@@ -173,15 +186,10 @@
 
 <script setup>
 import {
-  Plus,
-  Edit,
-  Search,
-  Reading,
-  Clock,
-  Calendar,
-  User
+  Plus, Edit, Search, Reading, Clock, Calendar, User
 } from '@element-plus/icons-vue'
 import { useExamManagement } from '@/assets/js/teacher/exam-management.js'
+import '@/assets/css/teacher/modern-theme.css'
 
 const {
   loading,
@@ -200,6 +208,7 @@ const {
   saveAsDraft,
   submitExam,
   viewExam,
+  manageQuestions,
   viewScores,
   editExam,
   publishExam,
@@ -211,5 +220,137 @@ const {
 </script>
 
 <style scoped>
-/* @import '@/assets/css/teacher/exam-management.css'; */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+.filter-section {
+  padding: 16px 24px;
+  margin-bottom: 24px;
+}
+
+.filter-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.filter-left, .filter-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.filter-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+
+:deep(.stylish-select .el-input__wrapper),
+:deep(.stylish-input .el-input__wrapper) {
+  background-color: rgba(243, 244, 246, 0.8) !important;
+  box-shadow: none !important;
+  border: 1px solid transparent;
+  transition: all 0.3s;
+  border-radius: 8px;
+  padding: 4px 12px;
+}
+
+:deep(.stylish-select .el-input__wrapper:hover),
+:deep(.stylish-input .el-input__wrapper:hover) {
+  background-color: white !important;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1) !important;
+}
+
+:deep(.stylish-select .el-input__wrapper.is-focus),
+:deep(.stylish-input .el-input__wrapper.is-focus) {
+  background-color: white !important;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2) !important; /* Soft Emerald */
+  border-color: rgba(16, 185, 129, 0.5);
+}
+
+.search-box {
+  width: 260px;
+}
+
+.create-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border: none;
+  padding: 10px 20px;
+  font-weight: 600;
+  transition: transform 0.2s;
+}
+
+.create-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.create-btn :deep(.el-icon) {
+  margin-right: 4px;
+}
+
+.content-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.list-card {
+  padding: 20px;
+  transition: all 0.3s;
+  border: 1px solid rgba(255,255,255,0.5);
+}
+.list-card:hover { 
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.title-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.card-title { font-size: 18px; font-weight: 700; color: #374151; margin: 0; }
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Utilities */
+.animate-slide-up { animation: slideUp 0.5s ease-out forwards; opacity: 0; transform: translateY(20px); }
+@keyframes slideUp { to { opacity: 1; transform: translateY(0); } }
 </style>

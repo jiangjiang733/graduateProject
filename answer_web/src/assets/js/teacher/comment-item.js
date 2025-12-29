@@ -47,8 +47,9 @@ export function useCommentItem(props, emit) {
                 userId: currentUserId.value,
                 userName: userInfoStore.userName,
                 userType: userInfoStore.userType,
+                userAvatar: userInfoStore.avatar,
                 content: replyContent.value,
-                parentId: props.comment.id || props.comment.commentId, // 回复当前评论
+                parentId: props.comment.commentId, // 回复当前评论
                 targetUserId: props.comment.userId, // 被回复人ID
                 targetUserName: props.comment.userName, // 被回复人名称
             };

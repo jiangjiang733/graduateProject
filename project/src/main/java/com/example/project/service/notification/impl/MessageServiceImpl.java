@@ -12,13 +12,13 @@ import java.util.Date;
 
 @Service
 public class MessageServiceImpl implements MessageService {
-    
+
     @Autowired
     private MessageMapper messageMapper;
-    
+
     @Override
     public Message sendMessage(String receiverId, String receiverType, String messageType,
-                              String title, String content, String relatedId) {
+            String title, String content, String relatedId) {
         Message message = new Message();
         message.setReceiverId(receiverId);
         message.setReceiverType(receiverType);
@@ -28,27 +28,38 @@ public class MessageServiceImpl implements MessageService {
         message.setRelatedId(relatedId);
         message.setIsRead(0);
         message.setCreateTime(new Date());
-        
+
         messageMapper.insert(message);
         return message;
     }
-    
+
+    @Override
+    public void saveMessage(Message message) {
+        if (message.getCreateTime() == null) {
+            message.setCreateTime(new Date());
+        }
+        if (message.getIsRead() == null) {
+            message.setIsRead(0);
+        }
+        messageMapper.insert(message);
+    }
+
     @Override
     public Page<Message> getMessageList(String teacherId, Integer isRead, Integer pageNumber, Integer pageSize) {
         Page<Message> page = new Page<>(pageNumber, pageSize);
         QueryWrapper<Message> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("receiver_id", teacherId);
         queryWrapper.eq("receiver_type", "TEACHER");
-        
+
         if (isRead != null) {
             queryWrapper.eq("is_read", isRead);
         }
-        
+
         queryWrapper.orderByDesc("create_time");
-        
+
         return messageMapper.selectPage(page, queryWrapper);
     }
-    
+
     @Override
     public void markAsRead(Long messageId) {
         Message message = messageMapper.selectById(messageId);
@@ -57,19 +68,19 @@ public class MessageServiceImpl implements MessageService {
             messageMapper.updateById(message);
         }
     }
-    
+
     @Override
     public void deleteMessage(Long messageId) {
         messageMapper.deleteById(messageId);
     }
-    
+
     @Override
     public Integer getUnreadCount(String teacherId) {
         QueryWrapper<Message> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("receiver_id", teacherId);
         queryWrapper.eq("receiver_type", "TEACHER");
         queryWrapper.eq("is_read", 0);
-        
+
         return Math.toIntExact(messageMapper.selectCount(queryWrapper));
     }
 }

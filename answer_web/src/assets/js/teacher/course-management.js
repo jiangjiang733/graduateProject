@@ -24,7 +24,7 @@ export function useCourseManagement() {
     const allCourses = ref([]) // 存储所有课程数据用于分页
     const loading = ref(false)
     const searchKeyword = ref('')
-    const currentFilter = ref('draft') // 默认显示草稿状态
+    const currentFilter = ref('all') // 默认显示草稿状态
     const stats = ref({
         totalCourses: 0,
         activeCourses: 0,

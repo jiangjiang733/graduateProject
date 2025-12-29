@@ -33,12 +33,8 @@ const TeacherCourseManagement = () => import('../views/teacher/course/CourseMana
 const TeacherCourseDetail = () => import('../views/teacher/course/CourseDetail.vue')
 const TeacherExamManagement = () => import('../views/teacher/exam/ExamManagement.vue')
 const TeacherExamForm = () => import('../views/teacher/exam/ExamForm.vue')
-// const TeacherExamGrading = () => import('../views/teacher/ExamGrading.vue')
 const TeacherHomeworkManagement = () => import('../views/teacher/Homework/HomeworkManagement.vue')
-// const TeacherLabReportManagement = () => import('../views/teacher/LabReportManagement.vue')
-// const TeacherClassManagement = () => import('../views/teacher/ClassManagement.vue')
 const TeacherMessageCenter = () => import('../views/teacher/Personal/MessageCenter.vue')
-// const TeacherChapterManagement = () => import('../views/teacher/ChapterManagement.vue')
 
 // 学生模块 - 使用懒加载
 const sIndex = () => import('../components/s_index.vue')
@@ -46,6 +42,8 @@ const StudentDashboard = () => import('../views/student/Dashboard.vue')
 const StudentHomework = () => import('../views/student/StudentHomework.vue')
 const HomeworkSubmit = () => import('../views/student/HomeworkSubmit.vue')
 const HomeworkDetail = () => import('../views/student/HomeworkDetail.vue')
+const StudentMessageCenter = () => import('../views/student/MessageCenter.vue')
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -138,36 +136,30 @@ const router = createRouter({
           component: () => import('../views/teacher/exam/ExamDetail.vue'),
           meta: { title: '考试详情', requiresAuth: true, role: 'teacher' }
         },
-        // {
-        //   path: 'exam/grading/:examId',
-        //   name: 'teacher_exam_grading',
-        //   component: TeacherExamGrading,
-        //   meta: { title: '试卷批改', requiresAuth: true, role: 'teacher' }
-        // },
+        {
+          path: 'exam/:id/questions',
+          name: 'teacher_exam_questions',
+          component: () => import('../views/teacher/exam/ExamQuestions.vue'),
+          meta: { title: '考试试题管理', requiresAuth: true, role: 'teacher' }
+        },
         {
           path: 'homework',
           name: 'teacher_homework',
           component: TeacherHomeworkManagement,
           meta: { title: '作业管理', requiresAuth: true, role: 'teacher' }
         },
-        // {
-        //   path: 'lab-reports',
-        //   name: 'teacher_lab_reports',
-        //   component: TeacherLabReportManagement,
-        //   meta: { title: '实验报告管理', requiresAuth: true, role: 'teacher' }
-        // },
+        {
+          path: 'homework/:id',
+          name: 'teacher_homework_detail',
+          component: () => import('../views/teacher/Homework/HomeworkDetail.vue'),
+          meta: { title: '作业详情', requiresAuth: true, role: 'teacher' }
+        },
         {
           path: 'classes',
           name: 'teacher_classes',
           component: () => import('../views/teacher/class/ClassManagement.vue'),
           meta: { title: '班级管理', requiresAuth: true, role: 'teacher' }
         },
-        // {
-        //   path: 'course/:courseId/chapters',
-        //   name: 'teacher_chapter_management',
-        //   component: TeacherChapterManagement,
-        //   meta: { title: '章节管理', requiresAuth: true, role: 'teacher' }
-        // },
         {
           path: 'messages',
           name: 'teacher_messages',
@@ -191,34 +183,22 @@ const router = createRouter({
           name: 'teacher_enrollments',
           component: () => import('../views/teacher/course/EnrollmentManagement.vue'),
           meta: { title: '报名管理', requiresAuth: true, role: 'teacher' }
+        },
+        {
+          path: 'questions',
+          name: 'teacher_questions',
+          component: () => import('../views/teacher/question/QuestionBank.vue'),
+          meta: { title: '题库管理', requiresAuth: true, role: 'teacher' }
+        },
+        {
+          path: 'resources',
+          name: 'teacher_resources',
+          component: () => import('../views/teacher/resource/ResourceManagement.vue'),
+          meta: { title: '资源管理', requiresAuth: true, role: 'teacher' }
         }
-        // {
-        //   path: 'tasks',
-        //   name: 'teacher_tasks',
-        //   component: () => import('../views/teacher/TaskManagement.vue'),
-        //   meta: { title: '任务管理', requiresAuth: true, role: 'teacher' }
-        // },
-        // {
-        //   path: 'resources',
-        //   name: 'teacher_resources',
-        //   component: () => import('../views/teacher/ResourceManagement.vue'),
-        //   meta: { title: '资源管理', requiresAuth: true, role: 'teacher' }
-        // },
-        // {
-        //   path: 'announcements',
-        //   name: 'teacher_announcements',
-        //   component: () => import('../views/teacher/AnnouncementManagement.vue'),
-        //   meta: { title: '公告管理', requiresAuth: true, role: 'teacher' }
-        // },
-        // {
-        //   path: 'discussions',
-        //   name: 'teacher_discussions',
-        //   component: () => import('../views/teacher/DiscussionManagement.vue'),
-        //   meta: { title: '讨论区', requiresAuth: true, role: 'teacher' }
-        // }
       ]
     },
-    
+
     {
       path: '/tIndex',
       redirect: '/teacher/dashboard'
@@ -277,6 +257,12 @@ const router = createRouter({
           name: 'student_profile',
           component: () => import('../views/student/Profile.vue'),
           meta: { title: '个人中心', requiresAuth: true, role: 'student' }
+        },
+        {
+          path: 'messages',
+          name: 'student_messages',
+          component: StudentMessageCenter,
+          meta: { title: '答疑中心', requiresAuth: true, role: 'student' }
         }
       ]
     },

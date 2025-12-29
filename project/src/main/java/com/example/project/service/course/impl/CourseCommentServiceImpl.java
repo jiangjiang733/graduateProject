@@ -18,10 +18,13 @@ import java.util.stream.Collectors;
 
 @Service
 public class CourseCommentServiceImpl implements CourseCommentService {
-    
+
     @Autowired
     private CourseCommentMapper courseCommentMapper;
-    
+
+    @Autowired
+    private com.example.project.service.notification.MessageService messageService;
+
     @Override
     @Transactional
     public CourseComment addComment(CourseComment comment) {
@@ -29,68 +32,95 @@ public class CourseCommentServiceImpl implements CourseCommentService {
         courseCommentMapper.insert(comment);
         return comment;
     }
-    
+
     @Override
     public List<CourseComment> getCourseComments(String courseId) {
         return courseCommentMapper.selectByCourseId(courseId);
     }
-    
+
     @Override
     public List<CourseComment> getChapterComments(Long chapterId) {
         return courseCommentMapper.selectByChapterId(chapterId);
     }
-    
+
     @Override
     public List<CourseCommentDTO> getChapterCommentsTree(Long chapterId) {
         // 获取该章节的所有评论
-        QueryWrapper<CourseComment> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("chapter_id", chapterId)
-                   .orderByAsc("create_time");
-        List<CourseComment> allComments = courseCommentMapper.selectList(queryWrapper);
-        
+        List<CourseComment> allComments = courseCommentMapper.selectByChapterId(chapterId);
+
         // 转换为DTO
         List<CourseCommentDTO> commentDTOs = allComments.stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
-        
+
         // 构建树形结构
         return buildCommentTree(commentDTOs);
     }
-    
+
     @Override
     public List<CourseComment> getRecentComments(String courseId, int limit) {
         return courseCommentMapper.selectRecentComments(courseId, limit);
     }
-    
+
     @Override
-    public List<CourseComment> getTeacherComments(String teacherId, int pageNumber, int pageSize, String courseId, String keyword) {
+    public List<CourseComment> getTeacherComments(String teacherId, int pageNumber, int pageSize, String courseId,
+            String keyword) {
         int offset = (pageNumber - 1) * pageSize;
         return courseCommentMapper.selectTeacherComments(teacherId, pageNumber, pageSize, courseId, keyword, offset);
     }
-    
+
     @Override
     @Transactional
     public CourseComment replyComment(CourseComment comment) {
         // 回复评论本质上也是添加评论，只是设置了parentId
         comment.setCreateTime(new Date());
         courseCommentMapper.insert(comment);
+
+        // 创建消息通知给目标用户
+        if (comment.getTargetUserId() != null && !comment.getTargetUserId().isEmpty()) {
+            try {
+                com.example.project.entity.notification.Message message = new com.example.project.entity.notification.Message();
+                message.setReceiverId(comment.getTargetUserId());
+                message.setSenderId(comment.getUserId());
+                message.setSenderName(comment.getUserName());
+                message.setSenderAvatar(comment.getUserAvatar());
+                message.setMessageType("INTERACTION");
+                message.setTitle("评论回复通知");
+                message.setContent(comment.getContent());
+                message.setRelatedId(comment.getCommentId().toString());
+                message.setIsRead(0);
+                message.setCreateTime(new Date());
+
+                // 如果目标是老师，设置receiverType (这里简化逻辑，通常根据userId前缀或表判断)
+                String receiverType = "STUDENT";
+                if (comment.getTargetUserId() != null && comment.getTargetUserId().startsWith("T")) {
+                    receiverType = "TEACHER";
+                }
+                message.setReceiverType(receiverType);
+
+                messageService.saveMessage(message);
+            } catch (Exception e) {
+                // 仅打印错误，允许业务继续
+                e.printStackTrace();
+            }
+        }
+
         return comment;
     }
-    
+
     @Override
     @Transactional
     public void deleteComment(Long commentId) {
-        // 软删除：删除评论及其所有子评论
         CourseComment comment = courseCommentMapper.selectById(commentId);
         if (comment != null) {
-            // 删除当前评论
-            courseCommentMapper.deleteById(commentId);
-            
-            // 递归删除所有子评论
+            // 先递归删除所有子评论
             deleteChildComments(commentId);
+
+            // 再删除当前评论
+            courseCommentMapper.deleteById(commentId);
         }
     }
-    
+
     /**
      * 递归删除子评论
      */
@@ -98,13 +128,15 @@ public class CourseCommentServiceImpl implements CourseCommentService {
         QueryWrapper<CourseComment> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("parent_id", parentId);
         List<CourseComment> childComments = courseCommentMapper.selectList(queryWrapper);
-        
+
         for (CourseComment child : childComments) {
-            courseCommentMapper.deleteById(child.getCommentId());
+            // 先递归删除子评论的子评论
             deleteChildComments(child.getCommentId());
+            // 再删除子评论本身
+            courseCommentMapper.deleteById(child.getCommentId());
         }
     }
-    
+
     /**
      * 将实体转换为DTO
      */
@@ -113,7 +145,7 @@ public class CourseCommentServiceImpl implements CourseCommentService {
         BeanUtils.copyProperties(comment, dto);
         return dto;
     }
-    
+
     /**
      * 构建评论树形结构
      */
@@ -121,14 +153,14 @@ public class CourseCommentServiceImpl implements CourseCommentService {
         // 创建一个Map，key为commentId，value为对应的DTO
         Map<Long, CourseCommentDTO> commentMap = allComments.stream()
                 .collect(Collectors.toMap(CourseCommentDTO::getCommentId, dto -> dto));
-        
+
         // 存储顶级评论（parentId为null或0）
         List<CourseCommentDTO> rootComments = new ArrayList<>();
-        
+
         // 遍历所有评论，构建树形结构
         for (CourseCommentDTO comment : allComments) {
             Long parentId = comment.getParentId();
-            
+
             if (parentId == null || parentId == 0) {
                 // 顶级评论
                 rootComments.add(comment);
@@ -140,7 +172,7 @@ public class CourseCommentServiceImpl implements CourseCommentService {
                 }
             }
         }
-        
+
         return rootComments;
     }
 }

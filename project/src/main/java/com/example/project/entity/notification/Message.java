@@ -13,26 +13,35 @@ import java.util.Date;
 @Data
 @TableName("message")
 public class Message implements Serializable {
-    
+
     private static final long serialVersionUID = 1L;
-    
+
     @TableId(type = IdType.AUTO)
     private Long messageId;
-    
+
     private String receiverId;
-    
+
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private String senderId;
+
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private String senderName;
+
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private String senderAvatar;
+
     private String receiverType;
-    
+
     private String messageType;
-    
+
     private String title;
-    
+
     private String content;
-    
+
     private String relatedId;
-    
+
     private Integer isRead;
-    
+
     @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date createTime;
