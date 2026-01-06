@@ -7,282 +7,207 @@
 
     <el-card class="form-card" shadow="never">
       <el-tabs v-model="activeTab" type="border-card">
-        <!-- 手动创建考试 -->
-        <el-tab-pane label="手动创建考试" name="manual" v-if="!isEdit">
-          <el-alert
-            title="手动创建考试说明"
-            type="info"
-            :closable="false"
-            style="margin-bottom: 20px;"
-          >
-            <p>1. 填写考试基本信息（课程、标题、时间等）</p>
-            <p>2. 手动添加题目，支持单选、多选、判断、填空、简答题</p>
-            <p>3. 确认题目无误后点击"创建考试"</p>
-          </el-alert>
+        <el-tab-pane label="手动出卷 / 题库拣题" name="manual">
+          <div class="step-container">
+            <div class="form-header section-title-wrap">
+              <span class="step-num">Step 1</span>
+              <h3 class="section-title">考试基础设置</h3>
+            </div>
+            
+            <el-form :model="examForm" label-position="top" class="premium-form">
+              <div class="form-grid">
+                <el-form-item label="所属课程" required>
+                  <el-select v-model="examForm.courseId" placeholder="请选择课程" class="glass-select" @change="handleCourseChange">
+                    <template #prefix><el-icon><Notebook /></el-icon></template>
+                    <el-option v-for="course in courses" :key="course.id" :label="course.courseName" :value="course.id" />
+                  </el-select>
+                </el-form-item>
 
-          <el-form :model="examForm" label-width="120px" style="max-width: 600px;">
-            <el-form-item label="所属课程" required>
-              <el-select 
-                v-model="examForm.courseId" 
-                placeholder="请选择课程" 
-                style="width: 100%"
+                <el-form-item label="考试标题" required>
+                  <el-input v-model="examForm.examTitle" placeholder="请输入考试标题" class="glass-input" />
+                </el-form-item>
+
+                <el-form-item label="考试时间" required class="full-width">
+                  <el-date-picker
+                    v-model="timeRange"
+                    type="datetimerange"
+                    range-separator="至"
+                    start-placeholder="开始时间"
+                    end-placeholder="结束时间"
+                    format="YYYY-MM-DD HH:mm"
+                    value-format="YYYY-MM-DD HH:mm:ss"
+                    class="glass-date-picker"
+                  />
+                </el-form-item>
+
+                <el-form-item label="考试时长 (分钟)">
+                  <el-input-number v-model="examForm.duration" :min="10" :max="300" class="glass-number" controls-position="right" />
+                </el-form-item>
+
+                <el-form-item :label="'及格分 (当前总分: ' + totalManualScore + ')'">
+                  <el-input-number v-model="examForm.passScore" :min="0" :max="examForm.totalScore || 100" class="glass-number" controls-position="right" />
+                </el-form-item>
+              </div>
+
+              <el-form-item label="考试说明" class="full-width">
+                <el-input v-model="examForm.examDescription" type="textarea" :rows="3" placeholder="请输入考试说明..." class="glass-input" />
+              </el-form-item>
+            </el-form>
+
+            <el-divider />
+
+            <div class="form-header questions-section">
+              <div class="section-title-wrap">
+                <span class="step-num">Step 2</span>
+                <h3 class="section-title">题目列表</h3>
+                <el-tag effect="dark" round class="score-badge">已添加 {{ manualQuestions.length }} 题 / 共 {{ totalManualScore }} 分</el-tag>
+              </div>
+              <div class="actions">
+                <el-button class="premium-btn ghost" :icon="Collection" @click="openBankSelection">从题库添加</el-button>
+                <el-button class="premium-btn primary" :icon="Plus" @click="addManualQuestion">手动添加题目</el-button>
+              </div>
+            </div>
+
+            <div v-if="manualQuestions.length === 0" class="empty-questions glass-panel">
+              <el-empty description="暂无题目，建议从题库拣题或手动添加" :image-size="120" />
+            </div>
+
+            <div v-else class="structured-questions-list">
+              <div v-for="(q, index) in manualQuestions" :key="index" class="q-item-card glass-panel animate-slide-up" :style="{ '--delay': index * 0.05 + 's' }">
+                <div class="q-card-header">
+                  <div class="q-card-meta">
+                    <span class="q-index">#{{ index + 1 }}</span>
+                    <el-tag :type="getQuestionTypeTag(q.questionType)" size="small">{{ getQuestionTypeText(q.questionType) }}</el-tag>
+                    <div class="q-score-edit">
+                      <el-input-number v-model="q.score" :min="1" :max="100" size="small" controls-position="right" @change="calculateTotal" />
+                      <span class="unit">分</span>
+                    </div>
+                  </div>
+                  <div class="q-card-ops">
+                    <el-button link type="primary" @click="editManualQuestion(index)">编辑</el-button>
+                    <el-button link type="danger" @click="deleteManualQuestion(index)">移除</el-button>
+                  </div>
+                </div>
+                <div class="q-card-body">
+                  <div class="q-content">{{ q.questionContent }}</div>
+                  <div v-if="q.questionOptions" class="q-options-preview">
+                     <div v-for="(opt, oIdx) in parseOptions(q.questionOptions)" :key="oIdx" class="opt-preview-item" :class="{ 'is-answer': isCorrectOption(q, oIdx) }">
+                       <span class="opt-prefix">{{ String.fromCharCode(65 + oIdx) }}</span>
+                       <span class="opt-text">{{ (typeof opt === 'object' && opt !== null) ? (opt.text || JSON.stringify(opt)) : opt }}</span>
+                     </div>
+                  </div>
+                  <div v-if="['JUDGE', 'FILL_BLANK', 'SHORT_ANSWER'].includes(q.questionType)" class="q-answer-preview">
+                    <span class="label">正确答案:</span>
+                    <span class="value">{{ q.correctAnswer }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-footer">
+              <el-button size="large" @click="goBack" class="premium-btn ghost">取消</el-button>
+              <el-button 
+                v-if="!isEdit"
+                type="primary" 
+                size="large"
+                @click="confirmCreateManual" 
+                :loading="submitting"
+                :disabled="!canCreateManual"
+                class="premium-btn primary submit-btn"
               >
-                <el-option
-                  v-for="course in courses"
-                  :key="course.id"
-                  :label="course.courseName"
-                  :value="course.id"
-                />
-              </el-select>
-            </el-form-item>
-
-            <el-form-item label="考试标题" required>
-              <el-input v-model="examForm.examTitle" placeholder="请输入考试标题" />
-            </el-form-item>
-
-            <el-form-item label="考试说明">
-              <el-input 
-                v-model="examForm.examDescription" 
-                type="textarea"
-                :rows="3"
-                placeholder="请输入考试说明（可选）" 
-              />
-            </el-form-item>
-
-            <el-form-item label="考试时间" required>
-              <el-date-picker
-                v-model="timeRange"
-                type="datetimerange"
-                range-separator="至"
-                start-placeholder="开始时间"
-                end-placeholder="结束时间"
-                format="YYYY-MM-DD HH:mm"
-                value-format="YYYY-MM-DD HH:mm:ss"
-                style="width: 100%"
-              />
-            </el-form-item>
-
-            <el-form-item label="考试时长">
-              <el-input-number v-model="examForm.duration" :min="10" :max="300" />
-              <span style="margin-left: 10px; color: #909399;">分钟</span>
-            </el-form-item>
-
-            <el-form-item label="总分">
-              <el-input-number v-model="examForm.totalScore" :min="0" :max="1000" disabled />
-              <span style="margin-left: 10px; color: #909399;">自动计算</span>
-            </el-form-item>
-
-            <el-form-item label="及格分">
-              <el-input-number v-model="examForm.passScore" :min="0" :max="examForm.totalScore" />
-            </el-form-item>
-          </el-form>
-
-          <el-divider />
-
-          <!-- 题目列表 -->
-          <div class="manual-questions">
-            <div class="questions-header">
-              <h3>
-                <el-icon><DocumentChecked /></el-icon>
-                题目列表（共 {{ manualQuestions.length }} 题，总分 {{ totalManualScore }} 分）
-              </h3>
-              <el-button type="primary" :icon="Plus" @click="addManualQuestion">
-                添加题目
+                <el-icon><Check /></el-icon> 确认创建考试
+              </el-button>
+              <el-button 
+                v-else
+                type="primary" 
+                size="large"
+                @click="confirmUpdate" 
+                :loading="submitting"
+                class="premium-btn primary submit-btn"
+              >
+                <el-icon><Check /></el-icon> 保存修改
               </el-button>
             </div>
-
-            <el-empty 
-              v-if="manualQuestions.length === 0" 
-              description="暂无题目，请点击上方按钮添加"
-              :image-size="120"
-            />
-
-            <div v-else class="questions-list">
-              <el-card 
-                v-for="(q, index) in manualQuestions" 
-                :key="index" 
-                class="question-card"
-                shadow="hover"
-              >
-                <div class="question-header">
-                  <span class="question-number">第 {{ index + 1 }} 题</span>
-                  <el-tag :type="getQuestionTypeTag(q.questionType)">
-                    {{ getQuestionTypeText(q.questionType) }}
-                  </el-tag>
-                  <el-tag type="info">{{ q.score }} 分</el-tag>
-                  <div class="question-actions">
-                    <el-button size="small" @click="editManualQuestion(index)">编辑</el-button>
-                    <el-button size="small" type="danger" @click="deleteManualQuestion(index)">删除</el-button>
-                  </div>
-                </div>
-                <p class="question-content">
-                  <strong>{{ q.questionContent }}</strong>
-                </p>
-                <div v-if="q.questionOptions" class="question-options">
-                  <div v-for="(option, optIdx) in parseOptions(q.questionOptions)" :key="optIdx" class="option-item">
-                    {{ option }}
-                  </div>
-                </div>
-                <div class="question-answer">
-                  <span class="answer-label">正确答案：</span>
-                  <el-tag type="success">{{ q.correctAnswer }}</el-tag>
-                </div>
-              </el-card>
-            </div>
-          </div>
-
-          <el-divider />
-
-          <div style="text-align: center; margin-top: 30px;">
-            <el-button @click="goBack">取消</el-button>
-            <el-button 
-              type="primary" 
-              size="large"
-              @click="confirmCreateManual" 
-              :loading="submitting"
-              :disabled="!canCreateManual"
-            >
-              <el-icon><Check /></el-icon>
-              创建考试
-            </el-button>
           </div>
         </el-tab-pane>
 
         <!-- AI 智能出题 -->
-        <el-tab-pane label="AI 智能出题" name="ai" v-if="!isEdit">
-          <el-alert
-            title="AI智能出题说明"
-            type="info"
-            :closable="false"
-            style="margin-bottom: 20px;"
-          >
-            <p>1. 选择课程和填写考试标题</p>
-            <p>2. AI将根据所选课程自动生成相关题目</p>
-            <p>3. 生成后可预览、编辑题目，确认无误后点击"确认创建考试"</p>
-          </el-alert>
-
-          <el-form :model="aiForm" label-width="120px" style="max-width: 600px;">
-            <el-form-item label="所属课程" required>
-              <el-select 
-                v-model="examForm.courseId" 
-                placeholder="请选择课程" 
-                style="width: 100%"
-                @change="handleCourseChange"
-              >
-                <el-option
-                  v-for="course in courses"
-                  :key="course.id"
-                  :label="course.courseName"
-                  :value="course.id"
-                />
-              </el-select>
-            </el-form-item>
-
-            <el-form-item label="考试标题" required>
-              <el-input v-model="examForm.examTitle" placeholder="请输入考试标题" />
-            </el-form-item>
-
-            <el-form-item label="课程名称" required>
-              <el-input 
-                v-model="aiForm.courseName" 
-                placeholder="自动填充或手动输入" 
-                :disabled="!!examForm.courseId"
-              />
-              <span style="color: #909399; font-size: 12px;">
-                选择课程后自动填充，AI将根据此名称生成相关题目
-              </span>
-            </el-form-item>
-
-            <el-form-item label="题目数量">
-              <el-input-number v-model="aiForm.questionCount" :min="1" :max="20" />
-              <span style="margin-left: 10px; color: #909399;">建议5-10题</span>
-            </el-form-item>
-
-            <el-form-item label="题型">
-              <el-checkbox-group v-model="aiForm.questionTypes">
-                <el-checkbox label="SINGLE">单选题</el-checkbox>
-                <el-checkbox label="MULTIPLE">多选题</el-checkbox>
-                <el-checkbox label="JUDGE">判断题</el-checkbox>
-              </el-checkbox-group>
-            </el-form-item>
-
-            <el-form-item label="考试时间" required>
-              <el-date-picker
-                v-model="timeRange"
-                type="datetimerange"
-                range-separator="至"
-                start-placeholder="开始时间"
-                end-placeholder="结束时间"
-                format="YYYY-MM-DD HH:mm"
-                value-format="YYYY-MM-DD HH:mm:ss"
-                style="width: 100%"
-              />
-            </el-form-item>
-
-            <el-form-item>
-              <el-button 
-                type="primary" 
-                @click="generateWithAi" 
-                :loading="aiLoading"
-                :disabled="!canGenerateAi"
-              >
+        <el-tab-pane label="AI 智能出题" name="ai">
+          <div class="step-container">
+            <div class="ai-hero">
+              <div class="ai-icon-wrap">
                 <el-icon><MagicStick /></el-icon>
-                AI智能生成题目
-              </el-button>
-              <el-button @click="goBack">取消</el-button>
-            </el-form-item>
-          </el-form>
-
-          <!-- AI 生成的题目预览 -->
-          <div v-if="aiQuestions.length > 0" class="ai-preview">
-            <el-divider />
-            <div class="preview-header">
-              <h3>
-                <el-icon><DocumentChecked /></el-icon>
-                AI 生成题目预览（共 {{ aiQuestions.length }} 题，总分 {{ totalAiScore }} 分）
-              </h3>
-              <div class="preview-actions">
-                <el-button @click="aiQuestions = []" :icon="Delete">
-                  清空重新生成
-                </el-button>
-                <el-button type="success" size="large" @click="confirmCreateWithAi" :loading="submitting">
-                  <el-icon><Check /></el-icon>
-                  确认创建考试
-                </el-button>
+              </div>
+              <div class="ai-text">
+                <h3>AI 智能出题助手</h3>
+                <p>根据您的教学大纲和课程名，由 AI 一键生成高质量试卷</p>
               </div>
             </div>
-            
-            <div class="ai-questions-list">
-              <el-card 
-                v-for="(q, index) in aiQuestions" 
-                :key="index" 
-                class="ai-question-card"
-                shadow="hover"
-              >
-                <div class="question-header">
-                  <span class="question-number">第 {{ index + 1 }} 题</span>
-                  <el-tag :type="getQuestionTypeTag(q.questionType)">
-                    {{ getQuestionTypeText(q.questionType) }}
-                  </el-tag>
-                  <el-tag type="info">{{ q.score }} 分</el-tag>
-                  <div class="question-actions">
-                    <el-button size="small" @click="editAiQuestion(index)">编辑</el-button>
-                    <el-button size="small" type="danger" @click="deleteAiQuestion(index)">删除</el-button>
+
+            <el-form :model="aiForm" label-position="top" class="premium-form ai-config">
+              <div class="ai-config-grid">
+                <el-form-item label="参考课程" required>
+                  <el-select v-model="examForm.courseId" placeholder="请选择课程" class="glass-select" @change="handleCourseChange">
+                    <el-option v-for="course in courses" :key="course.id" :label="course.courseName" :value="course.id" />
+                  </el-select>
+                </el-form-item>
+                
+                <el-form-item label="生成课程名 (AI识别项)" required>
+                  <el-input v-model="aiForm.courseName" placeholder="例如: 数据结构、线性代数" class="glass-input" />
+                </el-form-item>
+
+                <el-form-item label="期望题数">
+                  <el-input-number v-model="aiForm.questionCount" :min="1" :max="20" class="glass-number" />
+                </el-form-item>
+
+                <el-form-item label="题型组合">
+                  <el-checkbox-group v-model="aiForm.questionTypes" class="glass-checkbox-group">
+                    <el-checkbox label="SINGLE">单选</el-checkbox>
+                    <el-checkbox label="MULTIPLE">多选</el-checkbox>
+                    <el-checkbox label="JUDGE">判断</el-checkbox>
+                  </el-checkbox-group>
+                </el-form-item>
+              </div>
+
+              <div class="ai-actions">
+                <el-button 
+                  type="primary" 
+                  size="large"
+                  @click="generateWithAi" 
+                  :loading="aiLoading"
+                  :disabled="!canGenerateAi"
+                  class="premium-btn ai-start-btn"
+                >
+                  <el-icon><MagicStick /></el-icon> 开始 AI 智能出卷
+                </el-button>
+              </div>
+            </el-form>
+
+            <div v-if="aiQuestions.length > 0" class="ai-result-section">
+              <div class="result-header">
+                <h3><el-icon><DocumentChecked /></el-icon> AI 生成结果</h3>
+                <div class="result-ops">
+                  <el-button link @click="aiQuestions = []">重新配置</el-button>
+                  <el-button type="success" @click="confirmCreateWithAi" :loading="submitting" class="premium-btn success">
+                    采用这套试题
+                  </el-button>
+                </div>
+              </div>
+
+              <div class="ai-questions-grid">
+                <div v-for="(q, index) in aiQuestions" :key="index" class="q-item-card ai-style glass-panel">
+                  <div class="q-card-header">
+                    <span class="q-index">#{{ index + 1 }}</span>
+                    <el-tag :type="getQuestionTypeTag(q.questionType)" size="small">{{ getQuestionTypeText(q.questionType) }}</el-tag>
+                    <div class="q-card-ops">
+                      <el-button link type="primary" @click="editAiQuestion(index)">调整</el-button>
+                    </div>
+                  </div>
+                  <div class="q-card-body">
+                    <div class="q-content">{{ q.questionContent }}</div>
                   </div>
                 </div>
-                <p class="question-content">
-                  <strong>{{ q.questionContent }}</strong>
-                </p>
-                <div v-if="q.questionOptions" class="question-options">
-                  <div v-for="(option, optIdx) in parseOptions(q.questionOptions)" :key="optIdx" class="option-item">
-                    {{ option }}
-                  </div>
-                </div>
-                <div class="question-answer">
-                  <span class="answer-label">正确答案：</span>
-                  <el-tag type="success">{{ q.correctAnswer }}</el-tag>
-                </div>
-              </el-card>
+              </div>
             </div>
           </div>
         </el-tab-pane>
@@ -417,18 +342,68 @@
         </el-button>
       </template>
     </el-dialog>
+
+    <!-- 题库选题对话框 -->
+    <el-dialog v-model="bankDialogVisible" title="从我的题库选题" width="900px" class="glass-dialog bank-picker">
+      <div class="bank-picker-container">
+        <div class="picker-filter">
+          <el-select v-model="bankFilter.courseId" placeholder="所属课程" clearable @change="searchBank">
+            <el-option v-for="c in courses" :key="c.id" :label="c.courseName" :value="c.id" />
+          </el-select>
+          <el-select v-model="bankFilter.type" placeholder="题型" clearable @change="searchBank">
+            <el-option label="单选" value="SINGLE" />
+            <el-option label="多选" value="MULTIPLE" />
+            <el-option label="判断" value="JUDGE" />
+            <el-option label="简答" value="ESSAY" />
+          </el-select>
+          <el-input v-model="bankFilter.keyword" placeholder="搜索题目内容..." prefix-icon="Search" @keyup.enter="searchBank" />
+          <el-button type="primary" @click="searchBank" icon="Search">搜索</el-button>
+        </div>
+
+        <el-table :data="bankQuestions" height="450px" v-loading="bankLoading" @selection-change="handleBankSelection">
+          <el-table-column type="selection" width="50" />
+          <el-table-column label="题型" width="100">
+            <template #default="{row}">
+              <el-tag size="small" :type="getQuestionTypeTag(row.type)">{{ getQuestionTypeText(row.type) }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="题目内容" show-overflow-tooltip>
+            <template #default="{row}">{{ row.content }}</template>
+          </el-table-column>
+          <el-table-column label="难度" width="100" align="center">
+            <template #default="{row}">{{ '★'.repeat(row.difficulty) }}</template>
+          </el-table-column>
+        </el-table>
+
+        <div class="picker-footer">
+          <span class="selected-badge">已选择 {{ selectedBankQuestions.length }} 题</span>
+          <el-pagination 
+            v-model:current-page="bankPagination.current" 
+            v-model:page-size="bankPagination.size"
+            :total="bankPagination.total"
+            layout="prev, pager, next"
+            @current-change="searchBank"
+          />
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="bankDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmImportFromBank" :disabled="selectedBankQuestions.length === 0">确认导入</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
-  ArrowLeft, Plus, Delete, MagicStick, DocumentChecked, Check, QuestionFilled 
+  ArrowLeft, Plus, Delete, MagicStick, DocumentChecked, Check, QuestionFilled, Notebook, Collection 
 } from '@element-plus/icons-vue'
 import { getCourseList } from '@/api/course.js'
-import { createExam, generateQuestionsWithAi } from '@/api/exam.js'
+import { createExam, generateQuestionsWithAi, getExamDetail, updateExam, saveExamQuestions } from '@/api/exam.js'
+import { getQuestionList } from '@/api/question.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -461,6 +436,14 @@ const aiForm = reactive({
 const aiQuestions = ref([])
 const aiLoading = ref(false)
 
+// 题库选择相关
+const bankDialogVisible = ref(false)
+const bankLoading = ref(false)
+const bankQuestions = ref([])
+const bankFilter = reactive({ courseId: '', type: '', keyword: '' })
+const bankPagination = reactive({ current: 1, size: 10, total: 0 })
+const selectedBankQuestions = ref([])
+
 // 题目编辑
 const questionDialogVisible = ref(false)
 const isEditQuestion = ref(false)
@@ -489,12 +472,55 @@ const totalAiScore = computed(() => {
 })
 
 const totalManualScore = computed(() => {
-  const total = manualQuestions.value.reduce((sum, q) => sum + (q.score || 0), 0)
-  examForm.totalScore = total
-  if (examForm.passScore === 0 || examForm.passScore > total) {
-    examForm.passScore = Math.floor(total * 0.6)
+  return manualQuestions.value.reduce((sum, q) => sum + (Number(q.score) || 0), 0)
+})
+
+watch(totalManualScore, (newTotal) => {
+  examForm.totalScore = newTotal
+  if (examForm.passScore === 0 || examForm.passScore > newTotal) {
+    examForm.passScore = Math.floor(newTotal * 0.6)
   }
-  return total
+})
+
+// === 考试时间与时长双向绑定逻辑 ===
+let isInternalChange = false // 防止循环触发
+
+// 1. 监听时间范围变化 -> 更新时长
+watch(timeRange, (newRange) => {
+  if (isInternalChange) return
+  if (newRange && newRange.length === 2) {
+    const start = new Date(newRange[0]).getTime()
+    const end = new Date(newRange[1]).getTime()
+    if (end > start) {
+      const diffMinutes = Math.floor((end - start) / (1000 * 60))
+      isInternalChange = true
+      examForm.duration = diffMinutes
+      setTimeout(() => { isInternalChange = false }, 50)
+    }
+  }
+})
+
+// 2. 监听时长变化 -> 更新结束时间
+watch(() => examForm.duration, (newDuration) => {
+  if (isInternalChange) return
+  if (newDuration && timeRange.value && timeRange.value[0]) {
+    const start = new Date(timeRange.value[0]).getTime()
+    const newEnd = new Date(start + newDuration * 60 * 1000)
+    
+    const formatStr = (date) => {
+      const d = new Date(date)
+      return d.getFullYear() + '-' + 
+             String(d.getMonth() + 1).padStart(2, '0') + '-' + 
+             String(d.getDate()).padStart(2, '0') + ' ' + 
+             String(d.getHours()).padStart(2, '0') + ':' + 
+             String(d.getMinutes()).padStart(2, '0') + ':' + 
+             String(d.getSeconds()).padStart(2, '0')
+    }
+    
+    isInternalChange = true
+    timeRange.value = [timeRange.value[0], formatStr(newEnd)]
+    setTimeout(() => { isInternalChange = false }, 50)
+  }
 })
 
 const canCreateManual = computed(() => {
@@ -563,8 +589,9 @@ const editManualQuestion = (index) => {
     questionType: typeMapping[question.questionType] || 'SINGLE_CHOICE',
     questionContent: question.questionContent,
     options: parseOptions(question.questionOptions),
-    correctAnswer: question.correctAnswer,
-    correctAnswerArray: question.questionType === 'MULTIPLE' ? question.correctAnswer.split('') : [],
+    correctAnswer: question.answer || question.correctAnswer,
+    correctAnswerArray: (question.questionType === 'MULTIPLE' || question.questionType === 'MULTIPLE_CHOICE') 
+      ? (question.answer || question.correctAnswer || '').split('') : [],
     score: question.score,
     analysis: question.analysis || ''
   })
@@ -579,8 +606,84 @@ const deleteManualQuestion = (index) => {
     type: 'warning'
   }).then(() => {
     manualQuestions.value.splice(index, 1)
+    calculateTotal()
     ElMessage.success('删除成功')
   }).catch(() => {})
+}
+
+// 题库选题方法
+const openBankSelection = () => {
+  bankFilter.courseId = examForm.courseId
+  bankDialogVisible.value = true
+  searchBank()
+}
+
+const searchBank = async () => {
+  bankLoading.value = true
+  try {
+    const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id') || '1'
+    const res = await getQuestionList({
+      pageNum: bankPagination.current,
+      pageSize: bankPagination.size,
+      teacherId: teacherId,
+      ...bankFilter
+    })
+    if(res.success) {
+      bankQuestions.value = res.data.records
+      bankPagination.total = res.data.total
+    }
+  } finally {
+    bankLoading.value = false
+  }
+}
+
+const handleBankSelection = (val) => {
+  selectedBankQuestions.value = val
+}
+
+const confirmImportFromBank = () => {
+  const newQs = selectedBankQuestions.value.map(q => {
+    let opts = q.options
+    // Ensure options are handled correctly (might be string or array)
+    if (typeof opts === 'string') {
+      try {
+        const parsed = JSON.parse(opts)
+        opts = JSON.stringify(parsed)
+      } catch(e) {}
+    } else if (Array.isArray(opts)) {
+      opts = JSON.stringify(opts)
+    }
+
+    return {
+      questionType: q.type,
+      questionContent: q.content,
+      questionOptions: opts,
+      answer: q.answer,
+      score: 5, 
+      analysis: q.analysis
+    }
+  })
+  
+  manualQuestions.value.push(...newQs)
+  calculateTotal()
+  bankDialogVisible.value = false
+  selectedBankQuestions.value = []
+  ElMessage.success(`成功导入 ${newQs.length} 道题目`)
+}
+
+const isCorrectOption = (question, optIdx) => {
+  if (question.questionType === 'SINGLE') {
+    return question.correctAnswer === String.fromCharCode(65 + optIdx)
+  }
+  if (question.questionType === 'MULTIPLE') {
+    return question.correctAnswer && question.correctAnswer.includes(String.fromCharCode(65 + optIdx))
+  }
+  return false
+}
+
+const calculateTotal = () => {
+  const total = manualQuestions.value.reduce((sum, q) => sum + (q.score || 0), 0)
+  examForm.totalScore = total
 }
 
 const getQuestionTypeTag = (type) => {
@@ -694,8 +797,9 @@ const editAiQuestion = (index) => {
     questionType: typeMapping[question.questionType] || 'SINGLE_CHOICE',
     questionContent: question.questionContent,
     options: parseOptions(question.questionOptions),
-    correctAnswer: question.correctAnswer,
-    correctAnswerArray: question.questionType === 'MULTIPLE' ? question.correctAnswer.split('') : [],
+    correctAnswer: question.answer || question.correctAnswer,
+    correctAnswerArray: (question.questionType === 'MULTIPLE' || question.questionType === 'MULTIPLE_CHOICE') 
+      ? (question.answer || question.correctAnswer || '').split('') : [],
     score: question.score,
     analysis: question.analysis || ''
   })
@@ -749,13 +853,34 @@ const saveQuestion = async () => {
     'SHORT_ANSWER': 'SHORT_ANSWER'
   }
 
+  let optionsData = null
+  if (['SINGLE_CHOICE', 'MULTIPLE_CHOICE'].includes(questionForm.questionType)) {
+    optionsData = questionForm.options
+      .filter(o => o)
+      .map((opt, idx) => {
+        const char = String.fromCharCode(65 + idx)
+        let isCorrect = false
+        if (questionForm.questionType === 'SINGLE_CHOICE') {
+          isCorrect = questionForm.correctAnswer === char
+        } else {
+          isCorrect = questionForm.correctAnswerArray.includes(char)
+        }
+        return { text: opt, isCorrect }
+      })
+  } else if (questionForm.questionType === 'TRUE_FALSE') {
+    optionsData = [
+      { text: '正确', isCorrect: questionForm.correctAnswer === '正确' },
+      { text: '错误', isCorrect: questionForm.correctAnswer === '错误' }
+    ]
+  }
+
   const questionData = {
     questionType: typeMap[questionForm.questionType] || questionForm.questionType,
     questionContent: questionForm.questionContent,
-    questionOptions: ['SINGLE_CHOICE', 'MULTIPLE_CHOICE'].includes(questionForm.questionType)
-      ? JSON.stringify(questionForm.options.filter(o => o))
-      : null,
-    correctAnswer: questionForm.correctAnswer,
+    questionOptions: optionsData ? JSON.stringify(optionsData) : null,
+    answer: questionForm.questionType === 'MULTIPLE_CHOICE' 
+      ? questionForm.correctAnswerArray.join('') 
+      : questionForm.correctAnswer,
     score: questionForm.score,
     analysis: questionForm.analysis
   }
@@ -820,7 +945,11 @@ const confirmCreateManual = async () => {
       duration: examForm.duration || 60,
       totalScore: examForm.totalScore,
       passScore: examForm.passScore,
-      questions: manualQuestions.value
+      questions: manualQuestions.value.map((q, idx) => ({
+        ...q,
+        answer: q.answer || q.correctAnswer,
+        questionOrder: idx + 1
+      }))
     }
     
     const response = await createExam(data)
@@ -881,7 +1010,11 @@ const confirmCreateWithAi = async () => {
       duration: examForm.duration || 60,
       totalScore: totalScore,
       passScore: passScore,
-      questions: aiQuestions.value
+      questions: aiQuestions.value.map((q, idx) => ({
+        ...q,
+        answer: q.answer || q.correctAnswer,
+        questionOrder: idx + 1
+      }))
     }
     
     const response = await createExam(data)
@@ -915,12 +1048,120 @@ const confirmCreateWithAi = async () => {
   }
 }
 
+const confirmUpdate = async () => {
+  if (!examForm.examTitle) {
+    ElMessage.warning('请输入考试标题')
+    return
+  }
+  
+  if (manualQuestions.value.length === 0) {
+    ElMessage.warning('请至少添加一道题目')
+    return
+  }
+  
+  if (!timeRange.value || timeRange.value.length !== 2) {
+    ElMessage.warning('请选择考试时间')
+    return
+  }
+  
+  try {
+    submitting.value = true
+    const examId = route.params.id
+    
+    // 1. 更新考试基础信息
+    const examInfo = {
+      courseId: examForm.courseId,
+      examTitle: examForm.examTitle,
+      examDescription: examForm.examDescription || '',
+      startTime: timeRange.value[0],
+      endTime: timeRange.value[1],
+      duration: examForm.duration,
+      totalScore: examForm.totalScore,
+      passScore: examForm.passScore
+    }
+    
+    const updateRes = await updateExam(examId, examInfo)
+    if (!updateRes.success && updateRes.code !== 200) {
+      throw new Error(updateRes.message || '更新考试基础信息失败')
+    }
+    
+    // 2. 更新试题
+    const questionsData = manualQuestions.value.map((q, idx) => ({
+      ...q,
+      answer: q.answer || q.correctAnswer,
+      questionOrder: idx + 1
+    }))
+    
+    const questionsRes = await saveExamQuestions(examId, questionsData)
+    if (!questionsRes.success && questionsRes.code !== 200) {
+      throw new Error(questionsRes.message || '保存试题失败')
+    }
+    
+    ElMessage.success('考试更新成功！')
+    router.push(`/teacher/exam/${examId}`)
+  } catch (error) {
+    console.error('更新考试失败:', error)
+    ElMessage.error(error.message || '更新考试失败')
+  } finally {
+    submitting.value = false
+  }
+}
+
 const goBack = () => {
   router.back()
 }
 
+const fetchExamData = async () => {
+  if (!isEdit.value) return
+  
+  try {
+    const examId = route.params.id
+    const response = await getExamDetail(examId)
+    if (response.success && response.data) {
+      const { exam, questions: examQuestions } = response.data
+      
+      // 填充基础信息
+      Object.assign(examForm, {
+        examTitle: exam.examTitle,
+        courseId: exam.courseId,
+        examDescription: exam.examDescription,
+        duration: exam.duration,
+        totalScore: exam.totalScore,
+        passScore: exam.passScore
+      })
+      
+      // 填充时间
+      if (exam.startTime && exam.endTime) {
+        timeRange.value = [
+          exam.startTime,
+          exam.endTime
+        ]
+      }
+      
+      // 填充题目
+      manualQuestions.value = examQuestions.map(q => ({
+        questionType: q.questionType,
+        questionContent: q.questionContent,
+        questionOptions: q.questionOptions,
+        answer: q.answer || q.correctAnswer,
+        score: q.score,
+        analysis: q.analysis,
+        questionOrder: q.questionOrder
+      }))
+      
+      calculateTotal()
+    }
+  } catch (error) {
+    console.error('获取考试详情失败:', error)
+    ElMessage.error('获取考试详情失败')
+  }
+}
+
 onMounted(() => {
   loadCourses()
+  if (isEdit.value) {
+    fetchExamData()
+  }
 })
 </script>
 

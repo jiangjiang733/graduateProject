@@ -22,281 +22,155 @@
 
     <!-- 课程学习主界面 -->
     <div v-else class="learn-container">
-      <!-- 课程信息头部 -->
-      <div class="course-header">
-        <el-button :icon="ArrowLeft" @click="$router.back()">返回</el-button>
-        <div class="course-info">
-          <img 
-            :src="getCourseImage(courseInfo.image || courseInfo.coverImage)" 
-            class="course-cover"
-            alt="课程封面"
-            @error="handleImageError"
-          />
-          <div class="course-details">
-            <h1 class="course-title">{{ courseInfo.courseName }}</h1>
-            <p class="course-desc">{{ courseInfo.courseDescription || courseInfo.description }}</p>
-            <div class="course-meta">
-              <el-tag v-if="courseInfo.major">{{ courseInfo.major }}</el-tag>
-              <el-tag v-if="courseInfo.classification" type="success">{{ courseInfo.classification }}</el-tag>
-              <span class="teacher-name">
-                <el-icon><User /></el-icon>
-                {{ courseInfo.teacherName || '未知教师' }}
-              </span>
-            </div>
-          </div>
+      <!-- 极简课程标题栏 -->
+      <div class="minimal-header">
+        <div class="header-left">
+           <el-button @click="$router.back()" circle :icon="ArrowLeft" />
+           <div class="title-group">
+             <h1 class="main-title">{{ courseInfo.courseName }}</h1>
+             <div class="subtitle-meta">
+               <el-tag size="small" effect="plain">{{ courseInfo.major }}</el-tag>
+             </div>
+           </div>
+        </div>
+        <div class="header-right">
+           <el-button type="primary" plain round @click="$router.push(isTeacher ? '/teacher/courses' : '/student/courses')">
+             {{ isTeacher ? '课程管理' : '我的课程' }}
+           </el-button>
         </div>
       </div>
 
-      <!-- 章节内容区域 -->
-      <div class="content-area">
-        <!-- 左侧章节目录 -->
-        <div class="chapter-sidebar">
-          <div class="sidebar-header">
-            <h3>课程目录</h3>
-            <span class="chapter-count">共 {{ totalChapters }} 个章节</span>
+      <div class="main-layout">
+        <!-- 核心调整：目录在左 -->
+        <div class="side-nav">
+          <div class="nav-title">章节目录 <span>({{ totalChapters }})</span></div>
+          <div class="nav-search">
+            <el-input v-model="searchText" placeholder="搜索章节..." :prefix-icon="Search" clearable />
           </div>
-          
-          <div class="sidebar-search">
-            <el-input 
-              v-model="searchText" 
-              placeholder="搜索章节" 
-              :prefix-icon="Search"
-              clearable
-            />
-          </div>
-
-          <div class="sidebar-tree">
-            <el-empty 
-              v-if="chapters.length === 0" 
-              description="暂无章节内容"
-              :image-size="80"
-            />
+          <div class="nav-tree-scroller">
             <el-tree
-              v-else
               :data="chapters"
               node-key="chapterId"
               :props="treeProps"
-              :expand-on-click-node="false"
               :highlight-current="true"
               :current-node-key="currentChapter?.chapterId"
               @node-click="handleChapterClick"
               default-expand-all
             >
-              <template #default="{ node, data }">
-                <div class="tree-node">
-                  <el-icon v-if="data.chapterType === 'FOLDER'" color="#409eff">
-                    <Folder />
+              <template #default="{ data }">
+                <div :class="['nav-node', { 'active': currentChapter?.chapterId === data.chapterId }]">
+                  <el-icon :class="data.chapterType.toLowerCase()">
+                    <VideoPlay v-if="data.chapterType === 'VIDEO'" />
+                    <Document v-else-if="data.chapterType === 'PDF'" />
+                    <Edit v-else />
                   </el-icon>
-                  <el-icon v-else-if="data.chapterType === 'VIDEO'" color="#67c23a">
-                    <VideoPlay />
-                  </el-icon>
-                  <el-icon v-else-if="data.chapterType === 'PDF'" color="#e6a23c">
-                    <Document />
-                  </el-icon>
-                  <el-icon v-else color="#909399">
-                    <Edit />
-                  </el-icon>
-                  <span class="node-title">{{ data.chapterTitle }}</span>
-                  <el-icon 
-                    v-if="data.chapterId === currentChapter?.chapterId" 
-                    color="#67c23a" 
-                    class="check-icon"
-                  >
-                    <Check />
-                  </el-icon>
+                  <span class="nav-text" :title="data.chapterTitle">{{ data.chapterTitle }}</span>
                 </div>
               </template>
             </el-tree>
           </div>
         </div>
-
-        <!-- 右侧章节内容 -->
-        <div class="chapter-content">
-          <div v-if="!currentChapter" class="empty-content">
-            <el-empty description="请从左侧选择章节开始学习" :image-size="120" />
+        <div class="main-view">
+          <div v-if="!currentChapter" class="empty-state-view">
+            <el-empty description="请从左侧选择章节预览内容" :image-size="200" />
           </div>
-
-          <div v-else class="content-wrapper">
-            <!-- 章节标题 -->
-            <div class="content-header">
-              <div class="header-title">
-                <h2>{{ currentChapter.chapterTitle }}</h2>
-                <el-tag :type="getChapterTypeTag(currentChapter.chapterType)">
-                  {{ getTypeLabel(currentChapter.chapterType) }}
-                </el-tag>
-              </div>
-              <div class="header-meta">
-                <span>创建时间：{{ formatTime(currentChapter.createTime) }}</span>
-              </div>
-            </div>
-
-            <!-- 章节内容 -->
-            <div class="content-body" v-loading="chapterLoading">
-              <!-- 视频内容 -->
-              <div v-if="currentChapter.videoUrl" class="media-section">
-                <div class="section-title">
-                  <el-icon><VideoPlay /></el-icon>
-                  <span>视频内容</span>
+          <div v-else class="active-content">
+            <!-- 2. 内容呈现区 -->
+            <div class="content-display-box" v-loading="chapterLoading">
+              
+              <!-- 解析出的文本内容（直接显示） -->
+              <div v-if="currentChapter.textContent" class="parsed-content-container">
+                <div class="content-label">
+                  <el-icon><Edit /></el-icon>
+                  <span>文档解析正文</span>
                 </div>
-                <div class="video-wrapper">
-                  <video 
-                    :src="getMediaUrl(currentChapter.videoUrl)" 
-                    controls 
-                    controlslist="nodownload"
-                    class="video-player"
-                  >
-                    您的浏览器不支持视频播放
-                  </video>
-                </div>
+                <div class="rich-text-content" v-html="formatTextContent(currentChapter.textContent)"></div>
               </div>
 
-              <!-- PDF内容 -->
-              <div v-if="currentChapter.pdfUrl" class="media-section">
-                <div class="section-title">
-                  <el-icon><Document /></el-icon>
-                  <span>PDF文档</span>
-                  <el-button 
-                    type="primary" 
-                    size="small"
-                    :icon="Download" 
-                    @click="downloadPdf(currentChapter.pdfUrl)"
-                  >
-                    下载
-                  </el-button>
+              <!-- 资源附件列表 -->
+              <div v-if="currentChapter.pdfUrl" class="resource-materials-card">
+                <div class="card-header">
+                  <el-icon><Files /></el-icon>
+                  <span>资源附件</span>
                 </div>
-                <div class="pdf-wrapper">
+                <el-table :data="[{ title: currentChapter.chapterTitle, url: currentChapter.pdfUrl }]" class="teacher-file-table">
+                  <el-table-column label="附件名称" min-width="200">
+                    <template #default="scope">
+                       <span class="file-link">
+                         <el-icon color="#409EFF"><Document /></el-icon>
+                         {{ scope.row.title }}
+                       </span>
+                    </template>
+                  </el-table-column>
+                  <el-table-column label="操作" width="160" align="right">
+                    <template #default="scope">
+                      <el-button link type="primary" @click="togglePreview">在线预览</el-button>
+                      <el-button link type="success" @click="downloadFile(scope.row.url, scope.row.title)">直接下载</el-button>
+                    </template>
+                  </el-table-column>
+                </el-table>
+              </div>
+
+              <!-- 预览浮层 -->
+              <div v-if="showPreviewBox" class="preview-overlay-box slide-down">
+                <div class="preview-header">
+                  <span>正在预览: {{ currentChapter.chapterTitle }}</span>
+                  <el-icon class="close-icon" @click="showPreviewBox = false"><ArrowUp /></el-icon>
+                </div>
+                <div class="media-container document-preview">
                   <iframe 
+                    v-if="isPdf(currentChapter.pdfUrl)"
                     :src="getMediaUrl(currentChapter.pdfUrl)" 
-                    class="pdf-frame"
-                    frameborder="0"
+                    class="full-frame"
+                  ></iframe>
+                  <iframe 
+                    v-else-if="currentChapter.pdfUrl"
+                    :src="'https://view.officeapps.live.com/op/view.aspx?src=' + encodeURIComponent(getMediaUrl(currentChapter.pdfUrl))" 
+                    class="full-frame"
                   ></iframe>
                 </div>
               </div>
 
-              <!-- 文本内容 -->
-              <div v-if="currentChapter.textContent" class="media-section">
-                <div class="section-title">
-                  <el-icon><Edit /></el-icon>
-                  <span>文本内容</span>
-                </div>
-                <div class="text-content">
-                  <div v-html="formatTextContent(currentChapter.textContent)"></div>
+              <!-- 视频内容 -->
+              <div v-if="currentChapter.videoUrl" class="media-container video-mode">
+                <video :src="getMediaUrl(currentChapter.videoUrl)" controls class="premium-video"></video>
+              </div>
+
+              <!-- 无内容显示 -->
+              <el-empty 
+                v-if="!currentChapter.videoUrl && !currentChapter.pdfUrl && !currentChapter.textContent"
+                description="暂无教学内容可预览"
+              />
+            </div>
+
+            <!-- 3. 互动讨论区 -->
+            <div class="discussion-container glass-card">
+              <div class="discussion-header">
+                <h3>讨论交互 <span>({{ totalCommentCount }})</span></h3>
+              </div>
+              <!-- 只有发表逻辑，UI精简化 -->
+              <div class="comment-input-block teacher-reply-style">
+                <el-input
+                  v-model="newComment"
+                  type="textarea"
+                  :rows="2"
+                  placeholder="在此输入您的指导意见或课程补充..."
+                  resize="none"
+                />
+                <div class="submit-row">
+                  <el-button type="primary" round @click="submitComment">发布评论</el-button>
                 </div>
               </div>
 
-              <!-- 空状态 -->
-              <el-empty 
-                v-if="!currentChapter.videoUrl && !currentChapter.pdfUrl && !currentChapter.textContent"
-                description="该章节暂无内容"
-              />
-
-              <!-- 章节评论区 -->
-              <div class="comments-section">
-                <div class="comments-header">
-                  <h3>
-                    <el-icon><ChatDotRound /></el-icon>
-                    讨论区
-                  </h3>
-                  <span class="comment-count">{{ comments.length }} 条评论</span>
-                </div>
-
-                <!-- 发表评论 -->
-                <div class="comment-input-area">
-                  <el-input
-                    v-model="newComment"
-                    type="textarea"
-                    :rows="3"
-                    placeholder="发表你的看法..."
-                    maxlength="500"
-                    show-word-limit
-                  />
-                  <div class="comment-actions">
-                    <el-button 
-                      type="primary" 
-                      :loading="commentSubmitting"
-                      @click="submitComment"
-                    >
-                      发表评论
-                    </el-button>
-                  </div>
-                </div>
-
-                <!-- 评论列表 -->
-                <div class="comments-list" v-loading="commentsLoading">
-                  <el-empty 
-                    v-if="comments.length === 0" 
-                    description="暂无讨论，快来发表你的见解吧"
-                    :image-size="100"
-                  />
-                  
-                  <div 
-                    v-else
-                    v-for="comment in comments" 
-                    :key="comment.commentId"
-                    class="comment-card glass-panel"
-                  >
-                    <div class="comment-main">
-                      <div class="user-avatar-wrapper">
-                         <el-avatar :size="48" :src="getUserAvatar(comment.userAvatar)" class="premium-avatar" />
-                         <div v-if="comment.userType === 'TEACHER'" class="teacher-badge-glow"></div>
-                      </div>
-                      
-                      <div class="comment-body-rich">
-                        <div class="comment-header-row">
-                          <span class="author-name" :class="{ 'is-teacher': comment.userType === 'TEACHER' }">
-                            {{ comment.userName }}
-                            <el-tag v-if="comment.userType === 'TEACHER'" type="danger" size="small" effect="dark" class="role-tag">教师</el-tag>
-                          </span>
-                          <span class="post-time">{{ formatCommentTime(comment.createTime) }}</span>
-                        </div>
-                        
-                        <div class="comment-text-content">{{ comment.content }}</div>
-                        
-                        <div class="comment-footer-actions">
-                          <el-button link class="action-btn" @click="showReplyInput(comment)">
-                            <el-icon><ChatDotRound /></el-icon> 回复
-                          </el-button>
-                        </div>
-
-                        <!-- Nested Replies (Standard Layout) -->
-                        <div v-if="comment.replies && comment.replies.length > 0" class="replies-container-modern">
-                          <div 
-                            v-for="reply in comment.replies"
-                            :key="reply.commentId"
-                            class="reply-item-modern"
-                          >
-                            <el-avatar :size="32" :src="getUserAvatar(reply.userAvatar)" class="small-avatar" />
-                            <div class="reply-detail">
-                              <div class="reply-user-info">
-                                <span class="reply-name" :class="{ 'is-teacher': reply.userType === 'TEACHER' }">
-                                  {{ reply.userName }}
-                                  <el-tag v-if="reply.userType === 'TEACHER'" type="danger" size="small" effect="plain">教师</el-tag>
-                                </span>
-                                <span class="reply-time-text">{{ formatCommentTime(reply.createTime) }}</span>
-                              </div>
-                              <div class="reply-message">{{ reply.content }}</div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <!-- Quick Reply Input -->
-                        <div v-if="replyingTo === comment.commentId" class="quick-reply-box slide-down">
-                          <el-input
-                            v-model="replyContent"
-                            type="textarea"
-                            :rows="2"
-                            :placeholder="`回复 @${comment.userName}...`"
-                            maxlength="200"
-                          />
-                          <div class="reply-submit-row">
-                             <el-button size="small" rounded @click="cancelReply">取消</el-button>
-                             <el-button type="primary" size="small" rounded :loading="replySubmitting" @click="submitReply(comment.commentId)">发送回复</el-button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              <div class="comments-list-wrapper" v-loading="commentsLoading">
+                <CommentItem
+                  v-for="comment in comments"
+                  :key="comment.commentId || comment.id"
+                  :comment="comment"
+                  :courseId="courseId"
+                  :showChapter="false"
+                  @commentPosted="currentChapter && loadChapterComments(currentChapter.chapterId)"
+                />
               </div>
             </div>
           </div>
@@ -307,11 +181,19 @@
 </template>
 
 <script setup>
+import { ref, computed } from 'vue'
+import { useRoute } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { 
   ArrowLeft, User, Search, Folder, VideoPlay, Document, 
-  Edit, Check, Download, ChatDotRound, ChatLineRound
+  Edit, Check, Download, ChatDotRound, ChatLineRound,
+  ArrowDown, ArrowUp, Delete, Files
 } from '@element-plus/icons-vue'
+import CommentItem from '@/views/teacher/course/CommentItem.vue'
 import { useCourseLearn } from '@/assets/js/student/course-learn.js'
+
+const route = useRoute()
+const courseId = computed(() => route.params.id)
 
 const {
   loading,
@@ -325,13 +207,19 @@ const {
   chapterLoading,
   treeProps,
   comments,
+  totalCommentCount,
   commentsLoading,
   newComment,
   commentSubmitting,
   replyingTo,
   replyContent,
   replySubmitting,
+  expandedComments,
+  currentUserAvatar,
+  currentUserId,
+  isTeacher,
   handleChapterClick,
+  loadChapterComments,
   getCourseImage,
   handleImageError,
   getMediaUrl,
@@ -344,10 +232,88 @@ const {
   showReplyInput,
   cancelReply,
   submitReply,
-  formatCommentTime
+  formatCommentTime,
+  getUserAvatar,
+  toggleExpand,
+  canDelete,
+  handleDeleteComment,
+  getChapterTypeColor
 } = useCourseLearn()
+
+const isPdf = (url) => url?.toLowerCase().endsWith('.pdf')
+const showPreviewBox = ref(false)
+const togglePreview = () => {
+  showPreviewBox.value = !showPreviewBox.value
+}
+
+import axios from 'axios'
+const isDownloading = ref(false)
+const downloadFile = async (url, title) => {
+  if (!url || isDownloading.value) return
+  isDownloading.value = true
+  try {
+    const fullUrl = getMediaUrl(url)
+    const response = await axios({
+      url: fullUrl,
+      method: 'GET',
+      responseType: 'blob',
+    })
+    
+    const blob = new Blob([response.data], { type: response.headers['content-type'] })
+    const link = document.createElement('a')
+    link.href = window.URL.createObjectURL(blob)
+    link.download = title || url.split('/').pop() || 'download'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(link.href)
+    ElMessage.success('开始下载')
+  } catch (error) {
+    console.error('下载失败:', error)
+    ElMessage.error('下载失败，请重试')
+  } finally {
+    isDownloading.value = false
+  }
+}
 </script>
 
 <style scoped>
 @import '@/assets/css/student/course-learn.css';
+
+.comment-input-area {
+  display: flex !important;
+  gap: 16px;
+  margin-bottom: 30px;
+}
+
+.user-avatar-preview {
+  flex-shrink: 0;
+}
+
+.input-wrapper-rich {
+  flex: 1;
+}
+
+.delete-btn:hover {
+  color: #ff4d4f !important;
+}
+
+.reply-user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.reply-delete-btn {
+  margin-left: auto !important;
+  font-size: 12px !important;
+  color: #94a3b8 !important;
+  padding: 0 !important;
+  height: auto !important;
+}
+
+.reply-delete-btn:hover {
+  color: #ef4444 !important;
+}
 </style>

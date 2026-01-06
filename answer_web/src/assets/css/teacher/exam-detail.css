@@ -159,6 +159,7 @@
 
 /* 打印样式 */
 @media print {
+
   .page-header .header-actions,
   .students-card {
     display: none;
@@ -186,4 +187,62 @@
 /* 加载状态 */
 .el-loading-mask {
   border-radius: 8px;
+}
+
+/* 统计卡片样式 */
+.summary-items {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 10px 0;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.summary-item .label {
+  color: #909399;
+  font-size: 14px;
+}
+
+.summary-item .value {
+  font-size: 24px;
+  font-weight: bold;
+  color: #303133;
+}
+
+.summary-item .value.success {
+  color: #67C23A;
+}
+
+.summary-item .value.primary {
+  color: #409EFF;
+}
+
+.summary-item .value.warning {
+  color: #E6A23C;
+}
+
+.score-fail {
+  color: #F56C6C;
+  font-weight: bold;
+}
+
+.score-pass {
+  color: #67C23A;
+  font-weight: bold;
+}
+
+.not-available {
+  color: #C0C4CC;
+  font-style: italic;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }

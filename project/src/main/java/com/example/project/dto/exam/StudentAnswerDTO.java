@@ -11,7 +11,7 @@ public class StudentAnswerDTO {
     private String questionType;
     private String questionContent;
     private String questionOptions;
-    private String correctAnswer;
+    private String answer;
     private String studentAnswer;
     private Integer isCorrect;
     private BigDecimal score;

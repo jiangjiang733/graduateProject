@@ -1,7 +1,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getCourseList } from '@/api/course.js'
-import { getCourseEnrollments, reviewEnrollment, getTeacherEnrollments } from '@/api/enrollment.js'
+import { getCourseEnrollments, reviewEnrollment, getTeacherEnrollments, cancelEnrollment, directEnroll } from '@/api/enrollment.js'
 
 export function useEnrollmentManagement() {
     const loading = ref(false)
@@ -227,11 +227,76 @@ export function useEnrollmentManagement() {
         return types[status] || 'info'
     }
 
+    // 移除学生（退课）
+    const handleRemoveStudent = async (enrollment) => {
+        try {
+            await ElMessageBox.confirm(
+                `确定要将学生"${enrollment.studentName}"从课程中移除吗？`,
+                '确认移除',
+                {
+                    confirmButtonText: '确定移除',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }
+            )
+
+            const response = await cancelEnrollment(enrollment.id)
+            if (response.success) {
+                ElMessage.success('移除成功')
+                loadEnrollments()
+            } else {
+                ElMessage.error(response.message || '移除失败')
+            }
+        } catch (error) {
+            if (error !== 'cancel') {
+                console.error('移除学生失败:', error)
+                ElMessage.error('操作失败')
+            }
+        }
+    }
+
+    // 邀请学生相关
+    const inviteDialogVisible = ref(false)
+    const inviteSubmitting = ref(false)
+    const inviteFormRef = ref()
+    const inviteForm = reactive({
+        courseId: '',
+        studentId: ''
+    })
+    const inviteRules = {
+        courseId: [{ required: true, message: '请选择课程', trigger: 'change' }],
+        studentId: [{ required: true, message: '请输入学生ID', trigger: 'blur' }]
+    }
+
+    const submitInvite = async () => {
+        try {
+            await inviteFormRef.value.validate()
+            inviteSubmitting.value = true
+
+            // 使用新加的API
+            const response = await directEnroll(inviteForm.studentId, inviteForm.courseId)
+
+            if (response.success) {
+                ElMessage.success('邀请成功')
+                inviteDialogVisible.value = false
+                inviteForm.studentId = ''
+                loadEnrollments()
+            } else {
+                ElMessage.error(response.message || '邀请失败')
+            }
+        } catch (error) {
+            console.error('邀请失败:', error)
+            ElMessage.error('操作失败')
+        } finally {
+            inviteSubmitting.value = false
+        }
+    }
+
     // 获取状态文本
     const getStatusText = (status) => {
         const texts = {
             pending: '待审核',
-            approved: '已通过',
+            approved: '已入班',
             rejected: '已拒绝'
         }
         return texts[status] || '未知'
@@ -279,10 +344,15 @@ export function useEnrollmentManagement() {
         submitReject,
         getStatusType,
         getStatusText,
-        getStatusType,
-        getStatusText,
         formatDate,
         searchKeyword,
-        formatTimeAgo
+        formatTimeAgo,
+        inviteDialogVisible,
+        inviteForm,
+        inviteRules,
+        inviteFormRef,
+        inviteSubmitting,
+        submitInvite,
+        handleRemoveStudent
     }
 }

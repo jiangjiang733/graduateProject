@@ -11,30 +11,33 @@ import java.util.List;
 @Mapper
 public interface CourseCommentMapper extends BaseMapper<CourseComment> {
 
-    @Select("SELECT cc.*, COALESCE(s.students_head, t.teacher_head) as user_avatar " +
+    @Select("SELECT cc.*, COALESCE(s.students_head, t.teacher_head, cc.user_avatar) as user_avatar, ch.chapter_title " +
             "FROM course_comment cc " +
             "LEFT JOIN student_user s ON cc.user_id = s.students_id AND cc.user_type = 'STUDENT' " +
             "LEFT JOIN teacher_user t ON cc.user_id = t.teacher_id AND cc.user_type = 'TEACHER' " +
+            "LEFT JOIN course_chapter ch ON cc.chapter_id = ch.chapter_id " +
             "WHERE cc.course_id = #{courseId} ORDER BY cc.create_time DESC")
     List<CourseComment> selectByCourseId(@Param("courseId") String courseId);
 
-    @Select("SELECT cc.*, COALESCE(s.students_head, t.teacher_head) as user_avatar " +
+    @Select("SELECT cc.*, COALESCE(s.students_head, t.teacher_head, cc.user_avatar) as user_avatar, ch.chapter_title " +
             "FROM course_comment cc " +
             "LEFT JOIN student_user s ON cc.user_id = s.students_id AND cc.user_type = 'STUDENT' " +
             "LEFT JOIN teacher_user t ON cc.user_id = t.teacher_id AND cc.user_type = 'TEACHER' " +
+            "LEFT JOIN course_chapter ch ON cc.chapter_id = ch.chapter_id " +
             "WHERE cc.chapter_id = #{chapterId} ORDER BY cc.create_time DESC")
     List<CourseComment> selectByChapterId(@Param("chapterId") Long chapterId);
 
-    @Select("SELECT cc.*, COALESCE(s.students_head, t.teacher_head) as user_avatar " +
+    @Select("SELECT cc.*, COALESCE(s.students_head, t.teacher_head, cc.user_avatar) as user_avatar, ch.chapter_title " +
             "FROM course_comment cc " +
             "LEFT JOIN student_user s ON cc.user_id = s.students_id AND cc.user_type = 'STUDENT' " +
             "LEFT JOIN teacher_user t ON cc.user_id = t.teacher_id AND cc.user_type = 'TEACHER' " +
+            "LEFT JOIN course_chapter ch ON cc.chapter_id = ch.chapter_id " +
             "WHERE cc.course_id = #{courseId} ORDER BY cc.create_time DESC LIMIT #{limit}")
     List<CourseComment> selectRecentComments(@Param("courseId") String courseId, @Param("limit") int limit);
 
     @Select({
             "<script>",
-            "SELECT cc.*, COALESCE(s.students_head, t.teacher_head) as user_avatar ",
+            "SELECT cc.*, COALESCE(s.students_head, t.teacher_head, cc.user_avatar) as user_avatar ",
             "FROM course_comment cc",
             "LEFT JOIN student_user s ON cc.user_id = s.students_id AND cc.user_type = 'STUDENT'",
             "LEFT JOIN teacher_user t ON cc.user_id = t.teacher_id AND cc.user_type = 'TEACHER'",

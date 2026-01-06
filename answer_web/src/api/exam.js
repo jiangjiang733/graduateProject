@@ -23,6 +23,15 @@ export const getExamsByCourse = (courseId) => {
 }
 
 /**
+ * 获取教师所有考试列表
+ * @param {string} teacherId - 教师ID
+ * @returns {Promise}
+ */
+export const getExamsByTeacher = (teacherId) => {
+  return request.get(`/exam/teacher/${teacherId}`)
+}
+
+/**
  * 获取课程考试列表（别名）
  * @param {string} courseId - 课程ID
  * @returns {Promise}
@@ -95,6 +104,33 @@ export const deleteExam = (examId) => {
 }
 
 /**
+ * 搜索考试
+ * @param {Object} params - 搜索参数 (teacherId, courseId, status, keyword)
+ * @returns {Promise}
+ */
+export const searchExams = (params) => {
+  return request.get('/exam/search', { params })
+}
+
+/**
+ * 取消发布考试
+ * @param {number} examId - 考试ID
+ * @returns {Promise}
+ */
+export const unpublishExam = (examId) => {
+  return request.put(`/exam/${examId}/unpublish`)
+}
+
+/**
+ * 退回学生考试
+ * @param {number} studentExamId - 学生考试记录ID
+ * @returns {Promise}
+ */
+export const returnStudentExam = (studentExamId) => {
+  return request.delete(`/exam/student-exam/${studentExamId}/return`)
+}
+
+/**
  * 获取考试统计
  * @param {number} examId - 考试ID
  * @returns {Promise}
@@ -139,6 +175,15 @@ export const getGradingStatistics = (examId) => {
   return request.get(`/exam/grading/${examId}/statistics`)
 }
 
+/**
+ * 获取考试学生列表
+ * @param {number} examId 
+ * @returns 
+ */
+export const getStudentExams = (examId) => {
+  return request.get(`/exam/${examId}/students`)
+}
+
 export default {
   // 考试管理
   createExam,
@@ -147,6 +192,8 @@ export default {
   getExamDetail,
   updateExam,
   publishExam,
+  unpublishExam,
+  returnStudentExam,
   deleteExam,
   getExamStatistics,
   // AI生成

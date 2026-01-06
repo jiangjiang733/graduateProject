@@ -68,6 +68,16 @@
           <el-tab-pane label="学员评价" name="comments">
             <el-empty description="暂无评价" />
           </el-tab-pane>
+
+          <el-tab-pane label="资料库" name="resources">
+            <div class="course-resource-wrapper">
+               <CourseResource 
+                 :courseId="String($route.params.id)" 
+                 :isAdmin="false" 
+                 :canDownload="isEnrolled"
+               />
+            </div>
+          </el-tab-pane>
         </el-tabs>
       </div>
 
@@ -118,6 +128,7 @@
 
 <script setup>
 import { User, StarFilled, Reading, VideoPlay, Document } from '@element-plus/icons-vue'
+import CourseResource from '@/components/common/CourseResource.vue'
 import { useCourseDetail } from '@/assets/js/student/course-detail.js'
 const {
   course,

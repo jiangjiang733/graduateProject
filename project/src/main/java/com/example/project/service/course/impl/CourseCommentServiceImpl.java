@@ -111,29 +111,27 @@ public class CourseCommentServiceImpl implements CourseCommentService {
     @Override
     @Transactional
     public void deleteComment(Long commentId) {
+        System.out.println("DEBUG: 尝试删除评论 ID: " + commentId);
+
         CourseComment comment = courseCommentMapper.selectById(commentId);
         if (comment != null) {
-            // 先递归删除所有子评论
-            deleteChildComments(commentId);
+            // 简单处理：直接删除所有子评论（不必递归，因为目前只有两层结构）
+            QueryWrapper<CourseComment> queryWrapper = new QueryWrapper<>();
+            queryWrapper.eq("parent_id", commentId);
+            int deletedChildren = courseCommentMapper.delete(queryWrapper);
+            System.out.println("DEBUG: 已删除子评论数量: " + deletedChildren);
 
             // 再删除当前评论
-            courseCommentMapper.deleteById(commentId);
-        }
-    }
-
-    /**
-     * 递归删除子评论
-     */
-    private void deleteChildComments(Long parentId) {
-        QueryWrapper<CourseComment> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("parent_id", parentId);
-        List<CourseComment> childComments = courseCommentMapper.selectList(queryWrapper);
-
-        for (CourseComment child : childComments) {
-            // 先递归删除子评论的子评论
-            deleteChildComments(child.getCommentId());
-            // 再删除子评论本身
-            courseCommentMapper.deleteById(child.getCommentId());
+            int result = courseCommentMapper.deleteById(commentId);
+            System.out.println("DEBUG: 删除主评论结果: " + result);
+        } else {
+            System.out.println("DEBUG: 未找到 ID 为 " + commentId + " 的评论");
+            // 如果没找到，可能是因为 commentId 映射问题
+            // 尝试使用 QueryWrapper 兜底删除
+            QueryWrapper<CourseComment> qw = new QueryWrapper<>();
+            qw.eq("comment_id", commentId);
+            int result = courseCommentMapper.delete(qw);
+            System.out.println("DEBUG: 兜底删除结果: " + result);
         }
     }
 

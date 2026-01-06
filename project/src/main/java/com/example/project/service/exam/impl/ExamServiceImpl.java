@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.example.project.dto.exam.ExamCreateDTO;
 import com.example.project.dto.exam.ExamQuestionDTO;
 import com.example.project.dto.exam.ExamStatisticsDTO;
+import com.example.project.entity.Student;
 import com.example.project.entity.exam.Exam;
 import com.example.project.entity.exam.ExamQuestion;
 import com.example.project.entity.exam.StudentExam;
@@ -19,13 +20,9 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -45,6 +42,9 @@ public class ExamServiceImpl implements ExamService {
 
     @Autowired
     private StudentAnswerMapper studentAnswerMapper;
+
+    @Autowired
+    private com.example.project.mapper.StudentUserMapper studentUserMapper;
 
     @Override
     @Transactional
@@ -83,6 +83,23 @@ public class ExamServiceImpl implements ExamService {
         return exams;
     }
 
+    @Override
+    public List<Exam> getExamsByTeacherId(String teacherId) {
+        QueryWrapper<Exam> wrapper = new QueryWrapper<>();
+        wrapper.eq("teacher_id", teacherId);
+        wrapper.orderByDesc("create_time");
+        List<Exam> exams = examMapper.selectList(wrapper);
+
+        for (Exam exam : exams) {
+            enrichExamInfo(exam);
+        }
+
+        return exams;
+    }
+
+    @Autowired
+    private com.example.project.mapper.enrollment.CourseEnrollmentMapper courseEnrollmentMapper;
+
     /**
      * 丰富考试信息（添加课程名称、参考人数等）
      */
@@ -93,19 +110,21 @@ public class ExamServiceImpl implements ExamService {
             if (course != null) {
                 exam.setCourseName(course.getCourseName());
             }
+
+            // 获取参与人数（本次课程的参与人数）
+            QueryWrapper<com.example.project.entity.enrollment.CourseEnrollment> enrollmentWrapper = new QueryWrapper<>();
+            enrollmentWrapper.eq("course_id", exam.getCourseId());
+            enrollmentWrapper.eq("status", "approved");
+            Long enrollmentCount = courseEnrollmentMapper.selectCount(enrollmentWrapper);
+            exam.setTotalStudents(enrollmentCount.intValue());
         }
 
-        // 获取参考人数统计
+        // 获取提交人数统计
         QueryWrapper<StudentExam> wrapper = new QueryWrapper<>();
         wrapper.eq("exam_id", exam.getExamId());
-
-        List<StudentExam> studentExams = studentExamMapper.selectList(wrapper);
-        exam.setTotalStudents(studentExams.size());
-
-        long submittedCount = studentExams.stream()
-                .filter(se -> se.getStatus() != null && se.getStatus() >= 2)
-                .count();
-        exam.setSubmittedCount((int) submittedCount);
+        wrapper.ge("status", 2); // 2-已提交, 3-已批改
+        Long submittedCount = studentExamMapper.selectCount(wrapper);
+        exam.setSubmittedCount(submittedCount.intValue());
 
         // 设置考试状态文本
         updateExamStatus(exam);
@@ -143,6 +162,9 @@ public class ExamServiceImpl implements ExamService {
 
         // 获取考试信息
         Exam exam = examMapper.selectById(examId);
+        if (exam != null) {
+            enrichExamInfo(exam);
+        }
         result.put("exam", exam);
 
         // 获取试题列表
@@ -358,5 +380,114 @@ public class ExamServiceImpl implements ExamService {
         statistics.setScoreDistribution(scoreDistribution);
 
         return statistics;
+    }
+
+    @Override
+    public List<Map<String, Object>> getStudentExamStatus(Long examId) {
+        Exam exam = examMapper.selectById(examId);
+        if (exam == null) {
+            return new ArrayList<>();
+        }
+
+        // 1. 获取所有已选该课程并审核通过的学生
+        QueryWrapper<com.example.project.entity.enrollment.CourseEnrollment> enrollmentWrapper = new QueryWrapper<>();
+        enrollmentWrapper.eq("course_id", exam.getCourseId());
+        enrollmentWrapper.eq("status", "approved");
+        List<com.example.project.entity.enrollment.CourseEnrollment> enrollments = courseEnrollmentMapper
+                .selectList(enrollmentWrapper);
+
+        // 2. 获取现有的考试记录
+        QueryWrapper<StudentExam> wrapper = new QueryWrapper<>();
+        wrapper.eq("exam_id", examId);
+        List<StudentExam> studentExams = studentExamMapper.selectList(wrapper);
+        Map<String, StudentExam> examMap = studentExams.stream()
+                .collect(Collectors.toMap(StudentExam::getStudentId, se -> se, (v1, v2) -> v1));
+
+        // 3. 合并信息
+        return enrollments.stream().map(enrollment -> {
+            String studentId = enrollment.getStudentId();
+            Map<String, Object> map = new HashMap<>();
+            map.put("studentId", studentId);
+
+            // 获取学生姓名
+            try {
+                com.example.project.entity.Student student = studentUserMapper.selectById(Integer.parseInt(studentId));
+                map.put("studentName", student != null ? student.getStudentsUsername() : "未知学生");
+            } catch (Exception e) {
+                map.put("studentName", "学生" + studentId);
+            }
+
+            StudentExam se = examMap.get(studentId);
+            if (se != null) {
+                map.put("studentExamId", se.getStudentExamId());
+                map.put("status", se.getStatus()); // 1-进行中, 2-已提交, 3-已批改
+                map.put("obtainedScore", se.getObtainedScore());
+                map.put("submitTime", se.getSubmitTime());
+            } else {
+                map.put("studentExamId", null);
+                map.put("status", 0); // 0-未参加
+                map.put("obtainedScore", null);
+                map.put("submitTime", null);
+            }
+
+            return map;
+        }).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Exam> searchExams(String teacherId, String courseId, String status, String keyword) {
+        QueryWrapper<Exam> wrapper = new QueryWrapper<>();
+        if (teacherId != null && !teacherId.isEmpty()) {
+            wrapper.eq("teacher_id", teacherId);
+        }
+        if (courseId != null && !courseId.isEmpty()) {
+            wrapper.eq("course_id", courseId);
+        }
+        if (status != null && !status.isEmpty()) {
+            // 目前 status 在数据库是数字 0-草稿, 1-已发布
+            if ("DRAFT".equals(status))
+                wrapper.eq("status", 0);
+            else if ("PUBLISHED".equals(status) || "ONGOING".equals(status) || "ENDED".equals(status)) {
+                wrapper.eq("status", 1);
+                // 这里的细分（进行中/已结束）通常在内存中根据时间判断，或者在这里加时间过滤
+                Date now = new Date();
+                if ("PUBLISHED".equals(status))
+                    wrapper.gt("start_time", now);
+                else if ("ONGOING".equals(status))
+                    wrapper.le("start_time", now).ge("end_time", now);
+                else if ("ENDED".equals(status))
+                    wrapper.lt("end_time", now);
+            }
+        }
+        if (keyword != null && !keyword.isEmpty()) {
+            wrapper.and(i -> i.like("exam_title", keyword).or().like("exam_description", keyword));
+        }
+        wrapper.orderByDesc("create_time");
+
+        List<Exam> exams = examMapper.selectList(wrapper);
+        for (Exam exam : exams) {
+            enrichExamInfo(exam);
+        }
+        return exams;
+    }
+
+    @Transactional
+    public void unpublishExam(Long examId) {
+        Exam exam = new Exam();
+        exam.setExamId(examId);
+        exam.setStatus(0); // 设置回草稿状态
+        examMapper.updateById(exam);
+    }
+
+    @Override
+    @Transactional
+    public void returnStudentExam(Long studentExamId) {
+        // 删除该学生的答题记录
+        QueryWrapper<StudentAnswer> answerWrapper = new QueryWrapper<>();
+        answerWrapper.eq("student_exam_id", studentExamId);
+        studentAnswerMapper.delete(answerWrapper);
+
+        // 删除该学生的考试记录（或者将其状态重置，这里选择直接删除记录让学生重考）
+        studentExamMapper.deleteById(studentExamId);
     }
 }

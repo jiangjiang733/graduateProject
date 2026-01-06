@@ -14,10 +14,16 @@ export const useTeacherStore = defineStore('teacher', () => {
   const teacherDepartment = ref(localStorage.getItem('teacherDepartment') || '')
   const teacherLevel = ref(localStorage.getItem('teacherLevel') || '')
   const teacherPhone = ref(localStorage.getItem('teacherPhone') || '')
-  
+
+  // Notification State
+  const unreadCount = ref(0)
+  const setUnreadCount = (count) => {
+    unreadCount.value = count
+  }
+
   // 计算属性
   const isLoggedIn = computed(() => !!teacherId.value)
-  
+
   const avatarUrl = computed(() => {
     if (teacherHead.value && teacherHead.value.trim() !== '') {
       if (teacherHead.value.startsWith('http://') || teacherHead.value.startsWith('https://')) {
@@ -27,7 +33,7 @@ export const useTeacherStore = defineStore('teacher', () => {
     }
     return '/src/assets/image/avatar.jpeg'
   })
-  
+
   // 方法
   /**
    * 设置教师信息并持久化到localStorage
@@ -63,7 +69,7 @@ export const useTeacherStore = defineStore('teacher', () => {
       localStorage.setItem('teacherPhone', info.teacherPhone)
     }
   }
-  
+
   /**
    * 清除教师信息并退出登录
    */
@@ -75,7 +81,7 @@ export const useTeacherStore = defineStore('teacher', () => {
     teacherDepartment.value = ''
     teacherLevel.value = ''
     teacherPhone.value = ''
-    
+
     localStorage.removeItem('teacherId')
     localStorage.removeItem('t_id')
     localStorage.removeItem('teacherName')
@@ -87,7 +93,7 @@ export const useTeacherStore = defineStore('teacher', () => {
     localStorage.removeItem('user')
     localStorage.setItem('status', 'false')
   }
-  
+
   /**
    * 更新教师头像
    */
@@ -95,7 +101,7 @@ export const useTeacherStore = defineStore('teacher', () => {
     teacherHead.value = avatarUrl
     localStorage.setItem('teacherHead', avatarUrl)
   }
-  
+
   /**
    * 更新教师个人信息
    */
@@ -117,7 +123,7 @@ export const useTeacherStore = defineStore('teacher', () => {
       localStorage.setItem('teacherPhone', profileData.teacherPhone)
     }
   }
-  
+
   return {
     // 状态
     teacherId,
@@ -134,6 +140,9 @@ export const useTeacherStore = defineStore('teacher', () => {
     setTeacherInfo,
     clearTeacherInfo,
     updateAvatar,
-    updateProfile
+    updateProfile,
+    // Notification
+    unreadCount,
+    setUnreadCount
   }
 })

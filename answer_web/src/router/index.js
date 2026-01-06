@@ -10,15 +10,19 @@ import Index from '../views/index.vue'
  * @returns {boolean} - 是否已登录
  */
 const isAuthenticated = (role) => {
+  // 检查是否登录了任何角色
+  const hasTeacherId = !!(localStorage.getItem('teacherId') || localStorage.getItem('t_id'))
+  const hasTeacherToken = !!(localStorage.getItem('token') || localStorage.getItem('teacherToken') || localStorage.getItem('t_token'))
+  const hasStudentId = !!(localStorage.getItem('s_id'))
+  const hasStudentToken = !!(localStorage.getItem('s_token'))
+
   if (role === 'teacher') {
-    // 检查教师登录状态：需要有 teacherId 和 token
-    const hasTeacherId = !!(localStorage.getItem('teacherId') || localStorage.getItem('t_id'))
-    const hasToken = !!(localStorage.getItem('token') || localStorage.getItem('teacherToken') || localStorage.getItem('t_token'))
-    return hasTeacherId && hasToken
+    return hasTeacherId && hasTeacherToken
   } else if (role === 'student') {
-    return !!(localStorage.getItem('s_id') || localStorage.getItem('s_token'))
+    // 学生路由允许老师为了预览而进入
+    return (hasStudentId && hasStudentToken) || (hasTeacherId && hasTeacherToken)
   }
-  return false
+  return (hasTeacherId && hasTeacherToken) || (hasStudentId && hasStudentToken)
 }
 
 // 其他页面使用懒加载优化性能
@@ -111,6 +115,12 @@ const router = createRouter({
           name: 'teacher_course_detail',
           component: TeacherCourseDetail,
           meta: { title: '课程详情', requiresAuth: true, role: 'teacher' }
+        },
+        {
+          path: 'course/:id/learn',
+          name: 'teacher_course_learn',
+          component: () => import('../views/student/CourseLearn.vue'),
+          meta: { title: '课程预览', requiresAuth: true, role: 'teacher' }
         },
         {
           path: 'exams',

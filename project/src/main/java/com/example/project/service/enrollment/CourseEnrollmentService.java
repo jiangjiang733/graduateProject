@@ -61,4 +61,9 @@ public interface CourseEnrollmentService {
      * @param enrollmentId 报名ID
      */
     void cancelEnrollment(Long enrollmentId);
+
+    /**
+     * 教师直接添加学生到课程
+     */
+    CourseEnrollment directEnroll(String studentId, String courseId);
 }

@@ -22,6 +22,11 @@ public interface ExamService {
     List<Exam> getExamsByCourseId(String courseId);
 
     /**
+     * 获取教师考试列表
+     */
+    List<Exam> getExamsByTeacherId(String teacherId);
+
+    /**
      * 获取考试详情
      */
     Exam getExamById(Long examId);
@@ -65,4 +70,24 @@ public interface ExamService {
      * 验证学生是否有资格参加考试
      */
     boolean validateStudentEligibility(Long examId, String studentId);
+
+    /**
+     * 获取考试的所有学生答题记录
+     */
+    List<Map<String, Object>> getStudentExamStatus(Long examId);
+
+    /**
+     * 取消发布考试
+     */
+    void unpublishExam(Long examId);
+
+    /**
+     * 退回学生考试（让学生重新考）
+     */
+    void returnStudentExam(Long studentExamId);
+
+    /**
+     * 搜索考试
+     */
+    List<Exam> searchExams(String teacherId, String courseId, String status, String keyword);
 }

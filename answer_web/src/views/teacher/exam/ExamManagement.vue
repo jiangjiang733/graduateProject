@@ -7,63 +7,74 @@
       </div>
     </div>
 
-    <!-- 筛选和搜索 -->
-    <div class="filter-section glass-panel animate-slide-up">
-      <div class="filter-container">
+    <!-- 筛选和搜索控制栏 -->
+    <div class="filter-section animate-slide-up">
+      <div class="glass-panel filter-wrapper">
         <div class="filter-left">
-           <div class="filter-item">
-             <span class="filter-label">课程</span>
-             <el-select 
-               v-model="filterForm.courseId" 
-               placeholder="全部课程" 
-               class="glass-select stylish-select" 
-               @change="loadExams"
-               clearable
-             >
-              <el-option
-                v-for="course in courses"
-                :key="course.id"
-                :label="course.courseName || course.name"
-                :value="course.id"
-              />
-             </el-select>
-           </div>
-           <div class="filter-item">
-             <span class="filter-label">状态</span>
-             <el-select 
-               v-model="filterForm.status" 
-               placeholder="全部状态" 
-               class="glass-select stylish-select" 
-               @change="loadExams"
-               clearable
-             >
-              <el-option label="草稿" value="DRAFT" />
-              <el-option label="已发布" value="PUBLISHED" />
-              <el-option label="进行中" value="ONGOING" />
-              <el-option label="已结束" value="ENDED" />
-             </el-select>
-           </div>
+          <div class="filter-group">
+            <div class="filter-item">
+              <label>关联课程</label>
+              <el-select 
+                v-model="filterForm.courseId" 
+                placeholder="选择课程" 
+                class="premium-select" 
+                @change="loadExams"
+                clearable
+              >
+                <template #prefix>
+                  <el-icon><Reading /></el-icon>
+                </template>
+                <el-option label="全部课程" value="" />
+                <el-option
+                  v-for="course in courses"
+                  :key="course.id"
+                  :label="course.courseName || course.name"
+                  :value="course.id"
+                />
+              </el-select>
+            </div>
+            <div class="filter-item">
+              <label>考试状态</label>
+              <el-select 
+                v-model="filterForm.status" 
+                placeholder="全部状态" 
+                class="premium-select" 
+                @change="loadExams"
+                clearable
+              >
+                <template #prefix>
+                  <el-icon><Clock /></el-icon>
+                </template>
+                <el-option label="全部状态" value="" />
+                <el-option label="草稿" value="DRAFT" />
+                <el-option label="已发布" value="PUBLISHED" />
+                <el-option label="进行中" value="ONGOING" />
+                <el-option label="已结束" value="ENDED" />
+              </el-select>
+            </div>
+          </div>
         </div>
         
         <div class="filter-right">
-          <div class="search-box">
-             <el-input
+          <div class="search-group">
+            <el-input
               v-model="filterForm.keyword"
-              placeholder="搜索..."
-              class="glass-input stylish-input"
+              placeholder="搜索考试标题或内容..."
+              class="premium-search"
               clearable
               @keyup.enter="loadExams"
             >
               <template #prefix>
-                <el-icon class="search-icon"><Search /></el-icon>
+                <el-icon><Search /></el-icon>
               </template>
             </el-input>
+            <el-button class="search-btn" @click="loadExams" type="primary">
+              搜索
+            </el-button>
           </div>
-          <el-button class="glass-btn primary search-btn" @click="loadExams">
-             搜索
-          </el-button>
-          <el-button class="glass-btn create-btn" type="primary" @click="showCreateDialog">
-             <el-icon><Plus /></el-icon> 创建考试
+          <div class="divider"></div>
+          <el-button class="create-btn" type="success" @click="showCreateDialog">
+            <el-icon><Plus /></el-icon> 创建考试
           </el-button>
         </div>
       </div>
@@ -220,137 +231,240 @@ const {
 </script>
 
 <style scoped>
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
+.exam-management {
+  padding: 24px;
+  background-color: #f8fafc;
+  min-height: 100vh;
 }
+
 .filter-section {
-  padding: 16px 24px;
-  margin-bottom: 24px;
+  margin-bottom: 32px;
 }
 
-.filter-container {
+.filter-wrapper {
+  padding: 12px 24px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
+  gap: 24px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.04);
 }
 
-.filter-left, .filter-right {
+.filter-left {
+  flex: 1;
+}
+
+.filter-group {
   display: flex;
+  gap: 24px;
   align-items: center;
-  gap: 16px;
 }
 
 .filter-item {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.filter-label {
-  font-size: 14px;
-  font-weight: 600;
-  color: #4b5563;
+.filter-item label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-left: 2px;
 }
 
+/* Premium Inputs & Selects */
+:deep(.premium-select) {
+  width: 180px;
+}
 
-:deep(.stylish-select .el-input__wrapper),
-:deep(.stylish-input .el-input__wrapper) {
-  background-color: rgba(243, 244, 246, 0.8) !important;
+:deep(.premium-select .el-input__wrapper),
+:deep(.premium-search .el-input__wrapper) {
+  background-color: #f1f5f9 !important;
   box-shadow: none !important;
   border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 8px 16px;
   transition: all 0.3s;
-  border-radius: 8px;
-  padding: 4px 12px;
 }
 
-:deep(.stylish-select .el-input__wrapper:hover),
-:deep(.stylish-input .el-input__wrapper:hover) {
+:deep(.premium-select .el-input__wrapper:hover),
+:deep(.premium-search .el-input__wrapper:hover) {
+  background-color: #e2e8f0 !important;
+}
+
+:deep(.premium-select .el-input__wrapper.is-focus),
+:deep(.premium-search .el-input__wrapper.is-focus) {
   background-color: white !important;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1) !important;
+  border-color: #10b981;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1) !important;
 }
 
-:deep(.stylish-select .el-input__wrapper.is-focus),
-:deep(.stylish-input .el-input__wrapper.is-focus) {
-  background-color: white !important;
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2) !important; /* Soft Emerald */
-  border-color: rgba(16, 185, 129, 0.5);
-}
-
-.search-box {
-  width: 260px;
-}
-
-.create-btn {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  border: none;
-  padding: 10px 20px;
-  font-weight: 600;
-  transition: transform 0.2s;
-}
-
-.create-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-}
-
-.create-btn :deep(.el-icon) {
-  margin-right: 4px;
-}
-
-.content-list {
+.filter-right {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 16px;
 }
 
-.list-card {
-  padding: 20px;
-  transition: all 0.3s;
-  border: 1px solid rgba(255,255,255,0.5);
+.search-group {
+  display: flex;
+  gap: 8px;
 }
-.list-card:hover { 
-  transform: translateY(-3px);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
-  border-color: rgba(16, 185, 129, 0.2);
+
+.premium-search {
+  width: 300px;
+}
+
+.search-btn {
+  border-radius: 12px;
+  padding: 0 24px;
+  font-weight: 600;
+  background: #1f2937;
+  border: none;
+}
+
+.search-btn:hover {
+  background: #111827;
+}
+
+.divider {
+  width: 1px;
+  height: 32px;
+  background: #e2e8f0;
+}
+
+.create-btn {
+  border-radius: 12px;
+  padding: 0 24px;
+  height: 42px;
+  font-weight: 700;
+  background: #10b981;
+  border: none;
+  box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);
+}
+
+.create-btn:hover {
+  background: #059669;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3);
+}
+
+.content-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+  gap: 24px;
+}
+
+.list-card {
+  border-radius: 20px;
+  padding: 24px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: white;
+  border: 1px solid #f1f5f9;
+}
+
+.list-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
+  border-color: #10b981;
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid rgba(0,0,0,0.05);
+  align-items: flex-start;
+  margin-bottom: 20px;
 }
 
 .title-section {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.card-title { font-size: 18px; font-weight: 700; color: #374151; margin: 0; }
+.card-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #1e293b;
+  margin: 0;
+}
+
+.card-actions {
+  display: flex;
+  gap: 8px;
+}
 
 .info-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: 1fr 1fr;
   gap: 16px;
-  color: #6b7280;
-  font-size: 13px;
+  margin-bottom: 20px;
 }
 
 .info-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.info-item .el-icon {
+  font-size: 18px;
+  color: #94a3b8;
+}
+
+.empty-state {
+  grid-column: 1 / -1;
+  padding: 80px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 24px;
 }
 
 /* Utilities */
-.animate-slide-up { animation: slideUp 0.5s ease-out forwards; opacity: 0; transform: translateY(20px); }
-@keyframes slideUp { to { opacity: 1; transform: translateY(0); } }
+.animate-slide-up {
+  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+  transform: translateY(30px);
+}
+
+@keyframes slideUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 1200px) {
+  .filter-wrapper {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .filter-right {
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 768px) {
+  .filter-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .filter-right {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .search-group {
+    flex-direction: column;
+  }
+  .premium-search, .premium-select {
+    width: 100%;
+  }
+}
 </style>

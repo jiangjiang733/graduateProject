@@ -71,17 +71,29 @@
         <!-- Interaction List (Sidebar view for Interactions is just a summary or empty if we move list to main) -->
         <!-- User Preference Idea: Douyin puts interactions in a specific list. We can show categories here or just "All Interactions". -->
         <div v-show="activeTab === 'interaction'" class="sidebar-content interaction-menu">
-           <div class="menu-item active">
+           <div 
+             class="menu-item"
+             :class="{ active: activeInteractionType === 'comment' }"
+             @click="activeInteractionType = 'comment'"
+           >
               <el-icon class="icon-box bg-blue"><Comment /></el-icon>
               <span>收到的评论</span>
               <el-icon class="arrow"><ArrowRight /></el-icon>
            </div>
-           <div class="menu-item">
+           <div 
+             class="menu-item"
+             :class="{ active: activeInteractionType === 'like' }"
+             @click="activeInteractionType = 'like'"
+           >
               <el-icon class="icon-box bg-red"><Pointer /></el-icon>
               <span>点赞我的</span>
               <el-icon class="arrow"><ArrowRight /></el-icon>
            </div>
-           <div class="menu-item">
+           <div 
+             class="menu-item"
+             :class="{ active: activeInteractionType === 'system' }"
+             @click="activeInteractionType = 'system'"
+           >
               <el-icon class="icon-box bg-green"><Bell /></el-icon>
               <span>系统通知</span>
               <el-icon class="arrow"><ArrowRight /></el-icon>
@@ -150,12 +162,12 @@
         <!-- View 2: Interaction List (Douyin Style) -->
         <template v-if="activeTab === 'interaction'">
            <header class="window-header interaction-header">
-              <h3>评论回复</h3>
-              <el-button link type="primary">全部标记已读</el-button>
+              <h3>{{ interactionTitle }}</h3>
+              <el-button link type="primary" @click="markAllRead">全部标记已读</el-button>
            </header>
            
            <div class="interaction-list custom-scrollbar">
-              <div v-for="(item, index) in interactionList" :key="index" class="interaction-item animate-slide-up" :style="{ animationDelay: index * 0.05 + 's' }">
+              <div v-for="(item, index) in filteredInteractionList" :key="index" class="interaction-item animate-slide-up" :style="{ animationDelay: index * 0.05 + 's' }">
                  <div class="item-avatar">
                     <el-avatar :size="48" :src="item.userAvatar" shape="circle">{{ item.userName?.charAt(0) }}</el-avatar>
                     <div v-if="!item.isRead" class="unread-badge"></div>
@@ -163,15 +175,15 @@
                  <div class="item-content">
                     <div class="item-top">
                        <span class="user-name">{{ item.userName }}</span>
-                       <span class="action-text">回复了你的评论</span>
+                       <span class="action-text">{{ item.actionText }}</span>
                        <span class="time">{{ formatTime(item.time) }}</span>
                     </div>
-                    <div class="reply-content">{{ item.content }}</div>
+                    <div class="reply-content" v-if="item.content">{{ item.content }}</div>
                     
-                    <div class="context-box">
+                    <div class="context-box" v-if="item.originalContent">
                        <div class="context-bar"></div>
                        <div class="context-text">
-                          <span class="my-name">我: </span>
+                          <span class="my-name" v-if="item.type !== 'system'">我: </span>
                           {{ item.originalContent }}
                        </div>
                        <!-- If it links to a course/video -->
@@ -181,8 +193,8 @@
                     </div>
                     
                     <div class="item-actions">
-                       <el-button link type="primary" size="small" @click="handleReplyInteraction(item)">回复</el-button>
-                       <el-button link size="small">查看详情</el-button>
+                       <el-button v-if="item.type === 'comment'" link type="primary" size="small" @click="handleReplyInteraction(item)">回复</el-button>
+                       <el-button link size="small" @click="handleRead(item)">查看详情</el-button>
                     </div>
                  </div>
                  <div class="item-right-thumb" v-if="item.coverUrl">
@@ -190,7 +202,7 @@
                  </div>
               </div>
               
-              <div v-if="interactionList.length === 0" class="empty-state">
+              <div v-if="filteredInteractionList.length === 0" class="empty-state">
                  <el-empty description="暂无新消息" />
               </div>
            </div>
@@ -207,8 +219,10 @@ import {
 } from '@element-plus/icons-vue'
 import '@/assets/css/teacher/modern-theme.css'
 import { getMessageList, markAsRead, getUnreadCount } from '@/api/message.js'
+import { ElMessage } from 'element-plus'
 
 const activeTab = ref('interaction') 
+const activeInteractionType = ref('comment') // comment, like, system
 const loadingList = ref(false)
 const interactionLoading = ref(false)
 const searchKeyword = ref('')
@@ -255,6 +269,19 @@ const currentMessages = computed(() => {
   return messagesMap.value[currentChatUser.value.studentId] || []
 })
 
+const interactionTitle = computed(() => {
+  const titles = {
+    'comment': '收到的评论',
+    'like': '收到的点赞',
+    'system': '系统通知'
+  }
+  return titles[activeInteractionType.value] || '消息列表'
+})
+
+const filteredInteractionList = computed(() => {
+  return interactionList.value.filter(item => item.type === activeInteractionType.value)
+})
+
 // Methods
 const loadInteractions = async () => {
     interactionLoading.value = true
@@ -262,17 +289,31 @@ const loadInteractions = async () => {
         const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
         const res = await getMessageList(teacherId, { pageSize: 50 })
         if (res.code === 200 && res.data) {
-            interactionList.value = res.data.records.map(m => ({
-                id: m.messageId,
-                userName: m.senderName || '未知用户',
-                userAvatar: m.senderAvatar || '',
-                content: m.content,
-                time: m.createTime,
-                isRead: m.isRead === 1,
-                originalContent: '回复了您的评论', // Backend could provide more context
-                sourceName: '课程互动',
-                coverUrl: ''
-            }))
+            interactionList.value = res.data.records.map((m, index) => {
+                // Mocking types for demonstration since backend might not return explicit 'type' yet
+                // In production, use m.type or m.msgType
+                const types = ['comment', 'like', 'system']
+                // Use existing type if available, otherwise mock distribution
+                const type = m.type || (m.title?.includes('系统') ? 'system' : types[index % 2]) 
+                
+                let actionText = '回复了你的评论'
+                if (type === 'like') actionText = '点赞了你的课程'
+                if (type === 'system') actionText = '系统通知'
+
+                return {
+                    id: m.messageId,
+                    type: type,
+                    userName: type === 'system' ? '系统管理员' : (m.senderName || '未知用户'),
+                    userAvatar: m.senderAvatar || '',
+                    content: m.content,
+                    time: m.createTime,
+                    isRead: m.isRead === 1,
+                    actionText: actionText,
+                    originalContent: type === 'comment' ? '您的评论内容...' : (type === 'system' ? m.title : '您的课程《Java程序设计》'),
+                    sourceName: type !== 'system' ? '课程互动' : '',
+                    coverUrl: ''
+                }
+            })
             
             // Update unread count
             const countRes = await getUnreadCount(teacherId)
@@ -327,16 +368,42 @@ const receiveMockReply = (studentId) => {
    }
 }
 
-const handleReplyInteraction = async (item) => {
-    // Mark as read
+const handleRead = async (item) => {
     if (!item.isRead) {
         try {
             await markAsRead(item.id)
             item.isRead = true
             interactionUnread.value = Math.max(0, interactionUnread.value - 1)
-        } catch (e) { console.error(e) }
+        } catch (e) { console.error('标记已读失败', e) }
     }
-    ElMessage.info('正在跳转到评论页面...')
+}
+
+const markAllRead = async () => {
+    // Only mark visible list as read or all? Usually visible/current type.
+    const unreadItems = filteredInteractionList.value.filter(item => !item.isRead)
+    if (unreadItems.length === 0) return
+
+    try {
+        await Promise.all(unreadItems.map(item => markAsRead(item.id)))
+        unreadItems.forEach(item => item.isRead = true)
+        // Re-fetch count to be accurate
+        const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
+        const countRes = await getUnreadCount(teacherId)
+        if (countRes.code === 200) {
+            interactionUnread.value = countRes.data.unreadCount
+        } else {
+             interactionUnread.value = Math.max(0, interactionUnread.value - unreadItems.length)
+        }
+        ElMessage.success('已全部标记为已读')
+    } catch (error) {
+        ElMessage.error('操作失败')
+    }
+}
+
+const handleReplyInteraction = async (item) => {
+    await handleRead(item)
+    // Future: Navigate to specific comment
+    ElMessage.success('正在跳转到评论...')
 }
 
 const scrollToBottom = () => {

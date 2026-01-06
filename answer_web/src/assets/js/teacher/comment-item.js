@@ -14,7 +14,9 @@ export function useCommentItem(props, emit) {
     // 用户信息
     const userInfoStore = useUserInfo();
     userInfoStore.initUserInfo();
-    const currentUserId = computed(() => userInfoStore.userId);
+    const currentUserId = computed(() => {
+        return userInfoStore.userId || localStorage.getItem('studentId') || localStorage.getItem('s_id') || localStorage.getItem('teacherId') || localStorage.getItem('t_id');
+    });
 
     // 检查是否可以删除（自己发布的评论 或 课程教师）
     const canDeleteComment = async (courseId) => {
@@ -44,14 +46,15 @@ export function useCommentItem(props, emit) {
         try {
             const commentData = {
                 courseId: props.courseId,
+                chapterId: props.comment.chapterId || null, // Inherit chapterId from parent
                 userId: currentUserId.value,
-                userName: userInfoStore.userName,
-                userType: userInfoStore.userType,
-                userAvatar: userInfoStore.avatar,
+                userName: userInfoStore.userName || localStorage.getItem('userName') || localStorage.getItem('studentName') || '匿名用户',
+                userType: userInfoStore.userType || (localStorage.getItem('studentId') ? 'STUDENT' : 'TEACHER'),
+                userAvatar: userInfoStore.avatarUrl || defaultAvatar,
                 content: replyContent.value,
-                parentId: props.comment.commentId, // 回复当前评论
-                targetUserId: props.comment.userId, // 被回复人ID
-                targetUserName: props.comment.userName, // 被回复人名称
+                parentId: props.comment.commentId || props.comment.id,
+                targetUserId: props.comment.userId,
+                targetUserName: props.comment.userName,
             };
 
             const res = await addComment(commentData);
@@ -72,18 +75,18 @@ export function useCommentItem(props, emit) {
 
     // 删除评论
     const confirmDelete = (commentId) => {
+        const actualId = commentId || props.comment.commentId || props.comment.id;
+
         ElMessageBox.confirm('确定要删除这条评论吗？删除后将无法恢复！', '警告', {
             confirmButtonText: '确定删除',
             cancelButtonText: '取消',
             type: 'warning',
         }).then(async () => {
-            // 再次确认权限
-            if (!(await canDeleteComment(props.courseId))) {
-                return ElMessage.error('您没有权限删除此评论。');
-            }
+            // 再次确认权限 (Skip complex async check in UI for responsiveness, server will validate)
+            // if (!(await canDeleteComment(props.courseId))) { ... } 
 
             try {
-                const res = await deleteComment(commentId);
+                const res = await deleteComment(actualId);
                 if (res.code === 200) {
                     ElMessage.success('评论删除成功');
                     emit('commentPosted'); // 通知父组件刷新列表

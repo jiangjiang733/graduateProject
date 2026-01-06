@@ -8,7 +8,7 @@ public class ExamQuestionDTO {
     private String questionType;
     private String questionContent;
     private String questionOptions;
-    private String correctAnswer;
+    private String answer;
     private Integer score;
     private Integer questionOrder;
     private String analysis;

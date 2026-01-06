@@ -231,10 +231,88 @@ public class CourseEnrollmentServiceImpl implements CourseEnrollmentService {
             throw new RuntimeException("报名记录不存在");
         }
 
+        // 如果是已通过状态，也需要从 student_course 表中移除
         if ("approved".equals(enrollment.getStatus())) {
-            throw new RuntimeException("已通过的报名无法取消");
+            QueryWrapper<com.example.project.entity.course.StudentCourse> query = new QueryWrapper<>();
+            try {
+                query.eq("student_id", Integer.parseInt(enrollment.getStudentId()));
+                query.eq("course_id", enrollment.getCourseId());
+                studentCourseMapper.delete(query);
+            } catch (Exception e) {
+                System.err.println("删除学生课程关联失败: " + e.getMessage());
+            }
         }
 
         enrollmentMapper.deleteById(enrollmentId);
+    }
+
+    @Override
+    @Transactional
+    public CourseEnrollment directEnroll(String studentId, String courseId) {
+        // 获取学生信息
+        Student student = studentUserMapper.selectById(studentId);
+        if (student == null) {
+            throw new RuntimeException("学生不存在");
+        }
+
+        // 获取课程基本信息 (需要从Course表获取，这里为了简单先从已有的报名记录或其他地方拿teacherId)
+        // 通常应该从 CourseService 获取详情，这里暂用简单逻辑
+        com.example.project.mapper.course.CourseMapper courseMapper = (com.example.project.mapper.course.CourseMapper) org.springframework.web.context.ContextLoader
+                .getCurrentWebApplicationContext().getBean("courseMapper");
+        com.example.project.entity.course.Course course = courseMapper.selectById(courseId);
+        if (course == null) {
+            throw new RuntimeException("课程不存在");
+        }
+
+        // 检查是否已经报名
+        QueryWrapper<CourseEnrollment> wrapper = new QueryWrapper<>();
+        wrapper.eq("student_id", studentId);
+        wrapper.eq("course_id", courseId);
+        CourseEnrollment existing = enrollmentMapper.selectOne(wrapper);
+
+        if (existing != null && "approved".equals(existing.getStatus())) {
+            return existing;
+        }
+
+        CourseEnrollment enrollment = existing != null ? existing : new CourseEnrollment();
+        enrollment.setStudentId(studentId);
+        enrollment.setStudentName(student.getStudentsUsername());
+        enrollment.setStudentEmail(student.getStudentsEmail());
+        enrollment.setCourseId(courseId);
+        enrollment.setCourseName(course.getCourseName());
+        enrollment.setTeacherId(course.getTeacherId());
+        enrollment.setStatus("approved");
+        enrollment.setApplyTime(new Date());
+        enrollment.setReviewTime(new Date());
+
+        if (existing != null) {
+            enrollmentMapper.updateById(enrollment);
+        } else {
+            enrollmentMapper.insert(enrollment);
+        }
+
+        // 同时加入到课程学习表
+        com.example.project.entity.course.StudentCourse sc = new com.example.project.entity.course.StudentCourse();
+        try {
+            sc.setStudentId(Integer.parseInt(studentId));
+        } catch (Exception e) {
+        }
+        sc.setCourseId(courseId);
+        sc.setStudentName(student.getStudentsUsername());
+        sc.setCourseName(course.getCourseName());
+        sc.setTeacherId(course.getTeacherId());
+        sc.setStatus(1);
+        sc.setProgress(0);
+        sc.setJoinTime(new Date());
+        sc.setCreateTime(new Date());
+
+        QueryWrapper<com.example.project.entity.course.StudentCourse> scQuery = new QueryWrapper<>();
+        scQuery.eq("student_id", sc.getStudentId());
+        scQuery.eq("course_id", courseId);
+        if (studentCourseMapper.selectCount(scQuery) == 0) {
+            studentCourseMapper.insert(sc);
+        }
+
+        return enrollment;
     }
 }

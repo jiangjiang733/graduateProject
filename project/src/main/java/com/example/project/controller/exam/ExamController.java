@@ -50,6 +50,36 @@ public class ExamController {
     }
 
     /**
+     * 获取教师所有考试列表
+     */
+    @GetMapping("/teacher/{teacherId}")
+    public Result<List<Exam>> getExamsByTeacherId(@PathVariable String teacherId) {
+        try {
+            List<Exam> exams = examService.getExamsByTeacherId(teacherId);
+            return Result.success(exams);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 搜索考试
+     */
+    @GetMapping("/search")
+    public Result<List<Exam>> searchExams(
+            @RequestParam(required = false) String teacherId,
+            @RequestParam(required = false) String courseId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String keyword) {
+        try {
+            List<Exam> exams = examService.searchExams(teacherId, courseId, status, keyword);
+            return Result.success(exams);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
      * 获取考试详情（包含试题）
      */
     @GetMapping("/{examId}")
@@ -92,6 +122,32 @@ public class ExamController {
     }
 
     /**
+     * 取消发布考试
+     */
+    @PutMapping("/{examId}/unpublish")
+    public Result<String> unpublishExam(@PathVariable Long examId) {
+        try {
+            examService.unpublishExam(examId);
+            return Result.success("考试已取消发布");
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 退回学生考试
+     */
+    @DeleteMapping("/student-exam/{studentExamId}/return")
+    public Result<String> returnStudentExam(@PathVariable Long studentExamId) {
+        try {
+            examService.returnStudentExam(studentExamId);
+            return Result.success("考试已退回");
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
      * 删除考试
      */
     @DeleteMapping("/{examId}")
@@ -112,6 +168,19 @@ public class ExamController {
         try {
             ExamStatisticsDTO statistics = examService.getExamStatistics(examId);
             return Result.success(statistics);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 获取考试的所有学生答题记录
+     */
+    @GetMapping("/{examId}/students")
+    public Result<List<Map<String, Object>>> getStudentExams(@PathVariable Long examId) {
+        try {
+            List<Map<String, Object>> studentExams = examService.getStudentExamStatus(examId);
+            return Result.success(studentExams);
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }

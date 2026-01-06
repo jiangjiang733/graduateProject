@@ -14,17 +14,14 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * 服务实现
- */
 @Service
 public class DashboardServiceImpl implements DashboardService {
 
     @Autowired
-    private CourseMapper courseMapper;
+    private com.example.project.mapper.course.StudentCourseMapper studentCourseMapper;
 
     @Autowired
-    private com.example.project.mapper.course.StudentCourseMapper studentCourseMapper;
+    private CourseMapper courseMapper;
 
     @Autowired
     private com.example.project.mapper.exam.ExamMapper examMapper;
@@ -37,6 +34,9 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Autowired
     private com.example.project.mapper.homework.LabReportMapper labReportMapper;
+
+    @Autowired
+    private com.example.project.mapper.homework.StudentLabReportMapper studentLabReportMapper;
 
     @Override
     public DashboardStatisticsDTO getStatistics(String teacherId) {
@@ -62,20 +62,24 @@ public class DashboardServiceImpl implements DashboardService {
                 Long studentCount = studentCourseMapper.selectCount(scWrapper);
                 statistics.setStudentCount(studentCount.intValue());
 
-                // 2. 待批改作业数
-                QueryWrapper<com.example.project.entity.homework.LabReport> reportWrapper = new QueryWrapper<>();
-                reportWrapper.in("course_id", courseIds);
-                Long reportCount = labReportMapper.selectCount(reportWrapper);
-                statistics.setPendingHomeworkCount(reportCount.intValue());
+                // 2. 待批改作业数 (统计已提交但未批改的记录)
+                QueryWrapper<com.example.project.entity.homework.StudentLabReport> slrWrapper = new QueryWrapper<>();
+                slrWrapper.in("report_id",
+                        labReportMapper
+                                .selectList(new QueryWrapper<com.example.project.entity.homework.LabReport>()
+                                        .in("course_id", courseIds))
+                                .stream().map(com.example.project.entity.homework.LabReport::getReportId)
+                                .collect(Collectors.toList()));
+                slrWrapper.eq("status", 1); // 1-已提交待批改
+                Long pendingCount = studentLabReportMapper.selectCount(slrWrapper);
+                statistics.setPendingHomeworkCount(pendingCount.intValue());
 
-                // 3. 进行中的考试数
+                // 3. 进行中的考试数 (统计该教师课程下所有已发布的考试)
                 QueryWrapper<com.example.project.entity.exam.Exam> examWrapper = new QueryWrapper<>();
                 examWrapper.in("course_id", courseIds);
-                examWrapper.eq("status", 1);
-                examWrapper.le("start_time", new Date());
-                examWrapper.ge("end_time", new Date());
-                Long ongoingExams = examMapper.selectCount(examWrapper);
-                statistics.setOngoingExamCount(ongoingExams.intValue());
+                examWrapper.eq("status", 1); // 1-已发布
+                Long publishedExams = examMapper.selectCount(examWrapper);
+                statistics.setOngoingExamCount(publishedExams.intValue());
 
             } else {
                 statistics.setStudentCount(0);
@@ -188,7 +192,25 @@ public class DashboardServiceImpl implements DashboardService {
             if (courseIds.isEmpty())
                 return messages;
 
-            // 1. 获取最近提交的作业 (暂无)
+            // 1. 获取最近提交的作业动态
+            QueryWrapper<com.example.project.entity.homework.StudentLabReport> slrWrapper = new QueryWrapper<>();
+            slrWrapper.eq("status", 1);
+            slrWrapper.orderByDesc("submit_time");
+            slrWrapper.last("LIMIT " + limit);
+            List<com.example.project.entity.homework.StudentLabReport> submissions = studentLabReportMapper
+                    .selectList(slrWrapper);
+
+            for (com.example.project.entity.homework.StudentLabReport sub : submissions) {
+                com.example.project.entity.homework.LabReport report = labReportMapper.selectById(sub.getReportId());
+                if (report != null && courseIds.contains(report.getCourseId())) {
+                    Map<String, Object> msg = new HashMap<>();
+                    msg.put("studentName", sub.getStudentName());
+                    msg.put("title", "提交了作业");
+                    msg.put("content", report.getReportTitle());
+                    msg.put("time", sub.getSubmitTime());
+                    messages.add(msg);
+                }
+            }
 
         } catch (Exception e) {
             e.printStackTrace();

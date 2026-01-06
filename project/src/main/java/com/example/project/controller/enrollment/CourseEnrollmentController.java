@@ -123,7 +123,23 @@ public class CourseEnrollmentController {
     public Result<String> cancelEnrollment(@PathVariable Long enrollmentId) {
         try {
             enrollmentService.cancelEnrollment(enrollmentId);
-            return Result.success("报名已取消");
+            return Result.success("操作成功");
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 教师直接添加学生到课程
+     * POST /api/enrollment/direct-enroll
+     */
+    @PostMapping("/direct-enroll")
+    public Result<CourseEnrollment> directEnroll(
+            @RequestParam String studentId,
+            @RequestParam String courseId) {
+        try {
+            CourseEnrollment enrollment = enrollmentService.directEnroll(studentId, courseId);
+            return Result.success("学生已成功加入课程", enrollment);
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }

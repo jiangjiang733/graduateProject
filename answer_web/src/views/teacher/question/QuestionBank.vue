@@ -1,46 +1,60 @@
 <template>
   <div class="question-bank modern-page">
-    <header class="page-header">
-      <div class="title-group">
-        <h1 class="main-title">题库管理</h1>
-        <div class="status-badge">
-          <span class="dot"></span> 实时同步中
-        </div>
-      </div>
-      <div class="action-group">
-        <el-button class="action-btn import" plain>
+    <header class="page-header animate-fade-in">
+      <div class="header-right">
+        <el-button class="premium-btn ghost" @click="handleBatchImport">
           <el-icon><Upload /></el-icon>批量导入
         </el-button>
-        <el-button class="action-btn create" type="primary" @click="openCreateDialog">
+        <el-button class="premium-btn primary" @click="openCreateDialog">
           <el-icon><Plus /></el-icon>新增试题
         </el-button>
       </div>
     </header>
 
-    <section class="search-bar-container">
-      <div class="search-inner">
-        <el-select v-model="filter.courseId" placeholder="所有课程" clearable class="custom-select">
-          <el-option v-for="c in courses" :key="c.id" :label="c.courseName" :value="c.id" />
-        </el-select>
-
-        <el-select v-model="filter.type" placeholder="所有题型" clearable class="custom-select">
-          <el-option label="单选题" value="SINGLE" />
-          <el-option label="多选题" value="MULTIPLE" />
-          <el-option label="判断题" value="JUDGE" />
-          <el-option label="简答题" value="ESSAY" />
-        </el-select>
-
-        <div class="search-input-wrapper">
-          <el-icon class="search-icon"><Search /></el-icon>
-          <input
-              v-model="filter.keyword"
-              type="text"
-              placeholder="搜索题目关键内容..."
-              @keyup.enter="handleSearch"
-          >
+    <section class="filter-section animate-slide-up">
+      <div class="glass-panel filter-wrapper">
+        <div class="filter-left">
+          <div class="filter-group">
+            <div class="filter-item">
+              <label>所属课程</label>
+              <el-select v-model="filter.courseId" placeholder="全部课程" clearable class="premium-select" @change="handleSearch">
+                <template #prefix><el-icon><Notebook /></el-icon></template>
+                <el-option label="全部课程" value="" />
+                <el-option v-for="c in courses" :key="c.id" :label="c.courseName" :value="c.id" />
+              </el-select>
+            </div>
+            <div class="filter-item">
+              <label>题目类型</label>
+              <el-select v-model="filter.type" placeholder="全部题型" clearable class="premium-select" @change="handleSearch">
+                <template #prefix><el-icon><Clock /></el-icon></template>
+                <el-option label="全部题型" value="" />
+                <el-option label="单选题" value="SINGLE" />
+                <el-option label="多选题" value="MULTIPLE" />
+                <el-option label="判断题" value="JUDGE" />
+                <el-option label="简答题" value="ESSAY" />
+              </el-select>
+            </div>
+          </div>
         </div>
 
-        <button class="search-submit" @click="handleSearch">检索</button>
+        <div class="filter-right">
+          <div class="search-group">
+            <el-input
+              v-model="filter.keyword"
+              placeholder="搜索题目题干或内容..."
+              class="premium-search"
+              clearable
+              @keyup.enter="handleSearch"
+            >
+              <template #prefix>
+                <el-icon><Search /></el-icon>
+              </template>
+            </el-input>
+            <el-button class="search-btn" @click="handleSearch" type="primary">
+              搜索
+            </el-button>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -51,7 +65,6 @@
         </div>
         <p>空空如也，快去添加第一道试题吧</p>
       </div>
-
       <article v-for="(q, idx) in questions"
                :key="q.id"
                class="q-card"
@@ -185,7 +198,7 @@ const courses = ref([])
 const loading = ref(false)
 const dialogVisible = ref(false)
 const isEdit = ref(false)
-const pagination = ref({ current: 1, size: 8, total: 0 })
+const pagination = ref({ current: 1, size: 6, total: 0 })
 
 const form = ref({
   courseId: '', type: 'SINGLE', difficulty: 1, content: '',
@@ -245,7 +258,17 @@ const editQuestion = (q) => {
 const saveQuestion = async () => {
   const data = { ...form.value, teacherId: getTeacherId() }
   if(['SINGLE', 'MULTIPLE'].includes(data.type)) {
-    if(data.type === 'SINGLE') data.options.forEach((o, i) => o.isCorrect = (i === data.correctIndex))
+    if(data.type === 'SINGLE') {
+      data.options.forEach((o, i) => o.isCorrect = (i === data.correctIndex))
+
+      data.answer = String.fromCharCode(65 + data.correctIndex)
+    } else {
+      // 多选题：收集正确选项的字母
+      const correctChars = data.options
+        .map((o, i) => o.isCorrect ? String.fromCharCode(65 + i) : null)
+        .filter(c => c !== null)
+      data.answer = correctChars.join('')
+    }
     data.options = JSON.stringify(data.options)
   }
 
@@ -275,218 +298,367 @@ onMounted(() => { loadCourses(); loadQuestions() })
 </script>
 
 <style scoped>
-/* 1. 基础排版 */
-.modern-page {
-  padding: 2rem;
+.question-bank {
+  padding: 24px;
   background-color: #f8fafc;
   min-height: 100vh;
-  color: #1e293b;
-  font-family: 'Inter', -apple-system, sans-serif;
 }
 
-/* 2. 顶部 Header */
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  margin-bottom: 32px;
 }
 
 .main-title {
-  font-size: 1.75rem;
+  font-size: 28px;
   font-weight: 800;
-  margin-bottom: 0.5rem;
-  letter-spacing: -0.025em;
+  color: #1e293b;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.02em;
 }
 
-.status-badge {
+.status-indicator {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
+  gap: 8px;
+  font-size: 13px;
   color: #64748b;
+  font-weight: 500;
 }
 
-.dot {
+.pulse-dot {
   width: 8px;
   height: 8px;
   background: #10b981;
   border-radius: 50%;
-  box-shadow: 0 0 8px #10b981;
+  position: relative;
 }
 
-/* 3. 筛选栏 Search Bar */
-.search-bar-container {
-  margin-bottom: 2rem;
+.pulse-dot::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border: 4px solid rgba(16, 185, 129, 0.2);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
 }
 
-.search-inner {
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(3); opacity: 0; }
+}
+
+.header-right {
   display: flex;
-  background: #fff;
-  padding: 0.5rem;
+  gap: 12px;
+}
+
+.premium-btn {
   border-radius: 12px;
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-  gap: 0.75rem;
+  padding: 10px 20px;
+  font-weight: 700;
+  transition: all 0.3s;
 }
 
-.custom-select :deep(.el-input__wrapper) {
-  box-shadow: none !important;
-  background: transparent;
+.premium-btn.primary {
+  background: #10b981;
+  border: none;
+  box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.2);
 }
 
-.search-input-wrapper {
-  flex: 1;
+.premium-btn.primary:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.premium-btn.ghost {
+  background: white;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+}
+
+.premium-btn.ghost:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+/* Filter Bar */
+.filter-section {
+  margin-bottom: 32px;
+}
+
+.filter-wrapper {
+  padding: 12px 24px;
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0 1rem;
-  background: #f1f5f9;
-  border-radius: 8px;
+  gap: 24px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.04);
 }
 
-.search-input-wrapper input {
-  border: none;
-  background: transparent;
-  width: 100%;
-  outline: none;
-  font-size: 0.9rem;
+.filter-group {
+  display: flex;
+  gap: 24px;
 }
 
-.search-submit {
-  background: #1e293b;
-  color: #fff;
-  border: none;
-  padding: 0 1.5rem;
-  border-radius: 8px;
-  cursor: pointer;
+.filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filter-item label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-left: 2px;
+}
+
+:deep(.premium-select) {
+  width: 180px;
+}
+
+:deep(.premium-select .el-input__wrapper),
+:deep(.premium-search .el-input__wrapper) {
+  background-color: #f1f5f9 !important;
+  box-shadow: none !important;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 8px 16px;
+  transition: all 0.3s;
+}
+
+:deep(.premium-select .el-input__wrapper:hover),
+:deep(.premium-search .el-input__wrapper:hover) {
+  background-color: #e2e8f0 !important;
+}
+
+:deep(.premium-select .el-input__wrapper.is-focus),
+:deep(.premium-search .el-input__wrapper.is-focus) {
+  background-color: white !important;
+  border-color: #10b981;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1) !important;
+}
+
+.search-group {
+  display: flex;
+  gap: 8px;
+}
+
+.premium-search {
+  width: 300px;
+}
+
+.search-btn {
+  border-radius: 12px;
+  padding: 0 24px;
   font-weight: 600;
-  transition: opacity 0.2s;
+  background: #1f2937;
+  border: none;
 }
 
-.search-submit:hover { opacity: 0.9; }
-
-/* 4. 试题网格 Grid */
+/* Question Grid */
 .question-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 24px;
 }
 
 .q-card {
-  background: #fff;
-  border-radius: 16px;
-  padding: 1.5rem;
-  border: 1px solid #e2e8f0;
+  background: white;
+  border-radius: 20px;
+  padding: 24px;
+  border: 1px solid #f1f5f9;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  animation: slideUp 0.5s ease forwards;
-  opacity: 0;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .q-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 20px 25px -5px rgba(0,0,0,0.05);
-  border-color: #cbd5e1;
+  transform: translateY(-5px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
+  border-color: #10b981;
 }
 
 .q-card-header {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 1rem;
+  margin-bottom: 20px;
+}
+
+.tags {
+  display: flex;
+  gap: 8px;
 }
 
 .type-tag {
-  font-size: 0.75rem;
-  padding: 0.25rem 0.75rem;
-  border-radius: 999px;
-  font-weight: 700;
-  background: #f1f5f9;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .type-tag.single { color: #3b82f6; background: #eff6ff; }
 .type-tag.multiple { color: #8b5cf6; background: #f5f3ff; }
 .type-tag.judge { color: #f59e0b; background: #fffbeb; }
+.type-tag.essay { color: #10b981; background: #ecfdf5; }
 
-.stem-text {
+.diff-tag {
+  font-size: 12px;
+  color: #94a3b8;
   font-weight: 600;
-  line-height: 1.5;
-  margin-bottom: 1.25rem;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
-/* 选项列表 */
+.stem-text {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.6;
+  margin-bottom: 20px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 72px;
+}
+
 .option-list {
   list-style: none;
   padding: 0;
-  margin-bottom: 1.5rem;
+  margin: 0 0 20px 0;
   flex: 1;
 }
 
 .option-list li {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.6rem 0.75rem;
-  border-radius: 8px;
-  margin-bottom: 0.5rem;
-  font-size: 0.9rem;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  margin-bottom: 8px;
+  font-size: 14px;
   background: #f8fafc;
+  transition: all 0.2s;
+  border: 1px solid transparent;
 }
 
 .option-list li.is-correct {
   background: #ecfdf5;
   color: #059669;
-  font-weight: 600;
+  border-color: #10b981;
 }
 
 .prefix {
   width: 24px;
   height: 24px;
-  background: #fff;
+  background: white;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #94a3b8;
   border: 1px solid #e2e8f0;
-  font-size: 0.75rem;
 }
 
 .is-correct .prefix {
   background: #10b981;
-  color: #fff;
+  color: white;
   border-color: #10b981;
+}
+
+.answer-box {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 20px;
+}
+
+.answer-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: #94a3b8;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.answer-content {
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.5;
 }
 
 .q-card-footer {
   display: flex;
   justify-content: space-between;
-  font-size: 0.8rem;
-  color: #94a3b8;
+  align-items: center;
+  padding-top: 16px;
   border-top: 1px solid #f1f5f9;
-  padding-top: 1rem;
 }
 
-/* 动画 */
+.course-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.update-time {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* Animations */
+.animate-fade-in {
+  animation: fadeIn 0.8s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+  transform: translateY(30px);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 @keyframes slideUp {
-  from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* 空状态 */
+.pagination-container {
+  margin-top: 40px;
+  display: flex;
+  justify-content: center;
+}
+
 .empty-placeholder {
   grid-column: 1 / -1;
   text-align: center;
-  padding: 5rem 0;
-  color: #94a3b8;
+  padding: 80px 0;
+  background: white;
+  border-radius: 24px;
+  border: 2px dashed #e2e8f0;
 }
 
 .empty-icon-wrap {
-  font-size: 4rem;
-  margin-bottom: 1rem;
-  opacity: 0.3;
+  font-size: 64px;
+  color: #e2e8f0;
+  margin-bottom: 16px;
 }
 </style>

@@ -24,19 +24,19 @@ import java.util.List;
 
 @Service
 public class ExamGradingServiceImpl implements ExamGradingService {
-    
+
     @Autowired
     private StudentExamMapper studentExamMapper;
-    
+
     @Autowired
     private StudentAnswerMapper studentAnswerMapper;
-    
+
     @Autowired
     private ExamQuestionMapper examQuestionMapper;
-    
+
     @Autowired
     private StudentUserMapper studentUserMapper;
-    
+
     @Override
     public List<StudentExam> getPendingExams(Long examId) {
         QueryWrapper<StudentExam> wrapper = new QueryWrapper<>();
@@ -45,7 +45,7 @@ public class ExamGradingServiceImpl implements ExamGradingService {
         wrapper.orderByAsc("submit_time");
         return studentExamMapper.selectList(wrapper);
     }
-    
+
     @Override
     public StudentExamDetailDTO getStudentExamDetail(Long studentExamId) {
         // 获取学生考试记录
@@ -53,10 +53,10 @@ public class ExamGradingServiceImpl implements ExamGradingService {
         if (studentExam == null) {
             throw new RuntimeException("学生考试记录不存在");
         }
-        
+
         // 获取学生信息
         Student student = studentUserMapper.selectById(Integer.parseInt(studentExam.getStudentId()));
-        
+
         // 构建DTO
         StudentExamDetailDTO detailDTO = new StudentExamDetailDTO();
         detailDTO.setStudentExamId(studentExam.getStudentExamId());
@@ -68,18 +68,18 @@ public class ExamGradingServiceImpl implements ExamGradingService {
         detailDTO.setTotalScore(studentExam.getTotalScore());
         detailDTO.setObtainedScore(studentExam.getObtainedScore());
         detailDTO.setStatus(studentExam.getStatus());
-        
+
         // 获取学生答题记录
         QueryWrapper<StudentAnswer> answerWrapper = new QueryWrapper<>();
         answerWrapper.eq("student_exam_id", studentExamId);
         List<StudentAnswer> studentAnswers = studentAnswerMapper.selectList(answerWrapper);
-        
+
         // 构建答题详情列表
         List<StudentAnswerDTO> answerDTOs = new ArrayList<>();
         for (StudentAnswer answer : studentAnswers) {
             // 获取试题信息
             ExamQuestion question = examQuestionMapper.selectById(answer.getQuestionId());
-            
+
             StudentAnswerDTO answerDTO = new StudentAnswerDTO();
             answerDTO.setAnswerId(answer.getAnswerId());
             answerDTO.setQuestionId(answer.getQuestionId());
@@ -87,23 +87,23 @@ public class ExamGradingServiceImpl implements ExamGradingService {
             answerDTO.setIsCorrect(answer.getIsCorrect());
             answerDTO.setScore(answer.getScore());
             answerDTO.setTeacherComment(answer.getTeacherComment());
-            
+
             if (question != null) {
                 answerDTO.setQuestionType(question.getQuestionType());
                 answerDTO.setQuestionContent(question.getQuestionContent());
                 answerDTO.setQuestionOptions(question.getQuestionOptions());
-                answerDTO.setCorrectAnswer(question.getCorrectAnswer());
+                answerDTO.setAnswer(question.getAnswer());
                 answerDTO.setQuestionScore(question.getScore());
             }
-            
+
             answerDTOs.add(answerDTO);
         }
-        
+
         detailDTO.setAnswers(answerDTOs);
-        
+
         return detailDTO;
     }
-    
+
     @Override
     @Transactional
     public void gradeExam(Long studentExamId, ExamGradingDTO gradingDTO) {
@@ -112,13 +112,13 @@ public class ExamGradingServiceImpl implements ExamGradingService {
         if (studentExam == null) {
             throw new RuntimeException("学生考试记录不存在");
         }
-        
+
         // 先自动批改客观题
         autoGradeObjectiveQuestions(studentExamId);
-        
+
         // 批改主观题
         BigDecimal totalObtainedScore = BigDecimal.ZERO;
-        
+
         if (gradingDTO.getAnswers() != null) {
             for (ExamGradingDTO.AnswerGradeDTO answerGrade : gradingDTO.getAnswers()) {
                 StudentAnswer answer = studentAnswerMapper.selectById(answerGrade.getAnswerId());
@@ -129,18 +129,18 @@ public class ExamGradingServiceImpl implements ExamGradingService {
                 }
             }
         }
-        
+
         // 计算总分
         QueryWrapper<StudentAnswer> wrapper = new QueryWrapper<>();
         wrapper.eq("student_exam_id", studentExamId);
         List<StudentAnswer> allAnswers = studentAnswerMapper.selectList(wrapper);
-        
+
         for (StudentAnswer answer : allAnswers) {
             if (answer.getScore() != null) {
                 totalObtainedScore = totalObtainedScore.add(answer.getScore());
             }
         }
-        
+
         // 更新学生考试记录
         studentExam.setObtainedScore(totalObtainedScore);
         studentExam.setStatus(3); // 已批改
@@ -148,7 +148,7 @@ public class ExamGradingServiceImpl implements ExamGradingService {
         studentExam.setGradedTime(new Date());
         studentExamMapper.updateById(studentExam);
     }
-    
+
     @Override
     @Transactional
     public void autoGradeObjectiveQuestions(Long studentExamId) {
@@ -156,20 +156,20 @@ public class ExamGradingServiceImpl implements ExamGradingService {
         QueryWrapper<StudentAnswer> wrapper = new QueryWrapper<>();
         wrapper.eq("student_exam_id", studentExamId);
         List<StudentAnswer> studentAnswers = studentAnswerMapper.selectList(wrapper);
-        
+
         for (StudentAnswer answer : studentAnswers) {
             // 获取试题信息
             ExamQuestion question = examQuestionMapper.selectById(answer.getQuestionId());
             if (question == null) {
                 continue;
             }
-            
+
             // 只批改客观题：单选(SINGLE)、多选(MULTIPLE)、判断(JUDGE)
             String questionType = question.getQuestionType();
             if ("SINGLE".equals(questionType) || "MULTIPLE".equals(questionType) || "JUDGE".equals(questionType)) {
-                String correctAnswer = question.getCorrectAnswer();
+                String correctAnswer = question.getAnswer();
                 String studentAnswer = answer.getStudentAnswer();
-                
+
                 // 判断答案是否正确
                 boolean isCorrect = false;
                 if (studentAnswer != null && correctAnswer != null) {
@@ -180,7 +180,7 @@ public class ExamGradingServiceImpl implements ExamGradingService {
                         isCorrect = studentAnswer.trim().equalsIgnoreCase(correctAnswer.trim());
                     }
                 }
-                
+
                 // 更新答题记录
                 answer.setIsCorrect(isCorrect ? 1 : 0);
                 answer.setScore(isCorrect ? new BigDecimal(question.getScore()) : BigDecimal.ZERO);
@@ -188,7 +188,7 @@ public class ExamGradingServiceImpl implements ExamGradingService {
             }
         }
     }
-    
+
     /**
      * 标准化答案（用于多选题比较）
      * 将答案字符串按字母排序

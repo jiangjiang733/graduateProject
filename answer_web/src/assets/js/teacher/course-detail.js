@@ -41,7 +41,7 @@ export function useCourseDetail() {
         try {
             console.log('=== 开始加载课程详情 ===')
             console.log('课程ID:', courseId.value)
-            
+
             loading.value = true
             error.value = null
 
@@ -56,7 +56,7 @@ export function useCourseDetail() {
                 const currentUserId = getCurrentUserId()
                 console.log('当前用户ID:', currentUserId)
                 console.log('课程教师ID:', course.value.teacherId)
-                
+
                 const isOwner = course.value.teacherId === currentUserId
 
                 permission.value = {
@@ -113,7 +113,7 @@ export function useCourseDetail() {
         }
 
         console.log('开始构建章节树，数据量:', flatData.length)
-        
+
         const map = {}
         const roots = []
 
@@ -129,7 +129,7 @@ export function useCourseDetail() {
         flatData.forEach(item => {
             const id = item.chapterId || item.id
             const parentId = item.parentId
-            
+
             if (parentId && map[parentId]) {
                 map[parentId].children.push(map[id])
             } else {
@@ -184,7 +184,7 @@ export function useCourseDetail() {
     // 获取课程图片
     const getCourseImage = (imagePath) => {
         console.log('获取课程图片:', imagePath)
-        
+
         if (!imagePath) {
             console.log('图片路径为空，使用占位图')
             return 'https://via.placeholder.com/280x200/409EFF/FFFFFF?text=课程封面'
@@ -226,10 +226,8 @@ export function useCourseDetail() {
 
     // 查看内容
     const viewContent = (chapter) => {
-        if (chapter.videoUrl) {
-            // 跳转到视频播放页面或打开视频
-            router.push(`/teacher/course/${courseId.value}/chapter/${chapter.id}`)
-        }
+        // 跳转到学习预览页面
+        router.push(`/teacher/course/${courseId.value}/learn?chapterId=${chapter.chapterId || chapter.id}`)
     }
 
     // 确认删除

@@ -74,30 +74,27 @@
           />
           <div class="course-info">
             <div class="course-description">{{ course.courseDescription || course.description || '暂无描述' }}</div>
-            <div class="course-meta">
-              <div class="meta-row">
+            
+            <div class="course-meta-grid">
+              <div class="meta-item">
                 <el-icon><User /></el-icon>
-                <span>教师：{{ course.teacherName }}</span>
+                <span class="label">教师:</span>
+                <span class="value">{{ course.teacherName }}</span>
               </div>
-              <div class="meta-row">
+              <div class="meta-item">
                 <el-icon><Key /></el-icon>
-                <span>课程码：{{ course.courseCode || '未设置' }}</span>
+                <span class="label">课程码:</span>
+                <span class="value">{{ course.courseCode || '-' }}</span>
               </div>
-              <div class="meta-row">
+              <div class="meta-item">
                 <el-icon><Calendar /></el-icon>
-                <span>创建：{{ formatDate(course.createTime) }}</span>
+                <span class="label">创建:</span>
+                <span class="value">{{ formatDate(course.createTime) }}</span>
               </div>
-              <div v-if="course.startTime && course.endTime" class="meta-row">
-                <el-icon><Clock /></el-icon>
-                <span>课程时间：{{ formatDate(course.startTime) }} 至 {{ formatDate(course.endTime) }}</span>
-              </div>
-              <div v-if="course.major" class="meta-row">
+              <div class="meta-item">
                 <el-icon><School /></el-icon>
-                <span>专业：{{ course.major }}</span>
-              </div>
-              <div v-if="course.classification" class="meta-row">
-                <el-icon><Collection /></el-icon>
-                <span>分类：{{ course.classification }}</span>
+                <span class="label">专业:</span>
+                <span class="value">{{ course.major || '-' }}</span>
               </div>
             </div>
           </div>

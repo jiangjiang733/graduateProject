@@ -390,7 +390,7 @@ const editQuestion = (index) => {
         questionContent: q.questionContent,
         options: opts,
         correctIndex: correctIndex,
-        correctAnswer: q.correctAnswer,
+        correctAnswer: q.answer || q.correctAnswer,
         analysis: q.analysis
     }
     createDialogVisible.value = true
@@ -405,7 +405,13 @@ const saveLocalQuestion = async () => {
     if(['SINGLE', 'MULTIPLE'].includes(f.questionType)) {
         if(f.questionType === 'SINGLE') {
             f.options.forEach((o, i) => o.isCorrect = (i === f.correctIndex))
-            ans = null
+            ans = String.fromCharCode(65 + f.correctIndex)
+        } else {
+            // 对于多选，收集所有 isCorrect 为 true 的字母
+            const correctChars = f.options
+                .map((o, i) => o.isCorrect ? String.fromCharCode(65 + i) : null)
+                .filter(c => c !== null)
+            ans = correctChars.join('')
         }
         optsStr = JSON.stringify(f.options)
     }
@@ -415,12 +421,11 @@ const saveLocalQuestion = async () => {
         questionType: f.questionType,
         questionContent: f.questionContent,
         questionOptions: optsStr,
-        correctAnswer: ans,
+        answer: ans,
         score: f.score,
         analysis: f.analysis
     }
 
-    // 2. Add to Exam List First
     if(isEditIndex.value > -1) {
         questions.value[isEditIndex.value] = qObj
         createDialogVisible.value = false
@@ -429,7 +434,6 @@ const saveLocalQuestion = async () => {
         questions.value.push(qObj)
         createDialogVisible.value = false
         
-        // 3. Prompt to Add to Bank (Only for new questions)
         ElMessageBox.confirm(
             '试题已添加到试卷。是否同时也将其保存到【公共题库】中，以便在其他考试中复用？',
             '同步到题库',
@@ -440,7 +444,6 @@ const saveLocalQuestion = async () => {
                 distinguishCancelAndClose: true
             }
         ).then(async () => {
-            // Yes - Add to Bank
             try {
                  const userId = localStorage.getItem('teacherId')
                  await createBankQuestion({
@@ -458,7 +461,6 @@ const saveLocalQuestion = async () => {
                  ElMessage.warning('添加到题库失败，但试题已保留在试卷中')
             }
         }).catch(() => {
-            // No or Cancel - Do nothing contextually
         })
     }
 }
@@ -525,8 +527,8 @@ const handleAiGenerate = async () => {
 }
 
 // Helpers
-const getTypeTag = (t) => ({ SINGLE: '', MULTIPLE: 'success', JUDGE: 'warning', ESSAY: 'info' }[t] || '')
-const getTypeLabel = (t) => ({ SINGLE: '单选题', MULTIPLE: '多选题', JUDGE: '判断题', ESSAY: '简答题' }[t] || t)
+const getTypeTag = (t) => ({ SINGLE: '', MULTIPLE: 'success', JUDGE: 'warning', ESSAY: 'info', SINGLE_CHOICE: '', MULTIPLE_CHOICE: 'success' }[t] || '')
+const getTypeLabel = (t) => ({ SINGLE: '单选题', MULTIPLE: '多选题', JUDGE: '判断题', ESSAY: '简答题', SINGLE_CHOICE: '单选题', MULTIPLE_CHOICE: '多选题' }[t] || t)
 const getDiffLabel = (d) => ({ 1: '简单', 2: '中等', 3: '困难' }[d] || d)
 const parseOptions = (json) => {
     try {
@@ -534,8 +536,25 @@ const parseOptions = (json) => {
     } catch(e) { return [] }
 }
 const isCorrect = (opt, idx, q) => {
-    if(q.questionType === 'SINGLE' || q.questionType === 'MULTIPLE') {
-        return opt.isCorrect
+    if (q.questionType === 'SINGLE' || q.questionType === 'MULTIPLE' || q.questionType === 'SINGLE_CHOICE' || q.questionType === 'MULTIPLE_CHOICE') {
+        // 1. 如果选项对象本身带有 isCorrect 标记，优先使用
+        if (opt && typeof opt === 'object' && opt.isCorrect !== undefined) {
+            return opt.isCorrect === true || opt.isCorrect === 'true'
+        }
+        
+        // 2. 否则通过 answer/correctAnswer 字段匹配 (支持 "A", "0", "AB" 等格式)
+        const ans = q.answer !== undefined ? q.answer : q.correctAnswer;
+        if (ans !== undefined && ans !== null && ans !== '') {
+            const ansStr = String(ans);
+            const char = String.fromCharCode(65 + idx); // 'A', 'B', 'C'...
+            const indexStr = String(idx); // '0', '1', '2'...
+            
+            if (q.questionType === 'SINGLE' || q.questionType === 'SINGLE_CHOICE') {
+                return ansStr === char || ansStr === indexStr;
+            } else {
+                return ansStr.includes(char) || ansStr.includes(indexStr);
+            }
+        }
     }
     return false
 }

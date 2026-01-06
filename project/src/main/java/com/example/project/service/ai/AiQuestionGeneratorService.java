@@ -38,7 +38,7 @@ public class AiQuestionGeneratorService {
                         "- 每题必须包含：题干、选项、正确答案、分值\n" +
                         "- 以严格 JSON 数组格式返回，字段名：questionType, questionContent, questionOptions, correctAnswer, score\n" +
                         "- questionType 只能是：SINGLE（单选）、MULTIPLE（多选）、JUDGE（判断）、ESSAY（简答）\n" +
-                        "- questionOptions 必须是 JSON 数组格式，例如：[\"A.选项1\", \"B.选项2\", \"C.选项3\", \"D.选项4\"] 或判断题用 [\"对\", \"错\"]\n"
+                        "- questionOptions 对于选择题必须是包含 text 和 isCorrect 的 JSON 对象数组，例如：[{\"text\": \"选项1\", \"isCorrect\": true}, {\"text\": \"选项2\", \"isCorrect\": false}]\n"
                         +
                         "- correctAnswer 格式：单选用 \"A\"，多选用 \"AB\"，判断用 \"对\" 或 \"错\"，简答用核心关键字字符串\n" +
                         "- score 设置建议：单选/判断 5分，多选 10分，简答 15-20分，也可根据题目难度灵活调整（0-100之间）\n" +
@@ -139,9 +139,26 @@ public class AiQuestionGeneratorService {
                 String questionOptions = normalizeQuestionOptions(q.get("questionOptions"));
                 dto.setQuestionOptions(questionOptions);
 
-                dto.setCorrectAnswer(q.getString("correctAnswer"));
+                // 提取正确答案
+                String answer = q.getString("correctAnswer");
+                // 如果是选择题且没返回 correctAnswer，尝试从选项中提取标记为 isCorrect 的项
+                if (answer == null || answer.isEmpty()) {
+                    if (questionOptions.startsWith("[")) {
+                        JSONArray opts = JSON.parseArray(questionOptions);
+                        for (int j = 0; j < opts.size(); j++) {
+                            JSONObject opt = opts.getJSONObject(j);
+                            if (opt != null && (opt.getBooleanValue("isCorrect") || (opt.getString("isCorrect") != null
+                                    && opt.getString("isCorrect").equals("true")))) {
+                                String charAns = String.valueOf((char) ('A' + j));
+                                answer = (answer == null) ? charAns : answer + charAns;
+                            }
+                        }
+                    }
+                }
+                dto.setAnswer(answer);
                 dto.setScore(q.getInteger("score"));
                 dto.setQuestionOrder(i + 1);
+                dto.setAnalysis(q.getString("analysis"));
                 questions.add(dto);
 
                 System.out.println("题目" + (i + 1) + ": " + dto.getQuestionContent());

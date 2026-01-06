@@ -1,10 +1,11 @@
 import { ref, reactive, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getCourseList } from '@/api/course.js'
 import { getQuestionList } from '@/api/question.js'
 import {
     getCourseLabReportList,
+    getLabReportsByTeacher,
     createLabReport,
     updateLabReport,
     deleteLabReport,
@@ -13,6 +14,7 @@ import {
 
 export function useHomeworkManagement() {
     const router = useRouter()
+    const route = useRoute()
     const loading = ref(false)
     const dialogVisible = ref(false)
     const isEdit = ref(false)
@@ -23,7 +25,8 @@ export function useHomeworkManagement() {
     const bankDialogVisible = ref(false)
     const bankLoading = ref(false)
     const bankQuestions = ref([])
-    const bankSearchKeyword = ref('')
+    const bankFilter = reactive({ courseId: '', type: '', keyword: '' })
+    const bankPagination = reactive({ current: 1, size: 10, total: 0 })
     const selectedQuestions = ref([])
 
     // 课程列表
@@ -34,9 +37,16 @@ export function useHomeworkManagement() {
 
     // 筛选表单
     const filterForm = reactive({
-        courseId: '',
+        courseId: route.query.courseId || '',
         status: '',
         keyword: ''
+    })
+
+    // 分页状态
+    const pagination = reactive({
+        current: 1,
+        size: 10,
+        total: 0
     })
 
     // 作业表单
@@ -68,8 +78,8 @@ export function useHomeworkManagement() {
         ]
     }
 
-    // 题库相关方法
     const openQuestionBank = async () => {
+        bankFilter.courseId = homeworkForm.courseId
         bankDialogVisible.value = true
         await searchBank()
     }
@@ -80,12 +90,13 @@ export function useHomeworkManagement() {
             const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
             const response = await getQuestionList({
                 teacherId: teacherId,
-                keyword: bankSearchKeyword.value,
-                pageNum: 1,
-                pageSize: 50
+                pageNum: bankPagination.current,
+                pageSize: bankPagination.size,
+                ...bankFilter
             })
             if (response.success && response.data) {
-                bankQuestions.value = response.data.list || []
+                bankQuestions.value = response.data.records || []
+                bankPagination.total = response.data.total || 0
             }
         } catch (error) {
             console.error('获取题库失败:', error)
@@ -102,26 +113,37 @@ export function useHomeworkManagement() {
     const confirmImportQuestions = () => {
         if (selectedQuestions.value.length === 0) return
 
-        let importText = '\n--- 题目内容 ---\n'
+        let importText = '\n────────────────────────\n'
+        importText += '【题库导入题目】\n'
+
         selectedQuestions.value.forEach((q, index) => {
             const typeText = getQuestionTypeText(q.type)
-            importText += `【第 ${index + 1} 题 - ${typeText}】\n${q.content}\n`
+            importText += `\n第 ${index + 1} 题 [${typeText}]\n`
+            importText += `${q.content}\n`
 
-            if (q.type === 1 || q.type === 2) { // 单选或多选
-                const options = ['A', 'B', 'C', 'D', 'E', 'F']
-                const items = [q.optionA, q.optionB, q.optionC, q.optionD, q.optionE, q.optionF]
-                items.forEach((item, i) => {
-                    if (item) importText += `  ${options[i]}. ${item}\n`
-                })
-            } else if (q.type === 3) { // 判断
+            if (['SINGLE', 'MULTIPLE'].includes(q.type) || q.type === 'SINGLE' || q.type === 'MULTIPLE' || q.type === 1 || q.type === 2) {
+                let opts = q.options
+                if (typeof opts === 'string') {
+                    try { opts = JSON.parse(opts) } catch (e) { opts = [] }
+                }
+
+                if (Array.isArray(opts)) {
+                    opts.forEach((opt, i) => {
+                        importText += `  ${String.fromCharCode(65 + i)}. ${opt.text || opt}\n`
+                    })
+                }
+            } else if (q.type === 'JUDGE' || q.type === 3) {
                 importText += `  A. 正确\n  B. 错误\n`
             }
-            importText += '\n'
         })
 
+        importText += '────────────────────────\n'
+
+        const count = selectedQuestions.value.length
         homeworkForm.description = (homeworkForm.description || '') + importText
         bankDialogVisible.value = false
-        ElMessage.success(`成功导入 ${selectedQuestions.value.length} 道题目`)
+        selectedQuestions.value = []
+        ElMessage.success(`成功导入 ${count} 道题目`)
     }
 
     const getQuestionTypeText = (type) => {
@@ -151,83 +173,28 @@ export function useHomeworkManagement() {
     const loadHomeworks = async () => {
         loading.value = true
         try {
+            // 首先确保课程已加载（如果尚未加载）
+            if (courses.value.length === 0) {
+                await loadCourses()
+            }
+
             // 如果选择了特定课程，加载该课程的作业
             if (filterForm.courseId) {
                 const response = await getCourseLabReportList(filterForm.courseId)
                 if (response.success && response.data) {
-                    let reports = response.data
-
-                    // 应用状态筛选
-                    if (filterForm.status) {
-                        reports = reports.filter(r => r.status === filterForm.status)
-                    }
-
-                    // 应用关键词搜索
-                    if (filterForm.keyword) {
-                        const keyword = filterForm.keyword.toLowerCase()
-                        reports = reports.filter(r =>
-                            r.reportTitle?.toLowerCase().includes(keyword) ||
-                            r.title?.toLowerCase().includes(keyword)
-                        )
-                    }
-
-                    // 转换数据格式以匹配UI
-                    homeworks.value = reports.map(report => ({
-                        id: report.reportId || report.id,
-                        title: report.reportTitle || report.title,
-                        courseId: report.courseId,
-                        courseName: report.courseName || '未知课程',
-                        description: report.reportDescription || report.description,
-                        deadline: report.deadline,
-                        totalScore: report.totalScore,
-                        status: report.status || 1,
-                        submittedCount: report.submittedCount || 0,
-                        gradedCount: report.gradedCount || 0,
-                        totalStudents: report.totalStudents || 0
-                    }))
+                    processReports(response.data)
                 } else {
                     homeworks.value = []
                 }
             } else {
-                // 如果没有选择课程，加载所有课程的作业
-                const allHomeworks = []
-                for (const course of courses.value) {
-                    try {
-                        const response = await getCourseLabReportList(course.id)
-                        if (response.success && response.data) {
-                            const reports = response.data.map(report => ({
-                                id: report.reportId || report.id,
-                                title: report.reportTitle || report.title,
-                                courseId: report.courseId,
-                                courseName: course.courseName || course.name,
-                                description: report.reportDescription || report.description,
-                                deadline: report.deadline,
-                                totalScore: report.totalScore,
-                                status: report.status || 1,
-                                submittedCount: report.submittedCount || 0,
-                                gradedCount: report.gradedCount || 0,
-                                totalStudents: report.totalStudents || 0
-                            }))
-                            allHomeworks.push(...reports)
-                        }
-                    } catch (err) {
-                        console.error(`加载课程 ${course.id} 的作业失败:`, err)
-                    }
+                // 如果没有选择课程记录，加载教师的所有作业
+                const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
+                const response = await getLabReportsByTeacher(teacherId)
+                if (response.success && response.data) {
+                    processReports(response.data)
+                } else {
+                    homeworks.value = []
                 }
-
-                // 应用筛选
-                let filteredHomeworks = allHomeworks
-                if (filterForm.status) {
-                    filteredHomeworks = filteredHomeworks.filter(h => h.status === filterForm.status)
-                }
-                if (filterForm.keyword) {
-                    const keyword = filterForm.keyword.toLowerCase()
-                    filteredHomeworks = filteredHomeworks.filter(h =>
-                        h.title?.toLowerCase().includes(keyword)
-                    )
-                }
-
-                homeworks.value = filteredHomeworks
             }
         } catch (error) {
             console.error('加载作业列表失败:', error)
@@ -236,6 +203,65 @@ export function useHomeworkManagement() {
         } finally {
             loading.value = false
         }
+    }
+
+    // 辅助处理函数
+    const processReports = (data) => {
+        let reports = []
+        if (Array.isArray(data)) {
+            reports = data
+        } else if (data.list && Array.isArray(data.list)) {
+            reports = data.list
+        } else if (data.records && Array.isArray(data.records)) {
+            reports = data.records
+        }
+
+        // 应用关键词搜索
+        if (filterForm.keyword) {
+            const keyword = filterForm.keyword.toLowerCase()
+            reports = reports.filter(r =>
+                (r.reportTitle || r.title || '').toLowerCase().includes(keyword)
+            )
+        }
+
+        // 转换数据格式以匹配UI
+        let mappedReports = reports.map(report => ({
+            id: report.reportId || report.id,
+            title: report.reportTitle || report.title,
+            courseId: report.courseId,
+            courseName: report.courseName || '未知课程',
+            description: report.reportDescription || report.description,
+            deadline: report.deadline,
+            totalScore: report.totalScore,
+            status: (report.status === 0 || report.status === '0') ? 0 : (report.status || 1),
+            submittedCount: report.submittedCount || 0,
+            gradedCount: report.gradedCount || 0,
+            totalStudents: report.totalStudents || 0
+        }))
+
+        // 应用状态筛选
+        if (filterForm.status !== '' && filterForm.status !== null) {
+            mappedReports = mappedReports.filter(h => h.status == filterForm.status)
+        }
+
+        // 更新总条目数
+        pagination.total = mappedReports.length
+
+        // 前端分页处理
+        const start = (pagination.current - 1) * pagination.size
+        const end = start + pagination.size
+        homeworks.value = mappedReports.slice(start, end)
+    }
+
+    const handlePageChange = (page) => {
+        pagination.current = page
+        loadHomeworks()
+    }
+
+    const handleSizeChange = (size) => {
+        pagination.size = size
+        pagination.current = 1
+        loadHomeworks()
     }
 
     // 显示创建对话框
@@ -511,9 +537,9 @@ export function useHomeworkManagement() {
         return '#f56c6c'
     }
 
-    onMounted(() => {
-        loadCourses()
-        loadHomeworks()
+    onMounted(async () => {
+        await loadCourses()
+        await loadHomeworks()
     })
 
     return {
@@ -531,7 +557,8 @@ export function useHomeworkManagement() {
         bankDialogVisible,
         bankLoading,
         bankQuestions,
-        bankSearchKeyword,
+        bankFilter,
+        bankPagination,
         selectedQuestions,
         loadCourses,
         loadHomeworks,
@@ -553,6 +580,9 @@ export function useHomeworkManagement() {
         searchBank,
         handleBankSelection,
         confirmImportQuestions,
-        getQuestionTypeText
+        getQuestionTypeText,
+        pagination,
+        handlePageChange,
+        handleSizeChange
     }
 }

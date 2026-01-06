@@ -45,6 +45,15 @@ export const getCourseLabReportList = (courseId) => {
 export const getLabReportsByCourse = getCourseLabReportList
 
 /**
+ * 获取教师实验报告/作业列表
+ * @param {string} teacherId - 教师ID
+ * @returns {Promise}
+ */
+export const getLabReportsByTeacher = (teacherId) => {
+  return request.get(`/lab-report/teacher/${teacherId}`)
+}
+
+/**
  * 获取实验报告详情
  * @param {number} reportId - 实验报告ID
  * @returns {Promise}

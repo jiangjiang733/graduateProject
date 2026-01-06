@@ -20,6 +20,9 @@
             :value="course.id"
           />
         </el-select>
+        <el-button class="glass-btn primary-glass-btn" @click="inviteDialogVisible = true">
+           <el-icon><Plus /></el-icon> 邀请学生
+        </el-button>
         <el-button class="glass-btn" @click="loadEnrollments">
            <el-icon><Refresh /></el-icon>
         </el-button>
@@ -136,6 +139,16 @@
                <el-tag :type="getStatusType(enrollment.status)" effect="light" round>
                   {{ getStatusText(enrollment.status) }}
                </el-tag>
+               <el-button 
+                 v-if="enrollment.status === 'approved'" 
+                 type="danger" 
+                 link 
+                 size="small" 
+                 @click="handleRemoveStudent(enrollment)"
+                 style="margin-left: 8px"
+               >
+                 <el-icon><Delete /></el-icon> 移除
+               </el-button>
             </div>
          </div>
       </div>
@@ -184,13 +197,37 @@
         </el-button>
       </template>
     </el-dialog>
+    <!-- 邀请学生对话框 -->
+    <el-dialog v-model="inviteDialogVisible" title="邀请学生加入课程" width="500px">
+      <el-form :model="inviteForm" :rules="inviteRules" ref="inviteFormRef" label-width="100px">
+        <el-form-item label="课程" prop="courseId">
+          <el-select v-model="inviteForm.courseId" placeholder="请选择课程" style="width: 100%">
+            <el-option
+              v-for="course in courses"
+              :key="course.id"
+              :label="course.courseName || course.name"
+              :value="course.id"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="学生账户" prop="studentId">
+          <el-input v-model="inviteForm.studentId" placeholder="请输入学生的用户名或 ID 账户" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="inviteDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitInvite" :loading="inviteSubmitting">
+          确定邀请
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { 
   UserFilled, User, Message, Clock, CircleCheck, CircleClose,
-  Refresh, Check, Close, List, Search, Reading, Timer as Time
+  Refresh, Check, Close, List, Search, Reading, Timer as Time, Plus, Delete
 } from '@element-plus/icons-vue'
 import { useEnrollmentManagement } from '@/assets/js/teacher/enrollment-management.js'
 import '@/assets/css/teacher/modern-theme.css'
@@ -222,7 +259,15 @@ const {
   getStatusText,
   formatDate,
   searchKeyword,
-  formatTimeAgo
+  formatTimeAgo,
+  // 补全缺失的导出变量
+  inviteDialogVisible,
+  inviteForm,
+  inviteRules,
+  inviteFormRef,
+  inviteSubmitting,
+  submitInvite,
+  handleRemoveStudent
 } = useEnrollmentManagement()
 </script>
 

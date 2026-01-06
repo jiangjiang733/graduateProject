@@ -197,6 +197,16 @@ const initActivityChart = () => {
             days.push((d.getMonth()+1) + '-' + d.getDate())
         }
 
+        // 基于真实消息统计最近7天的动态
+        const chartData = days.map(dayStr => {
+            const count = recentMessages.value.filter(msg => {
+                const msgDate = new Date(msg.time);
+                const compareStr = (msgDate.getMonth() + 1) + '-' + msgDate.getDate();
+                return compareStr === dayStr;
+            }).length;
+            return count;
+        });
+
         activityChart.setOption({
             color: ['#3b82f6'],
             tooltip: { trigger: 'axis' },
@@ -213,7 +223,7 @@ const initActivityChart = () => {
                         { offset: 1, color: 'rgba(59, 130, 246, 0.01)' }
                     ])
                 },
-                data: days.map(() => Math.floor(Math.random() * 5) + (recentMessages.value.length > 0 ? 1 : 0))
+                data: chartData
             }]
         })
     })

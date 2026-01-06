@@ -43,7 +43,7 @@
 
             <!-- 通知 / 答疑入口 -->
             <div class="action-btn" @click="$router.push('/teacher/messages')" title="消息与答疑">
-              <el-badge :value="3" class="notification-badge" is-dot>
+              <el-badge :value="teacherStore.unreadCount" :hidden="teacherStore.unreadCount === 0" class="notification-badge">
                 <el-icon :size="20"><Bell /></el-icon>
               </el-badge>
             </div>
@@ -107,6 +107,9 @@ import {
   Collection, List, Folder
 } from '@element-plus/icons-vue'
 
+import { onMounted } from 'vue' // Add onMounted
+import { getUnreadCount } from '@/api/message.js'
+
 const route = useRoute()
 const router = useRouter()
 const teacherStore = useTeacherStore()
@@ -141,6 +144,26 @@ const handleUserCommand = (command) => {
     router.push('/teacher/profile')
   }
 }
+
+const fetchUnreadCount = async () => {
+  try {
+    const teacherId = teacherStore.teacherId
+    if (!teacherId) return
+    const res = await getUnreadCount(teacherId)
+    if (res.code === 200) {
+      teacherStore.setUnreadCount(res.data.unreadCount)
+    }
+  } catch (error) {
+    console.error('Fetch unread count failed', error)
+  }
+}
+
+onMounted(() => {
+  if (teacherStore.isLoggedIn) {
+     fetchUnreadCount()
+  }
+})
+
 </script>
 
 <style scoped>

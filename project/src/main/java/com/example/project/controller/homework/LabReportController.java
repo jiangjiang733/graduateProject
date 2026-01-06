@@ -22,10 +22,10 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/lab-report")
 public class LabReportController {
-    
+
     @Autowired
     private LabReportService labReportService;
-    
+
     /**
      * 发布实验报告
      * POST /api/lab-report
@@ -48,20 +48,20 @@ public class LabReportController {
             labReport.setReportDescription(reportDescription);
             labReport.setDeadline(deadline);
             labReport.setTotalScore(totalScore);
-            
+
             // 发布实验报告
             Long reportId = labReportService.publishLabReport(labReport, attachment);
-            
+
             // 返回结果
             Map<String, Object> data = new HashMap<>();
             data.put("reportId", reportId);
-            
+
             return Result.success("实验报告发布成功", data);
         } catch (Exception e) {
             return Result.error("发布失败: " + e.getMessage());
         }
     }
-    
+
     /**
      * 获取课程实验报告列表
      * GET /api/lab-report/course/{courseId}
@@ -75,7 +75,21 @@ public class LabReportController {
             return Result.error("获取实验报告列表失败: " + e.getMessage());
         }
     }
-    
+
+    /**
+     * 获取教师实验报告列表
+     * GET /api/lab-report/teacher/{teacherId}
+     */
+    @GetMapping("/teacher/{teacherId}")
+    public Result<List<LabReportDTO>> getLabReportsByTeacher(@PathVariable String teacherId) {
+        try {
+            List<LabReportDTO> reports = labReportService.getLabReportsByTeacher(teacherId);
+            return Result.success(reports);
+        } catch (Exception e) {
+            return Result.error("获取实验报告列表失败: " + e.getMessage());
+        }
+    }
+
     /**
      * 获取实验报告提交列表
      * GET /api/lab-report/{reportId}/submissions
@@ -89,7 +103,7 @@ public class LabReportController {
             return Result.error("获取提交列表失败: " + e.getMessage());
         }
     }
-    
+
     /**
      * 批改实验报告
      * PUT /api/lab-report/grade/{studentReportId}
@@ -105,7 +119,7 @@ public class LabReportController {
             return Result.error("批改失败: " + e.getMessage());
         }
     }
-    
+
     /**
      * 删除实验报告
      * DELETE /api/lab-report/{reportId}
@@ -119,7 +133,7 @@ public class LabReportController {
             return Result.error("删除失败: " + e.getMessage());
         }
     }
-    
+
     /**
      * 获取实验报告详情
      * GET /api/lab-report/{reportId}
@@ -133,9 +147,9 @@ public class LabReportController {
             return Result.error("获取实验报告详情失败: " + e.getMessage());
         }
     }
-    
+
     // ==================== 学生端接口 ====================
-    
+
     /**
      * 学生提交实验报告
      * POST /api/lab-report/submit
@@ -154,20 +168,20 @@ public class LabReportController {
             studentReport.setStudentId(studentId);
             studentReport.setStudentName(studentName);
             studentReport.setContent(content);
-            
+
             // 提交实验报告
             Long studentReportId = labReportService.submitLabReport(studentReport, attachment);
-            
+
             // 返回结果
             Map<String, Object> data = new HashMap<>();
             data.put("studentReportId", studentReportId);
-            
+
             return Result.success("提交成功", data);
         } catch (Exception e) {
             return Result.error("提交失败: " + e.getMessage());
         }
     }
-    
+
     /**
      * 获取学生的实验报告列表
      * GET /api/lab-report/student/{studentId}
@@ -181,7 +195,7 @@ public class LabReportController {
             return Result.error("获取实验报告列表失败: " + e.getMessage());
         }
     }
-    
+
     /**
      * 获取学生提交详情
      * GET /api/lab-report/submission/{studentReportId}
@@ -195,7 +209,7 @@ public class LabReportController {
             return Result.error("获取提交详情失败: " + e.getMessage());
         }
     }
-    
+
     /**
      * 更新学生提交
      * PUT /api/lab-report/submission/{studentReportId}

@@ -74,6 +74,16 @@ export const checkEnrollmentStatus = (studentId, courseId) => {
   })
 }
 
+/**
+ * 教师直接添加学生
+ */
+export const directEnroll = (studentId, courseId) => {
+  const formData = new FormData()
+  formData.append('studentId', studentId)
+  formData.append('courseId', courseId)
+  return request.post('/enrollment/direct-enroll', formData)
+}
+
 export default {
   applyEnrollment,
   getStudentEnrollments,
@@ -81,5 +91,6 @@ export default {
   getTeacherEnrollments,
   reviewEnrollment,
   cancelEnrollment,
-  checkEnrollmentStatus
+  checkEnrollmentStatus,
+  directEnroll
 }

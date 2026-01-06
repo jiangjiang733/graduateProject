@@ -72,8 +72,10 @@
                         <component :is="getChapterIcon(data.chapterType || data.type)" />
                       </el-icon>
                       <span class="chapter-title-text">{{ data.chapterTitle || data.title }}</span>
-                      <span v-if="data.videoUrl" class="chapter-link">
-                        <el-button link type="primary" size="small" @click="viewContent(data)">观看</el-button>
+                      <span v-if="data.chapterType !== 'FOLDER' && data.type !== 'FOLDER'" class="chapter-link">
+                        <el-button link type="primary" size="small" @click="viewContent(data)">
+                          {{ (data.chapterType === 'VIDEO' || data.type === 'VIDEO') ? '观看' : '查看' }}
+                        </el-button>
                       </span>
                     </span>
                   </template>
@@ -83,7 +85,19 @@
 
             <el-tab-pane label="课程评论" name="comments">
               <div class="tab-content-wrapper comments-container">
-                <CourseComment :courseId="courseId" />
+                <CourseComment :courseId="courseId" :chapters="chapters" />
+              </div>
+            </el-tab-pane>
+
+            <el-tab-pane label="资料库" name="resources">
+              <div class="tab-content-wrapper resources-container">
+                <CourseResource :courseId="courseId" :isAdmin="permission.canEdit" />
+              </div>
+            </el-tab-pane>
+
+             <el-tab-pane label="班级成员" name="students" v-if="permission.isOwner">
+              <div class="tab-content-wrapper students-container">
+                <CourseStudents :courseId="courseId" />
               </div>
             </el-tab-pane>
           </el-tabs>
@@ -101,6 +115,8 @@
 <script setup>
 import { ArrowLeft, User, Calendar, Star, Document, List, ChatDotSquare, Edit, Delete, Folder, VideoPlay, Files } from '@element-plus/icons-vue';
 import CourseComment from './CourseComment.vue';
+import CourseStudents from './CourseStudents.vue';
+import CourseResource from '@/components/common/CourseResource.vue';
 import { useCourseDetail } from '@/assets/js/teacher/course-detail.js';
 
 const {

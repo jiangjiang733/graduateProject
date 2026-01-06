@@ -12,95 +12,118 @@
       <el-tabs v-model="activeTab" type="border-card">
         <!-- 基本信息标签 -->
         <el-tab-pane label="基本信息" name="basic">
-          <el-form
-            ref="formRef"
-            :model="formData"
-            :rules="rules"
-            label-width="120px"
-            label-position="right"
-          >
-        <!-- 课程名称 -->
-        <el-form-item label="课程名称" prop="courseName">
-          <el-input
-            v-model="formData.courseName"
-            placeholder="请输入课程名称"
-            maxlength="100"
-            show-word-limit
-          />
-        </el-form-item>
+          <div class="basic-info-container">
+            <el-form
+              ref="formRef"
+              :model="formData"
+              :rules="rules"
+              label-width="100px"
+              label-position="top"
+              class="premium-form"
+            >
+              <div class="form-row">
+                <!-- 课程名称 -->
+                <el-form-item label="课程名称" prop="courseName" class="form-item-half">
+                  <el-input
+                    v-model="formData.courseName"
+                    placeholder="请输入富有吸引力的课程名称"
+                    maxlength="100"
+                    show-word-limit
+                  />
+                </el-form-item>
 
-        <!-- 课程描述 -->
-        <el-form-item label="课程描述" prop="courseDescription">
-          <el-input
-            v-model="formData.courseDescription"
-            type="textarea"
-            :rows="4"
-            placeholder="请输入课程描述"
-            maxlength="500"
-            show-word-limit
-          />
-        </el-form-item>
+                <!-- 专业 -->
+                <el-form-item label="所属专业" prop="major" class="form-item-half">
+                  <el-select v-model="formData.major" placeholder="请选择专业" style="width: 100%">
+                    <el-option label="计算机科学与技术" value="计算机科学与技术" />
+                    <el-option label="软件工程" value="软件工程" />
+                    <el-option label="信息安全" value="信息安全" />
+                    <el-option label="数据科学与大数据技术" value="数据科学与大数据技术" />
+                    <el-option label="人工智能" value="人工智能" />
+                    <el-option label="其他" value="其他" />
+                  </el-select>
+                </el-form-item>
+              </div>
 
-        <!-- 专业 -->
-        <el-form-item label="专业" prop="major">
-          <el-select v-model="formData.major" placeholder="请选择专业" style="width: 100%">
-            <el-option label="计算机科学与技术" value="计算机科学与技术" />
-            <el-option label="软件工程" value="软件工程" />
-            <el-option label="信息安全" value="信息安全" />
-            <el-option label="数据科学与大数据技术" value="数据科学与大数据技术" />
-            <el-option label="人工智能" value="人工智能" />
-            <el-option label="其他" value="其他" />
-          </el-select>
-        </el-form-item>
+              <div class="form-row">
+                <!-- 分类 -->
+                <el-form-item label="课程分类" prop="classification" class="form-item-half">
+                  <el-select v-model="formData.classification" placeholder="请选择分类" style="width: 100%">
+                    <el-option label="必修课" value="必修课" />
+                    <el-option label="选修课" value="选修课" />
+                    <el-option label="公共课" value="公共课" />
+                    <el-option label="专业课" value="专业课" />
+                  </el-select>
+                </el-form-item>
 
-        <!-- 分类 -->
-        <el-form-item label="课程分类" prop="classification">
-          <el-select v-model="formData.classification" placeholder="请选择分类" style="width: 100%">
-            <el-option label="必修课" value="必修课" />
-            <el-option label="选修课" value="选修课" />
-            <el-option label="公共课" value="公共课" />
-            <el-option label="专业课" value="专业课" />
-          </el-select>
-        </el-form-item>
+                <!-- 课程时间 -->
+                <el-form-item label="课程有效期" class="form-item-half">
+                  <el-date-picker
+                    v-model="dateRange"
+                    type="daterange"
+                    range-separator="至"
+                    start-placeholder="开课日期"
+                    end-placeholder="结课日期"
+                    format="YYYY-MM-DD"
+                    value-format="YYYY-MM-DD HH:mm:ss"
+                    style="width: 100%"
+                  />
+                </el-form-item>
+              </div>
 
-        <!-- 课程时间 -->
-        <el-form-item label="课程时间">
-          <el-date-picker
-            v-model="dateRange"
-            type="daterange"
-            range-separator="至"
-            start-placeholder="开始日期"
-            end-placeholder="结束日期"
-            format="YYYY-MM-DD"
-            value-format="YYYY-MM-DD HH:mm:ss"
-            style="width: 100%"
-          />
-        </el-form-item>
+              <!-- 课程描述 -->
+              <el-form-item label="课程简介 / 描述" prop="courseDescription">
+                <el-input
+                  v-model="formData.courseDescription"
+                  type="textarea"
+                  :rows="5"
+                  placeholder="详细介绍本课程的教学目标、受众及特色..."
+                  maxlength="500"
+                  show-word-limit
+                />
+              </el-form-item>
 
-        <!-- 课程封面 -->
-        <el-form-item label="课程封面">
-          <el-upload
-            class="cover-uploader"
-            :show-file-list="false"
-            :before-upload="beforeCoverUpload"
-            :on-change="handleCoverChange"
-            :auto-upload="false"
-            accept="image/*"
-          >
-            <img v-if="coverPreview" :src="coverPreview" class="cover-preview" />
-            <el-icon v-else class="cover-uploader-icon"><Plus /></el-icon>
-          </el-upload>
-          <div class="upload-tip">建议尺寸：800x450px，支持jpg、png格式，大小不超过2MB</div>
-        </el-form-item>
+              <!-- 课程封面 -->
+              <el-form-item label="课程封面图">
+                <div class="uploader-wrapper">
+                  <el-upload
+                    class="cover-uploader"
+                    :show-file-list="false"
+                    :before-upload="beforeCoverUpload"
+                    :on-change="handleCoverChange"
+                    :auto-upload="false"
+                    accept="image/*"
+                  >
+                    <div v-if="coverPreview" class="preview-container">
+                      <img :src="coverPreview" class="cover-preview-img" />
+                      <div class="preview-mask">
+                        <el-icon><Edit /></el-icon>
+                        <span>更换封面</span>
+                      </div>
+                    </div>
+                    <div v-else class="uploader-placeholder">
+                      <el-icon class="uploader-icon"><Plus /></el-icon>
+                      <div class="uploader-text">上传课程封面</div>
+                    </div>
+                  </el-upload>
+                  <div class="upload-tip">
+                    <p class="tip-title"><el-icon><Warning /></el-icon> 上传规范</p>
+                    <p>尺寸：建议 800 x 450 px (16:9)</p>
+                    <p>格式：支持 JPG, PNG, WEBP</p>
+                    <p>大小：单张图片不超过 2MB</p>
+                  </div>
+                </div>
+              </el-form-item>
 
-            <!-- 提交按钮 -->
-            <el-form-item>
-              <el-button type="primary" @click="submitForm" :loading="submitting">
-                {{ isEdit ? '保存修改' : '创建课程' }}
-              </el-button>
-              <el-button @click="goBack">取消</el-button>
-            </el-form-item>
-          </el-form>
+              <!-- 底部操作 -->
+              <div class="form-footer">
+                <el-button type="primary" size="large" @click="submitForm" :loading="submitting" class="submit-btn">
+                  {{ isEdit ? '保存所有修改' : '立即创建课程' }}
+                </el-button>
+                <el-button size="large" @click="goBack">取消并返回</el-button>
+              </div>
+            </el-form>
+          </div>
         </el-tab-pane>
 
         <!-- 课程时间表标签 -->
@@ -450,7 +473,7 @@
 </template>
 
 <script setup>
-import { ArrowLeft, Plus, Folder, VideoPlay, Document, Edit, View, Delete, Search, Check, Download } from '@element-plus/icons-vue'
+import { ArrowLeft, Plus, Folder, VideoPlay, Document, Edit, View, Delete, Search, Check, Download, Warning } from '@element-plus/icons-vue'
 import { useCourseForm } from '@/assets/js/teacher/course-form.js'
 import { onMounted } from 'vue'
 

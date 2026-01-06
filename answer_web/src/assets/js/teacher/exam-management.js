@@ -64,11 +64,20 @@ export function useExamManagement() {
     const loadExams = async () => {
         loading.value = true
         try {
-            if (filterForm.courseId) {
-                const response = await getExamsByCourse(filterForm.courseId)
-                if (response.success) {
-                    exams.value = response.data || []
-                }
+            const { searchExams } = await import('@/api/exam.js')
+            const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
+
+            const params = {
+                teacherId: teacherId,
+                courseId: filterForm.courseId,
+                status: filterForm.status,
+                keyword: filterForm.keyword
+            }
+
+            const response = await searchExams(params)
+
+            if (response && response.success) {
+                exams.value = response.data || []
             } else {
                 exams.value = []
             }
@@ -258,6 +267,7 @@ export function useExamManagement() {
 
     onMounted(() => {
         loadCourses()
+        loadExams()
     })
 
     return {
