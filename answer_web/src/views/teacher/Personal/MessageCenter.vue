@@ -3,7 +3,6 @@
     <div class="chat-container glass-panel">
       <!-- Sidebar -->
       <aside class="chat-sidebar">
-        <!-- Sidebar Tabs -->
         <div class="sidebar-tabs">
           <div 
             class="tab-item" 
@@ -29,7 +28,6 @@
           </div>
         </div>
 
-        <!-- Chat List (Visible when activeTab === 'chat') -->
         <div v-show="activeTab === 'chat'" class="sidebar-content">
           <div class="search-wrap">
             <el-input 
@@ -67,9 +65,6 @@
             </div>
           </div>
         </div>
-
-        <!-- Interaction List (Sidebar view for Interactions is just a summary or empty if we move list to main) -->
-        <!-- User Preference Idea: Douyin puts interactions in a specific list. We can show categories here or just "All Interactions". -->
         <div v-show="activeTab === 'interaction'" class="sidebar-content interaction-menu">
            <div 
              class="menu-item"
@@ -80,15 +75,7 @@
               <span>收到的评论</span>
               <el-icon class="arrow"><ArrowRight /></el-icon>
            </div>
-           <div 
-             class="menu-item"
-             :class="{ active: activeInteractionType === 'like' }"
-             @click="activeInteractionType = 'like'"
-           >
-              <el-icon class="icon-box bg-red"><Pointer /></el-icon>
-              <span>点赞我的</span>
-              <el-icon class="arrow"><ArrowRight /></el-icon>
-           </div>
+
            <div 
              class="menu-item"
              :class="{ active: activeInteractionType === 'system' }"

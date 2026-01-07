@@ -37,7 +37,9 @@ public class LabReportController {
             @RequestParam("reportTitle") String reportTitle,
             @RequestParam("reportDescription") String reportDescription,
             @RequestParam("deadline") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date deadline,
-            @RequestParam("totalScore") Integer totalScore,
+            @RequestParam(value = "totalScore", required = false) Integer totalScore,
+            @RequestParam(value = "status", required = false) Integer status,
+            @RequestParam(value = "questionList", required = false) String questionList,
             @RequestParam(value = "attachment", required = false) MultipartFile attachment) {
         try {
             // 创建实验报告对象
@@ -48,6 +50,8 @@ public class LabReportController {
             labReport.setReportDescription(reportDescription);
             labReport.setDeadline(deadline);
             labReport.setTotalScore(totalScore);
+            labReport.setStatus(status != null ? status : 1); // 默认发布
+            labReport.setQuestionList(questionList);
 
             // 发布实验报告
             Long reportId = labReportService.publishLabReport(labReport, attachment);
@@ -59,6 +63,40 @@ public class LabReportController {
             return Result.success("实验报告发布成功", data);
         } catch (Exception e) {
             return Result.error("发布失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 更新实验报告
+     * PUT /api/lab-report/{reportId}
+     */
+    @PutMapping("/{reportId}")
+    public Result<String> updateLabReport(
+            @PathVariable Long reportId,
+            @RequestParam(value = "courseId", required = false) String courseId,
+            @RequestParam(value = "teacherId", required = false) String teacherId,
+            @RequestParam(value = "reportTitle", required = false) String reportTitle,
+            @RequestParam(value = "reportDescription", required = false) String reportDescription,
+            @RequestParam(value = "deadline", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") Date deadline,
+            @RequestParam(value = "totalScore", required = false) Integer totalScore,
+            @RequestParam(value = "status", required = false) Integer status,
+            @RequestParam(value = "questionList", required = false) String questionList,
+            @RequestParam(value = "attachment", required = false) MultipartFile attachment) {
+        try {
+            LabReport labReport = new LabReport();
+            labReport.setCourseId(courseId);
+            labReport.setTeacherId(teacherId);
+            labReport.setReportTitle(reportTitle);
+            labReport.setReportDescription(reportDescription);
+            labReport.setDeadline(deadline);
+            labReport.setTotalScore(totalScore);
+            labReport.setStatus(status != null ? status : 1);
+            labReport.setQuestionList(questionList);
+
+            labReportService.updateLabReport(reportId, labReport, attachment);
+            return Result.success("实验报告更新成功");
+        } catch (Exception e) {
+            return Result.error("更新失败: " + e.getMessage());
         }
     }
 
@@ -160,6 +198,7 @@ public class LabReportController {
             @RequestParam("studentId") String studentId,
             @RequestParam("studentName") String studentName,
             @RequestParam("content") String content,
+            @RequestParam(value = "structuredAnswers", required = false) String structuredAnswers,
             @RequestParam(value = "attachment", required = false) MultipartFile attachment) {
         try {
             // 创建学生报告对象
@@ -168,6 +207,7 @@ public class LabReportController {
             studentReport.setStudentId(studentId);
             studentReport.setStudentName(studentName);
             studentReport.setContent(content);
+            studentReport.setStructuredAnswers(structuredAnswers);
 
             // 提交实验报告
             Long studentReportId = labReportService.submitLabReport(studentReport, attachment);

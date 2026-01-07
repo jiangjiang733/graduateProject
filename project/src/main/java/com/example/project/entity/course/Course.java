@@ -81,4 +81,7 @@ public class Course implements Serializable {
 
     @TableField(exist = false)
     private Integer chapterCount;
+
+    @TableField(exist = false)
+    private String teacherAvatar;
 }

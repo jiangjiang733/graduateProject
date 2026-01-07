@@ -73,7 +73,7 @@ export function useCourseList() {
 
                 // 前端筛选
                 if (filters.category !== 'all') {
-                    allCourses = allCourses.filter(course => 
+                    allCourses = allCourses.filter(course =>
                         course.classification === filters.category
                     )
                 }
@@ -122,7 +122,7 @@ export function useCourseList() {
 
     // 检查课程报名状态
     const checkCoursesEnrollmentStatus = async () => {
-        const studentId = localStorage.getItem('studentId') || localStorage.getItem('userId')
+        const studentId = localStorage.getItem('s_id') || localStorage.getItem('studentId') || localStorage.getItem('userId')
         if (!studentId) return
 
         for (const course of courses.value) {
@@ -144,6 +144,13 @@ export function useCourseList() {
         return `http://localhost:8088${image}`
     }
 
+    // 获取教师头像
+    const getTeacherAvatar = (avatar) => {
+        if (!avatar) return 'https://api.dicebear.com/7.x/avataaars/svg?seed=instructor'
+        if (avatar.startsWith('http')) return avatar
+        return `http://localhost:8088${avatar}`
+    }
+
     // 格式化日期
     const formatDate = (dateString) => {
         if (!dateString) return '未知'
@@ -157,7 +164,7 @@ export function useCourseList() {
 
     // 处理报名
     const handleEnroll = async (course) => {
-        const studentId = localStorage.getItem('studentId') || localStorage.getItem('userId')
+        const studentId = localStorage.getItem('s_id') || localStorage.getItem('studentId') || localStorage.getItem('userId')
         if (!studentId) {
             ElMessage.warning('请先登录')
             router.push('/login')
@@ -171,9 +178,6 @@ export function useCourseList() {
         } else if (course.enrollmentStatus === 'approved') {
             // 已通过审核，直接进入学习
             goToLearn(course.id)
-            return
-        } else if (course.enrollmentStatus === 'rejected') {
-            ElMessage.warning('您的报名申请已被拒绝，无法重新报名')
             return
         }
 
@@ -190,7 +194,7 @@ export function useCourseList() {
             )
 
             course.enrolling = true
-            
+
             const response = await applyEnrollment({
                 studentId: studentId,
                 courseId: course.id,
@@ -222,15 +226,14 @@ export function useCourseList() {
         if (course.enrolling) return '提交中...'
         if (course.enrollmentStatus === 'pending') return '审核中'
         if (course.enrollmentStatus === 'approved') return '进入学习'
-        if (course.enrollmentStatus === 'rejected') return '已拒绝'
+        if (course.enrollmentStatus === 'rejected') return '重新报名'
         return '立即报名'
     }
 
     // 获取报名按钮是否禁用
     const isEnrollButtonDisabled = (course) => {
-        return course.enrolling || 
-               course.enrollmentStatus === 'pending' || 
-               course.enrollmentStatus === 'rejected'
+        return course.enrolling ||
+            course.enrollmentStatus === 'pending'
     }
 
     // 进入课程学习
@@ -265,6 +268,7 @@ export function useCourseList() {
         isEnrollButtonDisabled,
         goToLearn,
         getCourseImage,
+        getTeacherAvatar,
         formatDate
     }
 }

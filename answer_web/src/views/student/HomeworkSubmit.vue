@@ -18,13 +18,65 @@
           </div>
           <div class="info-item">
             <el-icon><Star /></el-icon>
-            <span>总分: {{ homework.totalScore }}</span>
+            <span>总分: {{ homework.totalScore }}分</span>
           </div>
         </div>
         <div class="homework-description">
           <h3>作业要求</h3>
-          <p>{{ homework.reportDescription }}</p>
+          <p>{{ homework.reportDescription || '暂无详细说明' }}</p>
         </div>
+
+        <!-- 结构化题目作答区 -->
+        <div v-if="homework.questionList?.length > 0" class="homework-questions-section">
+          <div class="section-badge">在线作答题目</div>
+          <div v-for="(q, index) in homework.questionList" :key="index" class="question-item">
+            <div class="q-header">
+              <span class="q-idx">{{ index + 1 }}.</span>
+              <el-tag size="small" :type="getQuestionTypeTag(q.questionType)">{{ getQuestionTypeText(q.questionType) }}</el-tag>
+              <span class="q-score">({{ q.score }}分)</span>
+            </div>
+            <div class="q-content">{{ q.questionContent }}</div>
+            
+            <!-- 单选题 -->
+            <div v-if="q.questionType === 'SINGLE'" class="q-options">
+              <el-radio-group v-model="submitForm.answers[index]">
+                <el-radio v-for="(opt, oIdx) in q.options" :key="oIdx" :label="String.fromCharCode(65 + oIdx)" class="opt-radio">
+                  <span class="opt-label">{{ String.fromCharCode(65 + oIdx) }}.</span>
+                  <span class="opt-text">{{ opt.text || opt }}</span>
+                </el-radio>
+              </el-radio-group>
+            </div>
+
+            <!-- 多选题 -->
+            <div v-else-if="q.questionType === 'MULTIPLE'" class="q-options">
+              <el-checkbox-group v-model="submitForm.multiAnswers[index]">
+                <el-checkbox v-for="(opt, oIdx) in q.options" :key="oIdx" :label="String.fromCharCode(65 + oIdx)" class="opt-checkbox">
+                  <span class="opt-label">{{ String.fromCharCode(65 + oIdx) }}.</span>
+                  <span class="opt-text">{{ opt.text || opt }}</span>
+                </el-checkbox>
+              </el-checkbox-group>
+            </div>
+
+            <!-- 判断题 -->
+            <div v-else-if="q.questionType === 'JUDGE'" class="q-options">
+              <el-radio-group v-model="submitForm.answers[index]">
+                <el-radio label="A">A. 正确</el-radio>
+                <el-radio label="B">B. 错误</el-radio>
+              </el-radio-group>
+            </div>
+
+            <!-- 简答题 -->
+            <div v-else-if="q.questionType === 'ESSAY'" class="q-options">
+              <el-input
+                v-model="submitForm.answers[index]"
+                type="textarea"
+                :rows="3"
+                placeholder="请输入您的回答..."
+              />
+            </div>
+          </div>
+        </div>
+
         <div v-if="homework.attachmentUrl" class="homework-attachment">
           <h3>作业附件</h3>
           <el-link :href="`/api/${homework.attachmentUrl}`" target="_blank" type="primary">
@@ -104,8 +156,20 @@ const fileList = ref([])
 const currentFile = ref(null)
 
 const submitForm = reactive({
-  content: ''
+  content: '',
+  answers: {},
+  multiAnswers: {}
 })
+
+const getQuestionTypeText = (type) => {
+  const types = { SINGLE: '单选题', MULTIPLE: '多选题', JUDGE: '判断题', ESSAY: '简答题' }
+  return types[type] || type
+}
+
+const getQuestionTypeTag = (type) => {
+  const tags = { SINGLE: '', MULTIPLE: 'success', JUDGE: 'warning', ESSAY: 'info' }
+  return tags[type] || ''
+}
 
 const rules = {
   content: [
@@ -129,7 +193,32 @@ const loadHomework = async () => {
   try {
     const reportId = route.params.id
     const response = await getLabReportDetail(reportId)
-    homework.value = response.data || {}
+    const data = response.data || {}
+    
+    // 解析题目列表
+    if (data.questionList) {
+        try {
+            data.questionList = typeof data.questionList === 'string' ? JSON.parse(data.questionList) : data.questionList
+            // 初始化多选题答案
+            data.questionList.forEach((q, idx) => {
+                if (q.questionType === 'MULTIPLE') {
+                    submitForm.multiAnswers[idx] = []
+                }
+                
+                // 解析选项
+                if (q.questionOptions) {
+                    try {
+                        q.options = typeof q.questionOptions === 'string' ? JSON.parse(q.questionOptions) : q.questionOptions
+                    } catch (e) { q.options = [] }
+                }
+            })
+        } catch (e) {
+            console.error('解析题目失败:', e)
+            data.questionList = []
+        }
+    }
+    
+    homework.value = data
   } catch (error) {
     console.error('加载作业失败:', error)
     ElMessage.error('加载作业失败')
@@ -170,10 +259,25 @@ const submitHomework = async () => {
 
       submitting.value = true
 
+      // 合并结构化答案到内容中，或者单独存储
+      // 为了兼容现有逻辑，我们将结构化答案转为 JSON 存入辅助字段或 content 开头
+      const structuredAnswers = homework.value.questionList?.map((q, idx) => {
+          let ans = submitForm.answers[idx]
+          if (q.questionType === 'MULTIPLE') {
+              ans = submitForm.multiAnswers[idx]?.sort().join('')
+          }
+          return {
+              type: q.questionType,
+              content: q.questionContent,
+              answer: ans || ''
+          }
+      })
+
       const submissionData = {
         studentId: studentInfo.studentsId,
         studentName: studentInfo.studentsUsername,
-        content: submitForm.content
+        content: submitForm.content,
+        structuredAnswers: JSON.stringify(structuredAnswers) // 这里我们假设后端可以接收这个新字段，或者我们可以把它追加到内容里
       }
 
       await submitLabReportAPI(route.params.id, submissionData, currentFile.value)
@@ -262,5 +366,80 @@ onMounted(() => {
   justify-content: flex-end;
   gap: 12px;
   margin-top: 24px;
+}
+
+.homework-questions-section {
+    margin-top: 30px;
+    padding: 20px;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+.section-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background: #10b981;
+    color: white;
+    font-size: 12px;
+    font-weight: 700;
+    border-radius: 20px;
+    margin-bottom: 20px;
+}
+
+.question-item {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 16px;
+    border: 1px solid #edf2f7;
+}
+
+.q-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.q-idx {
+    font-weight: 800;
+    color: #1e293b;
+}
+
+.q-score {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.q-content {
+    font-size: 15px;
+    color: #334155;
+    line-height: 1.6;
+    margin-bottom: 16px;
+    font-weight: 500;
+}
+
+.q-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.opt-radio, .opt-checkbox {
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    white-space: normal;
+}
+
+.opt-label {
+    margin-right: 8px;
+    font-weight: 600;
+}
+
+:deep(.el-radio), :deep(.el-checkbox) {
+    height: auto;
+    padding: 8px 0;
 }
 </style>

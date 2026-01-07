@@ -53,6 +53,46 @@
              <span class="file-name">附件已上传</span>
              <el-link :href="`/api/${homework.attachmentUrl}`" target="_blank" type="primary">点击查阅</el-link>
           </div>
+
+          <!-- 结构化题目预览 -->
+          <div v-if="questionList?.length > 0" class="questions-preview-section">
+            <el-divider><el-icon><List /></el-icon> 试题列表</el-divider>
+            <div v-for="(q, index) in questionList" :key="index" class="q-detail-item">
+              <div class="q-item-header">
+                <span class="q-num">{{ index + 1 }}</span>
+                <el-tag size="small" :type="getQuestionTypeTag(q.questionType)">{{ getQuestionTypeText(q.questionType) }}</el-tag>
+                <span class="q-score">({{ q.score }}分)</span>
+              </div>
+              <div class="q-item-content">{{ q.questionContent }}</div>
+              
+              <!-- 选项列表 -->
+              <div v-if="['SINGLE', 'MULTIPLE'].includes(q.questionType)" class="q-item-options">
+                <div v-for="(opt, oIdx) in parseOptions(q.questionOptions)" :key="oIdx" class="opt-line" :class="{correct: isCorrect(opt, oIdx, q)}">
+                  <span class="opt-label">{{ String.fromCharCode(65+oIdx) }}</span>
+                  <span class="opt-text">{{ opt.text || opt }}</span>
+                  <el-icon v-if="isCorrect(opt, oIdx, q)" class="correct-icon"><Check /></el-icon>
+                </div>
+              </div>
+              <!-- 判断题 -->
+              <div v-else-if="q.questionType === 'JUDGE'" class="q-item-options">
+                  <div class="opt-line" :class="{correct: q.correctAnswer === 'A' || q.correctAnswer === '正确' || q.answer === '正确'}">
+                    <span class="opt-label">A</span>
+                    <span class="opt-text">正确</span>
+                    <el-icon v-if="q.correctAnswer === 'A' || q.correctAnswer === '正确' || q.answer === '正确'" class="correct-icon"><Check /></el-icon>
+                  </div>
+                  <div class="opt-line" :class="{correct: q.correctAnswer === 'B' || q.correctAnswer === '错误' || q.answer === '错误'}">
+                    <span class="opt-label">B</span>
+                    <span class="opt-text">错误</span>
+                    <el-icon v-if="q.correctAnswer === 'B' || q.correctAnswer === '错误' || q.answer === '错误'" class="correct-icon"><Check /></el-icon>
+                  </div>
+              </div>
+
+              <div class="q-item-analysis" v-if="q.analysis">
+                <div class="analysis-label">【解析】</div>
+                <div class="analysis-text">{{ q.analysis }}</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -143,6 +183,47 @@ const getStatusType = (status) => {
 const getStatusText = (status) => {
     const texts = { 1: '正在进行', 2: '已截止', 0: '草稿' }
     return texts[status] || '未知'
+}
+
+const questionList = computed(() => {
+    const qList = homework.value.questionList || homework.value.questions
+    if (!qList) return []
+    try {
+        return typeof qList === 'string' ? JSON.parse(qList) : qList
+    } catch (e) {
+        console.error('解析题目失败', e)
+        return []
+    }
+})
+
+const getQuestionTypeText = (type) => {
+    const types = { 
+        1: '单选题', 'SINGLE': '单选题',
+        2: '多选题', 'MULTIPLE': '多选题',
+        3: '判断题', 'JUDGE': '判断题',
+        4: '填空题', 'COMPLETION': '填空题',
+        5: '简答题', 'ESSAY': '简答题'
+    }
+    return types[type] || type || '未知'
+}
+
+const getQuestionTypeTag = (type) => {
+    const maps = { SINGLE: '', MULTIPLE: 'success', JUDGE: 'warning', ESSAY: 'info' }
+    return maps[type] || ''
+}
+
+const parseOptions = (json) => {
+    try {
+        return typeof json === 'string' ? JSON.parse(json) : json
+    } catch(e) { return [] }
+}
+
+const isCorrect = (opt, idx, q) => {
+    const ans = q.correctAnswer || q.answer
+    if (!ans) return false
+    const ansStr = String(ans)
+    const char = String.fromCharCode(65 + idx)
+    return ansStr.includes(char) || ansStr === String(idx)
 }
 
 const formatDate = (date) => {
@@ -242,16 +323,88 @@ onMounted(loadDetail)
 .progress-wrap { margin-top: 16px; }
 .progress-info { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; color: #475569; }
 
-/* Actions Card */
-.actions-card { padding: 24px; }
-.action-buttons { display: flex; flex-direction: column; gap: 12px; margin-top: 20px; }
-.full-btn {
-  width: 100%;
-  height: 48px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-weight: 600;
-  margin: 0 !important;
+/* Questions Preview */
+.questions-preview-section {
+    margin-top: 40px;
+}
+
+.q-detail-item {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.q-item-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.q-num {
+    font-weight: 800;
+    color: #3b82f6;
+    font-size: 16px;
+}
+
+.q-score {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.q-item-content {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1e293b;
+    line-height: 1.6;
+    margin-bottom: 16px;
+}
+
+.q-item-options {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.opt-line {
+    padding: 10px 16px;
+    background: #f8fafc;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #475569;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.opt-line.correct {
+    background: #f0fdf4;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+.correct-icon {
+    margin-left: auto;
+    color: #22c55e;
+}
+
+.q-item-analysis {
+    background: #fffcf0;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border-left: 4px solid #f59e0b;
+}
+
+.analysis-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #92400e;
+    margin-bottom: 4px;
+}
+
+.analysis-text {
+    font-size: 13px;
+    color: #d97706;
 }
 </style>

@@ -19,4 +19,5 @@ public class LabReportDTO {
     private Integer submittedCount;
     private Integer totalStudents;
     private String courseName;
+    private String questionList;
 }

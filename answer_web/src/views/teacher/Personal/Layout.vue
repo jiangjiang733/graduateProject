@@ -123,7 +123,6 @@ const menuItems = [
   { path: '/teacher/exams', label: '考试管理', icon: 'Collection' },
   { path: '/teacher/homework', label: '作业管理', icon: 'EditPen' },
   { path: '/teacher/questions', label: '题库', icon: 'List' },
-  { path: '/teacher/resources', label: '资料库', icon: 'Folder' },
   { path: '/teacher/enrollments', label: '报名管理', icon: 'User' },
 ]
 

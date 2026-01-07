@@ -68,11 +68,11 @@ export function useExamDetail() {
 
     const distribution = statistics.value.scoreDistribution || {}
     const data = [
-      { name: '不及格(0-59)', value: distribution['0-59'] || 0 },
-      { name: '及格(60-69)', value: distribution['60-69'] || 0 },
-      { name: '中等(70-79)', value: distribution['70-79'] || 0 },
-      { name: '良好(80-89)', value: distribution['80-89'] || 0 },
-      { name: '优秀(90-100)', value: distribution['90-100'] || 0 }
+      { name: '不及格(<60%)', value: distribution['0-59'] || 0 },
+      { name: '及格(60-69%)', value: distribution['60-69'] || 0 },
+      { name: '中等(70-79%)', value: distribution['70-79'] || 0 },
+      { name: '良好(80-89%)', value: distribution['80-89'] || 0 },
+      { name: '优秀(90%以上)', value: distribution['90-100'] || 0 }
     ]
 
     const option = {
@@ -315,8 +315,8 @@ export function useExamDetail() {
 
     // 判断题处理
     if (['JUDGE', 'JUDGEMENT', 'TRUE_FALSE'].includes(question.questionType)) {
-      if (ansStr === 'true' || ansStr === '1' || ansStr === '对') return '正确'
-      if (ansStr === 'false' || ansStr === '0' || ansStr === '错') return '错误'
+      if (ansStr === 'true' || ansStr === '1' || ansStr === '对' || ansStr === 'A') return 'A. 正确'
+      if (ansStr === 'false' || ansStr === '0' || ansStr === '错' || ansStr === 'B') return 'B. 错误'
     }
 
     return ansStr

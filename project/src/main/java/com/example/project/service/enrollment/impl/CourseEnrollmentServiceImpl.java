@@ -40,7 +40,13 @@ public class CourseEnrollmentServiceImpl implements CourseEnrollmentService {
             } else if ("approved".equals(existing.getStatus())) {
                 throw new RuntimeException("您已成功报名该课程");
             } else if ("rejected".equals(existing.getStatus())) {
-                throw new RuntimeException("您的报名申请已被拒绝");
+                // 如果是被拒绝，更新记录状态为待审核，允许重新报名
+                existing.setStatus("pending");
+                existing.setApplyTime(new Date());
+                existing.setReviewTime(null);
+                existing.setRejectReason(null);
+                enrollmentMapper.updateById(existing);
+                return existing;
             }
         }
 

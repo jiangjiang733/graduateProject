@@ -1,113 +1,87 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getCourseList } from '@/api/course.js'
-import { getStudentLabReports } from '@/api/homework.js'
+import { getStudentJoinedCourses } from '@/api/course.js'
 
 export function useStudentDashboard() {
     const router = useRouter()
-    const userInfo = ref(JSON.parse(localStorage.getItem('userInfo') || '{}'))
+
+    // 安全获取用户信息
+    const getUserInfo = () => {
+        try {
+            const student = localStorage.getItem('student')
+            if (student) return JSON.parse(student)
+            const userInfo = localStorage.getItem('userInfo')
+            if (userInfo) return JSON.parse(userInfo)
+            const user = localStorage.getItem('user')
+            if (user) {
+                const parsed = JSON.parse(user)
+                return typeof parsed === 'object' ? parsed : { username: parsed }
+            }
+        } catch (e) {
+            console.warn('解析用户信息失败:', e)
+        }
+        return {}
+    }
+
+    const userInfo = ref(getUserInfo())
     const searchQuery = ref('')
     const currentDate = ref(new Date())
 
     // 状态
-    const courses = ref([])
+    const allJoinedCourses = ref([])
     const todoList = ref([])
     const activities = ref([])
     const loading = ref(false)
 
-    // 模拟数据 - 真实环境中应从API获取
+    // 计算属性：只显示前2个课程用于展示卡片
+    const displayCourses = computed(() => {
+        if (!Array.isArray(allJoinedCourses.value)) return []
+        return allJoinedCourses.value.slice(0, 2)
+    })
+
+    // 模拟数据
     const mockActivities = [
-        {
-            id: 1,
-            content: '完成了 "Vue.js 基础" 的第一章测验',
-            timestamp: '2023-11-20 14:30',
-            type: 'exam',
-            color: '#67c23a'
-        },
-        {
-            id: 2,
-            content: '提交了 "Web 前端开发" 的实验报告',
-            timestamp: '2023-11-19 16:20',
-            type: 'homework',
-            color: '#409EFF'
-        },
-        {
-            id: 3,
-            content: '加入了课程 "计算机网络"',
-            timestamp: '2023-11-18 09:15',
-            type: 'course',
-            color: '#e6a23c'
-        }
+        { id: 1, content: '开始了新的学习计划', timestamp: '刚刚', type: 'system', color: '#6366f1' },
+        { id: 2, content: '完成了第一阶段课程', timestamp: '1天前', type: 'course', color: '#10b981' }
     ]
 
     const mockTodos = [
-        {
-            id: 1,
-            title: '完成 Vue.js 组件通信作业',
-            deadline: '2023-11-25',
-            urgent: true,
-            type: 'homework'
-        },
-        {
-            id: 2,
-            title: '计算机网络期中考试',
-            deadline: '2023-11-28',
-            urgent: false,
-            type: 'exam'
-        },
-        {
-            id: 3,
-            title: '阅读 React Hooks 文档',
-            deadline: '2023-11-30',
-            urgent: false,
-            type: 'study'
-        }
+        { id: 1, title: '完善个人资料', deadline: '2026-12-31', type: 'system' }
     ]
 
     // 方法
     const loadDashboardData = async () => {
+        // 尝试从多个字段获取学生ID
+        const studentId = userInfo.value.studentsId ||
+            userInfo.value.studentId ||
+            localStorage.getItem('s_id') ||
+            localStorage.getItem('studentId')
+
+        if (!studentId) {
+            console.warn('未找到学生ID，无法加载课程数据')
+            return
+        }
+
         loading.value = true
         try {
-            // 获取最近3条已发布的课程
-            const courseRes = await getCourseList({ 
-                pageNumber: 1, 
-                pageSize: 100 // 先获取所有课程
-            })
-            
-            if (courseRes.success && courseRes.data) {
-                // 筛选已发布的课程 (state === 1)，按创建时间倒序排序，取前3条
-                const publishedCourses = courseRes.data.list
-                    .filter(course => course.state === 1) // 只显示已发布的课程
-                    .sort((a, b) => {
-                        // 按创建时间倒序排序（最新的在前）
-                        const dateA = new Date(a.createTime || 0)
-                        const dateB = new Date(b.createTime || 0)
-                        return dateB - dateA
-                    })
-                    .slice(0, 3) // 只取前3条
-                    .map(course => ({
-                        ...course,
-                        // 处理图片URL
-                        image: course.image ? 
-                            (course.image.startsWith('http') ? course.image : `http://localhost:8088${course.image}`) 
-                            : 'https://via.placeholder.com/300x200?text=Course',
-                        progress: Math.floor(Math.random() * 100), // 模拟进度
-                        lastStudy: '2小时前'
-                    }))
-                
-                courses.value = publishedCourses
+            const courseRes = await getStudentJoinedCourses(studentId)
+            if (courseRes && courseRes.success && Array.isArray(courseRes.data)) {
+                allJoinedCourses.value = courseRes.data.map(course => ({
+                    id: course.courseId || course.id,
+                    courseName: course.courseName || '未命名课程',
+                    teacherName: course.teacherName || '教师',
+                    classification: course.classification || '综合',
+                    image: course.courseImage ?
+                        (course.courseImage.startsWith('http') ? course.courseImage : `http://localhost:8088${course.courseImage}`)
+                        : 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=400',
+                    progress: course.progress || 0
+                }))
             }
-
-            // 获取待办事项 (模拟)
             todoList.value = mockTodos
-
-            // 获取最近活动 (模拟)
             activities.value = mockActivities
-
         } catch (error) {
             console.error('获取仪表盘数据失败:', error)
-            ElMessage.error('加载数据失败')
         } finally {
             loading.value = false
         }
@@ -115,10 +89,7 @@ export function useStudentDashboard() {
 
     const handleSearch = () => {
         if (searchQuery.value) {
-            router.push({
-                path: '/student/courses',
-                query: { keyword: searchQuery.value }
-            })
+            router.push({ path: '/student/courses', query: { keyword: searchQuery.value } })
         }
     }
 
@@ -138,7 +109,8 @@ export function useStudentDashboard() {
         userInfo,
         searchQuery,
         currentDate,
-        courses,
+        courses: displayCourses,
+        allCourses: allJoinedCourses,
         todoList,
         activities,
         loading,

@@ -1,4 +1,5 @@
 package com.example.project.service.course.impl;
+
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.example.project.entity.course.Course;
 import com.example.project.entity.course.StudentCourse;
@@ -17,66 +18,67 @@ import java.util.Map;
 
 @Service
 public class StudentCourseServiceImpl implements StudentCourseService {
-    
+
     @Autowired
     private StudentCourseMapper studentCourseMapper;
-    
+
     @Autowired
     private CourseMapper courseMapper;
-    
+
     @Autowired
     private StudentUserMapper studentUserMapper;
-    
+
     @Override
     public Map<String, Object> getTeacherStudentStats(String teacherId) {
         return studentCourseMapper.getTeacherStudentStats(teacherId);
     }
-    
+
     @Override
     public Map<String, Object> getCourseStudentStats(String courseId) {
         return studentCourseMapper.getCourseStudentStats(courseId);
     }
-    
+
     @Override
     public List<StudentCourse> getCourseStudents(String courseId, int pageNumber, int pageSize) {
         int offset = (pageNumber - 1) * pageSize;
         return studentCourseMapper.getCourseStudents(courseId, pageSize, offset);
     }
-    
+
     @Override
-    public List<StudentCourse> getTeacherStudents(String teacherId, String courseId, String keyword, int pageNumber, int pageSize) {
+    public List<StudentCourse> getTeacherStudents(String teacherId, String courseId, String keyword, int pageNumber,
+            int pageSize) {
         int offset = (pageNumber - 1) * pageSize;
         return studentCourseMapper.getTeacherStudents(teacherId, courseId, keyword, pageSize, offset);
     }
-    
+
     @Override
     public List<Map<String, Object>> getCourseActivityData(String courseId, int days) {
         return studentCourseMapper.getCourseActivityData(courseId, days);
     }
-    
+
     @Override
     @Transactional
     public boolean joinCourse(String studentId, String courseId) {
         try {
             Integer studentIdInt = Integer.valueOf(studentId);
-            
+
             // 检查是否已经加入
             QueryWrapper<StudentCourse> wrapper = new QueryWrapper<>();
             wrapper.eq("student_id", studentIdInt).eq("course_id", courseId);
             StudentCourse existing = studentCourseMapper.selectOne(wrapper);
-            
+
             if (existing != null) {
                 return false; // 已经加入
             }
-            
+
             // 获取课程和学生信息
             Course course = courseMapper.selectById(courseId);
             Student student = studentUserMapper.selectById(studentIdInt);
-            
+
             if (course == null || student == null) {
                 return false;
             }
-            
+
             // 创建关联记录
             StudentCourse studentCourse = new StudentCourse();
             studentCourse.setStudentId(studentIdInt);
@@ -91,46 +93,51 @@ public class StudentCourseServiceImpl implements StudentCourseService {
             studentCourse.setLastActiveTime(new Date());
             studentCourse.setCreateTime(new Date());
             studentCourse.setUpdateTime(new Date());
-            
+
             studentCourseMapper.insert(studentCourse);
             return true;
-            
+
         } catch (Exception e) {
             e.printStackTrace();
             return false;
         }
     }
-    
+
     @Override
     @Transactional
     public boolean updateStudentProgress(String studentId, String courseId, int progress, int studyTime) {
         try {
             Integer studentIdInt = Integer.valueOf(studentId);
-            
+
             QueryWrapper<StudentCourse> wrapper = new QueryWrapper<>();
             wrapper.eq("student_id", studentIdInt).eq("course_id", courseId);
             StudentCourse studentCourse = studentCourseMapper.selectOne(wrapper);
-            
+
             if (studentCourse == null) {
                 return false;
             }
-            
+
             studentCourse.setProgress(progress);
             studentCourse.setTotalStudyTime(studentCourse.getTotalStudyTime() + studyTime);
             studentCourse.setLastActiveTime(new Date());
             studentCourse.setUpdateTime(new Date());
-            
+
             // 如果进度达到100%，标记为已完成
             if (progress >= 100) {
                 studentCourse.setStatus(2);
             }
-            
+
             studentCourseMapper.updateById(studentCourse);
             return true;
-            
+
         } catch (Exception e) {
             e.printStackTrace();
             return false;
         }
+    }
+
+    @Override
+    public List<Map<String, Object>> getStudentJoinedCourses(String studentId) {
+        return studentCourseMapper.getStudentJoinedCourses(studentId);
     }
 }

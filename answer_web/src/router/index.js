@@ -200,12 +200,6 @@ const router = createRouter({
           component: () => import('../views/teacher/question/QuestionBank.vue'),
           meta: { title: '题库管理', requiresAuth: true, role: 'teacher' }
         },
-        {
-          path: 'resources',
-          name: 'teacher_resources',
-          component: () => import('../views/teacher/resource/ResourceManagement.vue'),
-          meta: { title: '资源管理', requiresAuth: true, role: 'teacher' }
-        }
       ]
     },
 
@@ -273,6 +267,24 @@ const router = createRouter({
           name: 'student_messages',
           component: StudentMessageCenter,
           meta: { title: '答疑中心', requiresAuth: true, role: 'student' }
+        },
+        {
+          path: 'exams',
+          name: 'student_exams',
+          component: () => import('../views/student/StudentExamList.vue'),
+          meta: { title: '在线考试', requiresAuth: true, role: 'student' }
+        },
+        {
+          path: 'exam/:id/take',
+          name: 'student_exam_take',
+          component: () => import('../views/student/StudentExamDetail.vue'),
+          meta: { title: '正在考试', requiresAuth: true, role: 'student' }
+        },
+        {
+          path: 'exam/:id/result',
+          name: 'student_exam_result',
+          component: () => import('../views/student/StudentExamResult.vue'),
+          meta: { title: '考试成绩', requiresAuth: true, role: 'student' }
         }
       ]
     },

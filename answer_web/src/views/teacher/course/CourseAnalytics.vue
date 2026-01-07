@@ -321,10 +321,10 @@ const initCharts = () => {
             label: { show: true, fontSize: 20, fontWeight: 'bold' }
           },
           data: [
-            { value: 40, name: '优秀 (90+)', itemStyle: { color: '#10b981' } },
-            { value: 30, name: '良好 (80-89)', itemStyle: { color: '#3b82f6' } },
-            { value: 20, name: '及格 (60-79)', itemStyle: { color: '#fbbf24' } },
-            { value: 10, name: '不及格 (<60)', itemStyle: { color: '#ef4444' } }
+            { value: 40, name: '优秀 (90%以上)', itemStyle: { color: '#10b981' } },
+            { value: 30, name: '良好 (80-89%)', itemStyle: { color: '#3b82f6' } },
+            { value: 20, name: '及格 (60-79%)', itemStyle: { color: '#fbbf24' } },
+            { value: 10, name: '不及格 (<60%)', itemStyle: { color: '#ef4444' } }
           ]
         }]
       })

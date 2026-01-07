@@ -90,4 +90,19 @@ public interface ExamService {
      * 搜索考试
      */
     List<Exam> searchExams(String teacherId, String courseId, String status, String keyword);
+
+    /**
+     * 提交试卷
+     */
+    void submitExam(com.example.project.dto.exam.StudentExamSubmitDTO submitDTO);
+
+    /**
+     * 获取学生的所有考试（仅限已选课程且已发布的考试）
+     */
+    List<Map<String, Object>> getStudentExams(String studentId, String status, String courseId);
+
+    /**
+     * 获取学生考试成绩详情（包含答题记录和正确答案）
+     */
+    Map<String, Object> getStudentExamResult(Long examId, String studentId);
 }

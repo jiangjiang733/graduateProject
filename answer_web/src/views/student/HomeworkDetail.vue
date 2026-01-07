@@ -62,6 +62,45 @@
             下载我的附件
           </el-link>
         </div>
+
+        <!-- 结构化题目回答预览 -->
+        <div v-if="questionList?.length > 0" class="structured-results-section">
+          <div class="results-badge">在线题目明细</div>
+          <div v-for="(q, index) in questionList" :key="index" class="result-item">
+            <div class="q-header">
+              <span class="q-idx">{{ index + 1 }}.</span>
+              <el-tag size="small">{{ getQuestionTypeText(q.questionType) }}</el-tag>
+              <div class="q-score-stat" v-if="submission.status === 2">
+                <el-tag :type="isStudentCorrect(index, q) ? 'success' : 'danger'" size="small" effect="plain" round>
+                   {{ isStudentCorrect(index, q) ? '回答正确' : '回答错误' }}
+                </el-tag>
+              </div>
+            </div>
+            <div class="q-content">{{ q.questionContent }}</div>
+            
+            <div class="student-ans-box">
+              <div class="ans-label">您的回答：</div>
+              <div class="ans-val" :class="{
+                correct: submission.status === 2 && isStudentCorrect(index, q),
+                wrong: submission.status === 2 && !isStudentCorrect(index, q)
+              }">
+                {{ formatStudentAnswer(index, q) || '未作答' }}
+              </div>
+            </div>
+
+            <!-- 如果已批改，显示正确答案和解析 -->
+            <div v-if="submission.status === 2" class="standard-ans-section">
+              <div class="standard-ans">
+                 <span class="label">正确答案：</span>
+                 <span class="val">{{ formatCorrectAnswer(q) }}</span>
+              </div>
+              <div v-if="q.analysis" class="ans-analysis">
+                 <span class="label">题目解析：</span>
+                 <span class="val">{{ q.analysis }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- 教师评语 -->
@@ -176,6 +215,58 @@ const editSubmission = () => {
 // 返回
 const goBack = () => {
   router.push({ name: 'student_homework' })
+}
+
+const questionList = computed(() => {
+  const qList = homework.value.questionList || homework.value.questions
+  if (!qList) return []
+  try {
+    const parsed = typeof qList === 'string' ? JSON.parse(qList) : qList
+    return parsed.map(q => {
+      if (q.questionOptions && typeof q.questionOptions === 'string') {
+        try { q.options = JSON.parse(q.questionOptions) } catch(e) { q.options = [] }
+      }
+      return q
+    })
+  } catch (e) { return [] }
+})
+
+const structuredAnswers = computed(() => {
+  if (!submission.value.structuredAnswers) return []
+  try {
+    return JSON.parse(submission.value.structuredAnswers)
+  } catch (e) { return [] }
+})
+
+const getQuestionTypeText = (type) => {
+  const types = { SINGLE: '单选题', MULTIPLE: '多选题', JUDGE: '判断题', ESSAY: '简答题' }
+  return types[type] || type
+}
+
+const formatStudentAnswer = (idx, q) => {
+  const ansObj = structuredAnswers.value[idx]
+  if (!ansObj) return ''
+  const ans = ansObj.answer
+  if (q.questionType === 'JUDGE') {
+     if (ans === 'A' || ans === '正确') return 'A. 正确'
+     if (ans === 'B' || ans === '错误') return 'B. 错误'
+  }
+  return ans
+}
+
+const formatCorrectAnswer = (q) => {
+  const ans = q.correctAnswer || q.answer
+  if (q.questionType === 'JUDGE') {
+     if (ans === 'A' || ans === '正确') return 'A. 正确'
+     if (ans === 'B' || ans === '错误') return 'B. 错误'
+  }
+  return ans
+}
+
+const isStudentCorrect = (idx, q) => {
+  const sAns = formatStudentAnswer(idx, q)
+  const cAns = formatCorrectAnswer(q)
+  return sAns === cAns
 }
 
 onMounted(() => {
@@ -334,5 +425,107 @@ onMounted(() => {
   margin-top: 24px;
   padding-top: 24px;
   border-top: 1px solid #f0f0f0;
+}
+
+.structured-results-section {
+  margin-top: 32px;
+  padding: 24px;
+  background: #f8fafc;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+}
+
+.results-badge {
+  display: inline-block;
+  padding: 4px 16px;
+  background: #3b82f6;
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 20px;
+  margin-bottom: 20px;
+}
+
+.result-item {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  border: 1px solid #edf2f7;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.q-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.q-idx {
+  font-weight: 800;
+  color: #1e293b;
+  font-size: 16px;
+}
+
+.q-score-stat {
+  margin-left: auto;
+}
+
+.q-content {
+  font-size: 15px;
+  color: #334155;
+  line-height: 1.6;
+  margin-bottom: 16px;
+  font-weight: 500;
+}
+
+.student-ans-box {
+  background: #f1f5f9;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+}
+
+.ans-label {
+  font-size: 14px;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.ans-val {
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.ans-val.correct { color: #10b981; }
+.ans-val.wrong { color: #ef4444; }
+
+.standard-ans-section {
+  border-top: 1px dashed #e2e8f0;
+  padding-top: 12px;
+  margin-top: 12px;
+}
+
+.standard-ans, .ans-analysis {
+  font-size: 14px;
+  line-height: 1.6;
+  margin-top: 4px;
+}
+
+.standard-ans .label, .ans-analysis .label {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.standard-ans .val {
+  color: #10b981;
+  font-weight: 700;
+}
+
+.ans-analysis .val {
+  color: #64748b;
 }
 </style>

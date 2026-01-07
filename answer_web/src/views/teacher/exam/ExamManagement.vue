@@ -179,8 +179,8 @@
           <el-input-number v-model="examForm.totalScore" :min="1" :max="100" />
         </el-form-item>
 
-        <el-form-item label="及格分" prop="passScore">
-          <el-input-number v-model="examForm.passScore" :min="0" :max="100" />
+        <el-form-item label="及格分 (60%)" prop="passScore">
+          <el-input-number v-model="examForm.passScore" disabled />
         </el-form-item>
       </el-form>
 

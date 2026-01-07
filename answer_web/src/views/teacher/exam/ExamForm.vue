@@ -44,8 +44,8 @@
                   <el-input-number v-model="examForm.duration" :min="10" :max="300" class="glass-number" controls-position="right" />
                 </el-form-item>
 
-                <el-form-item :label="'及格分 (当前总分: ' + totalManualScore + ')'">
-                  <el-input-number v-model="examForm.passScore" :min="0" :max="examForm.totalScore || 100" class="glass-number" controls-position="right" />
+                <el-form-item :label="'及格分 (总分的60%)'">
+                  <el-input-number v-model="examForm.passScore" disabled class="glass-number" />
                 </el-form-item>
               </div>
 
@@ -90,15 +90,30 @@
                 </div>
                 <div class="q-card-body">
                   <div class="q-content">{{ q.questionContent }}</div>
-                  <div v-if="q.questionOptions" class="q-options-preview">
+                  <div v-if="['SINGLE', 'MULTIPLE', 'SINGLE_CHOICE', 'MULTIPLE_CHOICE'].includes(q.questionType) && q.questionOptions" class="q-options-preview">
                      <div v-for="(opt, oIdx) in parseOptions(q.questionOptions)" :key="oIdx" class="opt-preview-item" :class="{ 'is-answer': isCorrectOption(q, oIdx) }">
                        <span class="opt-prefix">{{ String.fromCharCode(65 + oIdx) }}</span>
                        <span class="opt-text">{{ (typeof opt === 'object' && opt !== null) ? (opt.text || JSON.stringify(opt)) : opt }}</span>
                      </div>
                   </div>
-                  <div v-if="['JUDGE', 'FILL_BLANK', 'SHORT_ANSWER'].includes(q.questionType)" class="q-answer-preview">
+                  <div v-else-if="['JUDGE', 'TRUE_FALSE'].includes(q.questionType)" class="q-options-preview">
+                     <div class="opt-preview-item" :class="{ 'is-answer': q.correctAnswer === 'A' || q.correctAnswer === '对' || q.correctAnswer === '正确' }">
+                       <span class="opt-prefix">A</span>
+                       <span class="opt-text">正确</span>
+                     </div>
+                     <div class="opt-preview-item" :class="{ 'is-answer': q.correctAnswer === 'B' || q.correctAnswer === '错' || q.correctAnswer === '错误' }">
+                       <span class="opt-prefix">B</span>
+                       <span class="opt-text">错误</span>
+                     </div>
+                  </div>
+                  <div v-if="['JUDGE', 'FILL_BLANK', 'SHORT_ANSWER', 'TRUE_FALSE'].includes(q.questionType)" class="q-answer-preview">
                     <span class="label">正确答案:</span>
-                    <span class="value">{{ q.correctAnswer }}</span>
+                    <template v-if="q.questionType === 'JUDGE' || q.questionType === 'TRUE_FALSE'">
+                       <span class="value" :class="{correct: q.correctAnswer === 'A' || q.correctAnswer === '对', error: q.correctAnswer === 'B' || q.correctAnswer === '错'}">
+                         {{ (q.correctAnswer === 'A' || q.correctAnswer === '对') ? 'A. 正确' : (q.correctAnswer === 'B' || q.correctAnswer === '错' ? 'B. 错误' : q.correctAnswer) }}
+                       </span>
+                    </template>
+                    <span class="value" v-else>{{ q.correctAnswer }}</span>
                   </div>
                 </div>
               </div>
@@ -118,7 +133,7 @@
                 <el-icon><Check /></el-icon> 确认创建考试
               </el-button>
               <el-button 
-                v-else
+                v-else给我修正
                 type="primary" 
                 size="large"
                 @click="confirmUpdate" 
@@ -232,6 +247,12 @@
         </el-form-item>
 
         <el-form-item label="题目内容" required>
+          <div v-if="questionForm.questionType === 'FILL_BLANK'" style="margin-bottom: 5px;">
+             <el-button size="small" type="primary" link @click="questionForm.questionContent += '（ ）'">
+               <el-icon><Plus /></el-icon> 插入填空符（ ）
+             </el-button>
+             <span class="tip-text" style="font-size: 12px; color: #999;">点击插入或手动输入中文括号</span>
+          </div>
           <el-input
             v-model="questionForm.questionContent"
             type="textarea"
@@ -296,8 +317,8 @@
             placeholder="选择正确答案"
             style="width: 100%"
           >
-            <el-option label="对" value="对" />
-            <el-option label="错" value="错" />
+            <el-option label="A. 正确" value="A" />
+            <el-option label="B. 错误" value="B" />
           </el-select>
           <el-input
             v-else-if="questionForm.questionType === 'FILL_BLANK'"
@@ -477,9 +498,7 @@ const totalManualScore = computed(() => {
 
 watch(totalManualScore, (newTotal) => {
   examForm.totalScore = newTotal
-  if (examForm.passScore === 0 || examForm.passScore > newTotal) {
-    examForm.passScore = Math.floor(newTotal * 0.6)
-  }
+  examForm.passScore = Math.floor(newTotal * 0.6)
 })
 
 // === 考试时间与时长双向绑定逻辑 ===
@@ -584,12 +603,16 @@ const editManualQuestion = (index) => {
   }
   
   isEditQuestion.value = true
+  const mappedType = typeMapping[question.questionType] || 'SINGLE_CHOICE'
+
   Object.assign(questionForm, {
     questionId: index,
-    questionType: typeMapping[question.questionType] || 'SINGLE_CHOICE',
+    questionType: mappedType,
     questionContent: question.questionContent,
-    options: parseOptions(question.questionOptions),
-    correctAnswer: question.answer || question.correctAnswer,
+    options: getOptionsForEdit(question.questionOptions),
+    correctAnswer: mappedType === 'TRUE_FALSE'
+      ? normalizeJudgeAnswer(question.answer || question.correctAnswer)
+      : (question.answer || question.correctAnswer),
     correctAnswerArray: (question.questionType === 'MULTIPLE' || question.questionType === 'MULTIPLE_CHOICE') 
       ? (question.answer || question.correctAnswer || '').split('') : [],
     score: question.score,
@@ -643,7 +666,9 @@ const handleBankSelection = (val) => {
 
 const confirmImportFromBank = () => {
   const newQs = selectedBankQuestions.value.map(q => {
-    let opts = q.options
+    const qClone = JSON.parse(JSON.stringify(q))
+    
+    let opts = qClone.options
     // Ensure options are handled correctly (might be string or array)
     if (typeof opts === 'string') {
       try {
@@ -652,15 +677,21 @@ const confirmImportFromBank = () => {
       } catch(e) {}
     } else if (Array.isArray(opts)) {
       opts = JSON.stringify(opts)
+    } else if (['JUDGE', 'TRUE_FALSE', 'JUDGEMENT'].includes(qClone.type) && (!opts || opts === 'null')) {
+        // Fix for missing options in Judgment questions from bank
+        opts = JSON.stringify([
+          { text: 'A. 正确', isCorrect: false }, 
+          { text: 'B. 错误', isCorrect: false }
+        ])
     }
 
     return {
-      questionType: q.type,
-      questionContent: q.content,
+      questionType: qClone.type,
+      questionContent: qClone.content,
       questionOptions: opts,
-      answer: q.answer,
+      correctAnswer: qClone.answer, // Unified field name
       score: 5, 
-      analysis: q.analysis
+      analysis: qClone.analysis
     }
   })
   
@@ -678,6 +709,7 @@ const isCorrectOption = (question, optIdx) => {
   if (question.questionType === 'MULTIPLE') {
     return question.correctAnswer && question.correctAnswer.includes(String.fromCharCode(65 + optIdx))
   }
+  // Simplified Judgment display handled in template logic
   return false
 }
 
@@ -780,6 +812,20 @@ const generateWithAi = async () => {
   }
 }
 
+const getOptionsForEdit = (optionsRaw) => {
+  const opts = parseOptions(optionsRaw)
+  if (Array.isArray(opts)) {
+    return opts.map(o => (typeof o === 'object' && o !== null) ? (o.text || '') : String(o))
+  }
+  return ['', '', '', '']
+}
+
+const normalizeJudgeAnswer = (ans) => {
+   if (ans === '正确' || ans === '对' || ans === 'true' || ans === 'True') return 'A'
+   if (ans === '错误' || ans === '错' || ans === 'false' || ans === 'False') return 'B'
+   return ans
+}
+
 const editAiQuestion = (index) => {
   const question = aiQuestions.value[index]
   
@@ -792,12 +838,16 @@ const editAiQuestion = (index) => {
   }
   
   isEditQuestion.value = true
+  const mappedType = typeMapping[question.questionType] || 'SINGLE_CHOICE'
+  
   Object.assign(questionForm, {
     questionId: index,
-    questionType: typeMapping[question.questionType] || 'SINGLE_CHOICE',
+    questionType: mappedType,
     questionContent: question.questionContent,
-    options: parseOptions(question.questionOptions),
-    correctAnswer: question.answer || question.correctAnswer,
+    options: getOptionsForEdit(question.questionOptions),
+    correctAnswer: mappedType === 'TRUE_FALSE' 
+      ? normalizeJudgeAnswer(question.answer || question.correctAnswer)
+      : (question.answer || question.correctAnswer),
     correctAnswerArray: (question.questionType === 'MULTIPLE' || question.questionType === 'MULTIPLE_CHOICE') 
       ? (question.answer || question.correctAnswer || '').split('') : [],
     score: question.score,
@@ -869,8 +919,8 @@ const saveQuestion = async () => {
       })
   } else if (questionForm.questionType === 'TRUE_FALSE') {
     optionsData = [
-      { text: '正确', isCorrect: questionForm.correctAnswer === '正确' },
-      { text: '错误', isCorrect: questionForm.correctAnswer === '错误' }
+      { text: 'A. 正确', isCorrect: questionForm.correctAnswer === 'A' || questionForm.correctAnswer === '正确' || questionForm.correctAnswer === '对' },
+      { text: 'B. 错误', isCorrect: questionForm.correctAnswer === 'B' || questionForm.correctAnswer === '错误' || questionForm.correctAnswer === '错' }
     ]
   }
 
@@ -911,6 +961,37 @@ const saveQuestion = async () => {
   questionDialogVisible.value = false
 }
 
+const processQuestionsForSubmit = (list) => {
+  return list.map((q, idx) => {
+    let opts = q.questionOptions
+    let ans = q.answer || q.correctAnswer
+    
+    if (typeof opts === 'object' && opts !== null) {
+      opts = JSON.stringify(opts)
+    }
+
+    if (['JUDGE', 'TRUE_FALSE', 'JUDGEMENT'].includes(q.questionType) && (!opts || opts === 'null')) {
+       const isACorrect = ans === 'A' || ans === '对' || ans === '正确' || ans === 'true' || ans === 'True' || ans === '1'
+       const isBCorrect = ans === 'B' || ans === '错' || ans === '错误' || ans === 'false' || ans === 'False' || ans === '0'
+       
+       opts = JSON.stringify([
+          { text: 'A. 正确', isCorrect: isACorrect },
+          { text: 'B. 错误', isCorrect: isBCorrect }
+       ])
+       
+       if (isACorrect) ans = 'A'
+       else if (isBCorrect) ans = 'B'
+    }
+
+    return {
+      ...q,
+      questionOptions: opts,
+      answer: ans,
+      questionOrder: idx + 1
+    }
+  })
+}
+
 const confirmCreateManual = async () => {
   if (!examForm.courseId) {
     ElMessage.warning('请选择课程')
@@ -945,11 +1026,7 @@ const confirmCreateManual = async () => {
       duration: examForm.duration || 60,
       totalScore: examForm.totalScore,
       passScore: examForm.passScore,
-      questions: manualQuestions.value.map((q, idx) => ({
-        ...q,
-        answer: q.answer || q.correctAnswer,
-        questionOrder: idx + 1
-      }))
+      questions: processQuestionsForSubmit(manualQuestions.value)
     }
     
     const response = await createExam(data)
@@ -1010,11 +1087,7 @@ const confirmCreateWithAi = async () => {
       duration: examForm.duration || 60,
       totalScore: totalScore,
       passScore: passScore,
-      questions: aiQuestions.value.map((q, idx) => ({
-        ...q,
-        answer: q.answer || q.correctAnswer,
-        questionOrder: idx + 1
-      }))
+      questions: processQuestionsForSubmit(aiQuestions.value)
     }
     
     const response = await createExam(data)
@@ -1086,11 +1159,7 @@ const confirmUpdate = async () => {
     }
     
     // 2. 更新试题
-    const questionsData = manualQuestions.value.map((q, idx) => ({
-      ...q,
-      answer: q.answer || q.correctAnswer,
-      questionOrder: idx + 1
-    }))
+    const questionsData = processQuestionsForSubmit(manualQuestions.value)
     
     const questionsRes = await saveExamQuestions(examId, questionsData)
     if (!questionsRes.success && questionsRes.code !== 200) {

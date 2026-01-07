@@ -153,21 +153,84 @@
           </el-select>
         </el-form-item>
 
-        <el-form-item label="题目要求" prop="description" required>
+        <el-form-item label="作业内容" prop="description">
           <div class="textarea-header">
-            <el-button link class="import-link" @click="openQuestionBank">
-              <el-icon><List /></el-icon> 从题库导入题目
-            </el-button>
+            <span class="content-tip">输入总体要求/说明（选填）</span>
           </div>
           <el-input
             v-model="homeworkForm.description"
             type="textarea"
-            :rows="8"
-            placeholder="请输入作业详细要求、实验步骤或内容描述..."
+            :rows="3"
+            placeholder="请输入作业总体说明..."
             maxlength="1000"
             show-word-limit
           />
         </el-form-item>
+
+        <!-- 结构化题目部分 -->
+        <div class="questions-management-section">
+          <div class="section-header">
+            <div class="h-left">
+              <span class="section-title">作业试题 ({{ homeworkForm.questions?.length || 0 }})</span>
+              <span class="section-tip">学生可直接在页面上作答</span>
+            </div>
+            <div class="h-right">
+              <el-button link class="import-link" @click="openQuestionBank">
+                <el-icon><List /></el-icon> 引用题库
+              </el-button>
+              <el-button link type="primary" class="ai-btn" @click="openAiDialog">
+                <el-icon><MagicStick /></el-icon> AI 出题
+              </el-button>
+            </div>
+          </div>
+
+          <div class="questions-list" v-if="homeworkForm.questions?.length > 0">
+            <div v-for="(q, index) in homeworkForm.questions" :key="index" class="q-manage-item">
+              <div class="q-header">
+                <div class="q-idx">{{ index + 1 }}</div>
+                <el-tag size="small" :type="getQuestionTypeTag(q.questionType)">{{ getQuestionTypeText(q.questionType) }}</el-tag>
+                <div class="q-score-set">
+                  <el-input-number v-model="q.score" :min="1" :max="100" size="small" controls-position="right" @change="calculateHomeworkTotalScore" />
+                  <span class="unit">分</span>
+                </div>
+                <div class="q-actions">
+                  <el-button link size="small" type="primary" @click="openEditQuestion(index)"><el-icon><Edit /></el-icon> 编辑</el-button>
+                  <el-button link size="small" type="success" @click="saveToBank(q)"><el-icon><Checked /></el-icon> 存入题库</el-button>
+                  <el-button link size="small" :disabled="index === 0" @click="moveHomeworkQuestion(index, -1)"><el-icon><ArrowUp /></el-icon></el-button>
+                  <el-button link size="small" :disabled="index === homeworkForm.questions.length - 1" @click="moveHomeworkQuestion(index, 1)"><el-icon><ArrowDown /></el-icon></el-button>
+                  <el-button link type="danger" size="small" @click="removeHomeworkQuestion(index)"><el-icon><Delete /></el-icon></el-button>
+                </div>
+              </div>
+              <div class="q-body">
+                <div class="q-content-preview">{{ q.questionContent }}</div>
+                
+                <!-- 单选/多选预览 -->
+                <div class="q-options-preview" v-if="['SINGLE', 'MULTIPLE'].includes(q.questionType)">
+                   <div v-for="(opt, oIdx) in parseOptions(q.questionOptions)" :key="oIdx" class="opt-preview-item" :class="{correct: isCorrect(opt, oIdx, q)}">
+                      <span class="opt-label">{{ String.fromCharCode(65+oIdx) }}</span>
+                      <span class="opt-text">{{ opt.text || opt }}</span>
+                   </div>
+                </div>
+
+                <!-- 判断题预览 -->
+                <div class="q-options-preview" v-else-if="q.questionType === 'JUDGE'">
+                   <!-- 支持多种匹配格式 (A正确 B错误) -->
+                   <div class="opt-preview-item" :class="{correct: q.correctAnswer === 'A' || q.correctAnswer === '正确' || q.correctAnswer === '对' || q.answer === '正确' || q.answer === '对'}">
+                      <span class="opt-label">A</span>
+                      <span class="opt-text">正确</span>
+                   </div>
+                   <div class="opt-preview-item" :class="{correct: q.correctAnswer === 'B' || q.correctAnswer === '错误' || q.correctAnswer === '错' || q.answer === '错误' || q.answer === '错'}">
+                      <span class="opt-label">B</span>
+                      <span class="opt-text">错误</span>
+                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="empty-questions" v-else>
+            <el-empty :image-size="60" description="点击上方按钮添加结构化题目" />
+          </div>
+        </div>
 
         <el-form-item label="截止时间" prop="deadline" required>
           <el-date-picker
@@ -181,7 +244,15 @@
         </el-form-item>
 
         <el-form-item label="总分" prop="totalScore">
-          <el-input-number v-model="homeworkForm.totalScore" :min="1" :max="100" controls-position="right" />
+          <el-input-number 
+            v-model="homeworkForm.totalScore" 
+            :min="0" 
+            :max="1000" 
+            controls-position="right"
+            placeholder="不填默认为0" 
+            style="width: 140px;"
+          />
+          <span class="tip-text">分 (选填，不填则不计分或手动打分)</span>
         </el-form-item>
 
         <el-form-item label="附件">
@@ -288,15 +359,139 @@
         </div>
       </template>
     </el-dialog>
+
+    <!-- AI 生成对话框 -->
+    <el-dialog
+      v-model="aiDialogVisible"
+      title="AI 智能生成题目"
+      width="600px"
+      append-to-body
+      class="ketangpai-dialog"
+    >
+      <div v-loading="aiLoading" element-loading-text="AI 正在思考生成中...">
+        <el-form label-position="top">
+          <el-form-item label="生成主题 / 课程内容">
+            <el-input 
+              v-model="aiForm.topic" 
+              placeholder="请输入想要生成的主题，例如：Java多线程、操作系统进程调度..." 
+              clearable
+            />
+          </el-form-item>
+          
+          <el-form-item label="题目数量">
+            <el-slider v-model="aiForm.count" :min="1" :max="10" show-input />
+          </el-form-item>
+          
+          <el-form-item label="包含题型">
+            <el-checkbox-group v-model="aiForm.types">
+              <el-checkbox label="SINGLE">单选题</el-checkbox>
+              <el-checkbox label="MULTIPLE">多选题</el-checkbox>
+              <el-checkbox label="JUDGE">判断题</el-checkbox>
+              <el-checkbox label="ESSAY">简答题</el-checkbox>
+            </el-checkbox-group>
+          </el-form-item>
+        </el-form>
+      </div>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="aiDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleAiGenerate" :loading="aiLoading">
+            开始生成
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
+    <!-- 题目编辑弹窗 -->
+    <el-dialog
+      v-model="editQuestionDialogVisible"
+      title="编辑题目"
+      width="700px"
+      append-to-body
+      class="modern-dialog"
+    >
+      <el-form label-position="top">
+        <el-form-item label="题目内容">
+          <el-input v-model="editingQuestion.questionContent" type="textarea" :rows="4" />
+        </el-form-item>
+        
+        <!-- 选项编辑 (单选/多选) -->
+        <div v-if="['SINGLE', 'MULTIPLE'].includes(editingQuestion.questionType)" class="options-edit-area">
+          <div class="sub-title">选项设置</div>
+          <div v-for="(opt, idx) in editingQuestion.options" :key="idx" class="opt-edit-row">
+            <span class="opt-tag">{{ String.fromCharCode(65+idx) }}.</span>
+            <el-input v-model="opt.text" placeholder="输入选项内容" />
+            <el-button link type="danger" @click="removeOption(idx)"><el-icon><Delete /></el-icon></el-button>
+          </div>
+          <el-button link type="primary" @click="addOption"><el-icon><Plus /></el-icon> 添加选项</el-button>
+        </div>
+
+        <el-form-item label="正确答案">
+          <!-- 单选答案 -->
+          <el-radio-group v-if="editingQuestion.questionType === 'SINGLE'" v-model="editingQuestion.correctAnswer">
+            <el-radio v-for="(opt, idx) in editingQuestion.options" :key="idx" :label="String.fromCharCode(65+idx)">
+              {{ String.fromCharCode(65+idx) }}
+            </el-radio>
+          </el-radio-group>
+          <!-- 多选答案 -->
+          <el-checkbox-group v-else-if="editingQuestion.questionType === 'MULTIPLE'" v-model="editingQuestion.correctAnswers">
+             <el-checkbox v-for="(opt, idx) in editingQuestion.options" :key="idx" :label="String.fromCharCode(65+idx)">
+               {{ String.fromCharCode(65+idx) }}
+             </el-checkbox>
+          </el-checkbox-group>
+          <!-- 判断题答案 (根据用户要求：A正确 B错误) -->
+          <el-radio-group v-else-if="editingQuestion.questionType === 'JUDGE'" v-model="editingQuestion.correctAnswer">
+            <el-radio label="A">A. 正确</el-radio>
+            <el-radio label="B">B. 错误</el-radio>
+          </el-radio-group>
+          <!-- 简答题答案 -->
+          <el-input v-else v-model="editingQuestion.correctAnswer" type="textarea" :rows="3" />
+        </el-form-item>
+
+        <div class="form-row" style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+           <el-form-item label="分值">
+             <el-input-number v-model="editingQuestion.score" :min="1" />
+           </el-form-item>
+        </div>
+
+        <el-form-item label="解析">
+          <el-input v-model="editingQuestion.analysis" type="textarea" :rows="2" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editQuestionDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveEditQuestion">确认修改</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import {
-  Plus, Document, Search, Reading, Calendar, User, Check, List, Edit, Delete, Checked
+  Plus, Document, Search, Reading, Calendar, User, Check, List, Edit, Delete, Checked, MagicStick,
+  ArrowUp, ArrowDown
 } from '@element-plus/icons-vue'
 import { useHomeworkManagement } from '@/assets/js/teacher/homework-management.js'
 import '@/assets/css/teacher/modern-theme.css'
+
+// 辅助方法，用于 UI 展示
+const parseOptions = (json) => {
+    try {
+        return typeof json === 'string' ? JSON.parse(json) : json
+    } catch(e) { return [] }
+}
+
+const isCorrect = (opt, idx, q) => {
+    const ans = q.correctAnswer || q.answer
+    if (!ans) return false
+    const ansStr = String(ans)
+    const char = String.fromCharCode(65 + idx)
+    return ansStr.includes(char) || ansStr === String(idx)
+}
+
+const getQuestionTypeTag = (type) => {
+    const maps = { SINGLE: '', MULTIPLE: 'success', JUDGE: 'warning', ESSAY: 'info' }
+    return maps[type] || ''
+}
 
 const {
   loading,
@@ -337,7 +532,22 @@ const {
   getQuestionTypeText,
   pagination,
   handlePageChange,
-  handleSizeChange
+  handleSizeChange,
+  aiDialogVisible,
+  aiLoading,
+  aiForm,
+  openAiDialog,
+  handleAiGenerate,
+  removeHomeworkQuestion,
+  moveHomeworkQuestion,
+  calculateHomeworkTotalScore,
+  editQuestionDialogVisible,
+  editingQuestion,
+  openEditQuestion,
+  saveEditQuestion,
+  addOption,
+  removeOption,
+  saveToBank
 } = useHomeworkManagement()
 </script>
 
@@ -603,10 +813,166 @@ const {
   color: #059669;
 }
 
+.ai-btn {
+  font-weight: 600;
+  margin-left: 12px;
+  background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  border: 1px solid #10b981;
+  padding: 2px 10px;
+  border-radius: 4px;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.ai-btn:hover {
+  background: linear-gradient(135deg, #059669 0%, #2563eb 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  border-color: #059669;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* Questions Management */
+.questions-management-section {
+    margin-top: 32px;
+    background: #fcfcfc;
+    border: 1px solid #edf2f7;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: #f8fafc;
+    border-bottom: 1px solid #edf2f7;
+}
+
+.section-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #2d3748;
+}
+
+.section-tip {
+    font-size: 12px;
+    color: #a0aec0;
+    margin-left: 12px;
+}
+
+.questions-list {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.q-manage-item {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 16px;
+    transition: all 0.2s;
+}
+
+.q-manage-item:hover {
+    border-color: #10b981;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+}
+
+.q-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.q-idx {
+    width: 24px;
+    height: 24px;
+    background: #edf2f7;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 800;
+    color: #4a5568;
+}
+
+.q-score-set {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+}
+
+.q-score-set .unit {
+    font-size: 12px;
+    color: #718096;
+}
+
+.q-actions {
+    display: flex;
+    gap: 4px;
+    margin-left: 12px;
+}
+
+.q-content-preview {
+    font-size: 14px;
+    color: #1a202c;
+    line-height: 1.6;
+    font-weight: 500;
+    margin-bottom: 12px;
+}
+
+.q-options-preview {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+}
+
+.opt-preview-item {
+    font-size: 13px;
+    padding: 6px 12px;
+    background: #f7fafc;
+    border-radius: 6px;
+    color: #4a5568;
+    display: flex;
+    gap: 8px;
+}
+
+.opt-preview-item.correct {
+    background: #f0fff4;
+    color: #38a169;
+    font-weight: 600;
+}
+
+.opt-label {
+    opacity: 0.6;
+}
+
+.empty-questions {
+    padding: 30px 0;
+}
+
 .upload-tip {
   font-size: 12px;
   color: #70757a;
   margin-top: 8px;
+}
+
+.content-tip {
+  font-size: 13px;
+  color: #5f6368;
+  margin-right: 8px;
 }
 
 .ketangpai-footer {

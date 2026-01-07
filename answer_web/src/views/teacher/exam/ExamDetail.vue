@@ -150,7 +150,7 @@
         </el-table-column>
         <el-table-column label="成绩" width="120" align="center" sortable sort-by="obtainedScore">
           <template #default="{ row }">
-            <span v-if="row.status >= 2" :class="{'score-fail': row.obtainedScore < exam.passScore, 'score-pass': row.obtainedScore >= exam.passScore}">
+            <span v-if="row.status >= 2" :class="{'score-fail': row.obtainedScore < (exam.totalScore * 0.6), 'score-pass': row.obtainedScore >= (exam.totalScore * 0.6)}">
               {{ row.obtainedScore }}
             </span>
             <span v-else class="not-available">-</span>

@@ -184,10 +184,39 @@ export const getStudentExams = (examId) => {
   return request.get(`/exam/${examId}/students`)
 }
 
+/**
+ * 获取学生的所有考试列表（仅限已选课程且已发布）
+ * @param {string} studentId
+ * @param {string} status
+ * @param {string} courseId
+ */
+export const getStudentExamList = (studentId, status, courseId) => {
+  return request.get('/student/exam/list', { params: { studentId, status, courseId } })
+}
+
+// Alias for backward compatibility if code uses listStudentExams
+export const listStudentExams = getStudentExamList
+
+/**
+ * 获取学生待参加的考试详情
+ */
+export const getExamToTake = (examId, studentId) => {
+  return request.get(`/student/exam/${examId}`, { params: { studentId } })
+}
+
+/**
+ * 提交学生考试
+ */
+export const submitStudentExam = (examId, data) => {
+  return request.post(`/student/exam/${examId}/submit`, data)
+}
+
+// 学生端考试接口
 export default {
   // 考试管理
   createExam,
   getExamsByCourse,
+  getExamsByTeacher,
   getExamsByCourseId,
   getExamDetail,
   updateExam,
@@ -195,6 +224,7 @@ export default {
   unpublishExam,
   returnStudentExam,
   deleteExam,
+  searchExams,
   getExamStatistics,
   // AI生成
   generateQuestionsWithAi,
@@ -204,5 +234,11 @@ export default {
   getPendingExams,
   getStudentExamDetail,
   gradeExam,
-  getGradingStatistics
+  getGradingStatistics,
+  getStudentExams,
+  // 学生端
+  getStudentExamList,
+  listStudentExams,
+  getExamToTake,
+  submitStudentExam
 }

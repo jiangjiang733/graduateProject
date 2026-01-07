@@ -447,7 +447,10 @@ public class ExamServiceImpl implements ExamService {
             // 目前 status 在数据库是数字 0-草稿, 1-已发布
             if ("DRAFT".equals(status))
                 wrapper.eq("status", 0);
-            else if ("PUBLISHED".equals(status) || "ONGOING".equals(status) || "ENDED".equals(status)) {
+            else if ("VISIBLE".equals(status)) {
+                wrapper.eq("status", 1);
+                // VISIBLE returns all published exams regardless of time
+            } else if ("PUBLISHED".equals(status) || "ONGOING".equals(status) || "ENDED".equals(status)) {
                 wrapper.eq("status", 1);
                 // 这里的细分（进行中/已结束）通常在内存中根据时间判断，或者在这里加时间过滤
                 Date now = new Date();
@@ -489,5 +492,279 @@ public class ExamServiceImpl implements ExamService {
 
         // 删除该学生的考试记录（或者将其状态重置，这里选择直接删除记录让学生重考）
         studentExamMapper.deleteById(studentExamId);
+    }
+
+    @Override
+    @Transactional
+    public void submitExam(com.example.project.dto.exam.StudentExamSubmitDTO submitDTO) {
+        Long examId = submitDTO.getExamId();
+        Long studentId = submitDTO.getStudentId();
+
+        // 1. 获取考试信息
+        Exam exam = examMapper.selectById(examId);
+        if (exam == null) {
+            throw new RuntimeException("考试不存在");
+        }
+
+        // 2. 获取或创建学生考试记录
+        QueryWrapper<StudentExam> seWrapper = new QueryWrapper<>();
+        seWrapper.eq("exam_id", examId);
+        seWrapper.eq("student_id", String.valueOf(studentId));
+        StudentExam studentExam = studentExamMapper.selectOne(seWrapper);
+
+        if (studentExam == null) {
+            // 如果之前没有记录（比如没点过任何保存），创建一个
+            studentExam = new StudentExam();
+            studentExam.setExamId(examId);
+            studentExam.setStudentId(String.valueOf(studentId));
+            studentExam.setStartTime(new Date()); // 假设刚才开始? 或者应该在进入考试时创建
+            studentExam.setStatus(0);
+            studentExamMapper.insert(studentExam);
+        } else if (studentExam.getStatus() >= 2) {
+            throw new RuntimeException("您已提交过该试卷，请勿重复提交");
+        }
+
+        // 3. 获取试卷题目用于判分
+        List<ExamQuestion> questions = getExamQuestions(examId);
+        Map<Long, ExamQuestion> questionMap = questions.stream()
+                .collect(Collectors.toMap(ExamQuestion::getQuestionId, q -> q));
+
+        // 4. 保存答案并自动判分
+        BigDecimal totalScore = BigDecimal.ZERO;
+        boolean hasSubjective = false;
+
+        Date now = new Date();
+
+        // 先删除旧答案 (如果有保存功能的话，这里是为了覆盖)
+        QueryWrapper<StudentAnswer> saWrapper = new QueryWrapper<>();
+        saWrapper.eq("student_exam_id", studentExam.getStudentExamId());
+        studentAnswerMapper.delete(saWrapper);
+
+        if (submitDTO.getAnswers() != null) {
+            for (com.example.project.dto.exam.StudentAnswerDTO ansDTO : submitDTO.getAnswers()) {
+                StudentAnswer answer = new StudentAnswer();
+                answer.setStudentExamId(studentExam.getStudentExamId());
+                answer.setQuestionId(ansDTO.getQuestionId());
+                answer.setStudentAnswer(ansDTO.getAnswer()); // 使用 answer 字段
+
+                ExamQuestion question = questionMap.get(ansDTO.getQuestionId());
+                if (question != null) {
+                    // 自动判分逻辑
+                    String type = question.getQuestionType();
+                    boolean isObjective = "SINGLE".equals(type) || "SINGLE_CHOICE".equals(type) ||
+                            "MULTIPLE".equals(type) || "MULTIPLE_CHOICE".equals(type) ||
+                            "JUDGE".equals(type) || "TRUE_FALSE".equals(type);
+
+                    if (isObjective) {
+                        // 简单比对答案 (假设答案已标准化)
+                        // 对于多选，假设前端和服务端都排序过
+                        String correct = question.getAnswer();
+                        String studentAns = ansDTO.getAnswer();
+
+                        // 移除空格和无关字符进行比较
+                        boolean correctMatch = false;
+                        if (correct != null && studentAns != null) {
+                            correctMatch = correct.trim().equalsIgnoreCase(studentAns.trim());
+                        }
+
+                        if (correctMatch) {
+                            answer.setIsCorrect(1);
+                            BigDecimal qScore = new BigDecimal(question.getScore());
+                            answer.setScore(qScore);
+                            totalScore = totalScore.add(qScore);
+                        } else {
+                            answer.setIsCorrect(0);
+                            answer.setScore(BigDecimal.ZERO);
+                        }
+                    } else {
+                        // 主观题
+                        hasSubjective = true;
+                        answer.setIsCorrect(0); // 待批改
+                        answer.setScore(BigDecimal.ZERO);
+                    }
+                }
+
+                studentAnswerMapper.insert(answer);
+            }
+        }
+
+        // 5. 更新学生考试记录
+        studentExam.setSubmitTime(now);
+        studentExam.setObtainedScore(totalScore);
+
+        if (hasSubjective) {
+            studentExam.setStatus(2);
+        } else {
+            studentExam.setStatus(3); // 自动批改完成
+        }
+
+        studentExamMapper.updateById(studentExam);
+
+    }
+
+    @Override
+    public List<Map<String, Object>> getStudentExams(String studentId, String status, String courseId) {
+        // 1. 获取学生选修的所有有效课程ID
+        QueryWrapper<com.example.project.entity.course.StudentCourse> courseWrapper = new QueryWrapper<>();
+        try {
+            courseWrapper.eq("student_id", Integer.parseInt(studentId));
+        } catch (Exception e) {
+            courseWrapper.eq("student_id", studentId); // 降级处理
+        }
+        courseWrapper.eq("status", 1); // 仅限学习中的课程
+
+        List<com.example.project.entity.course.StudentCourse> enrolledCourses = studentCourseMapper
+                .selectList(courseWrapper);
+        if (enrolledCourses.isEmpty()) {
+            return new ArrayList<>(); // 没有选课，自然没有考试
+        }
+
+        Map<String, Date> courseJoinTimeMap = enrolledCourses.stream()
+                .filter(sc -> sc.getCourseId() != null)
+                .collect(Collectors.toMap(
+                        com.example.project.entity.course.StudentCourse::getCourseId,
+                        sc -> sc.getJoinTime() != null ? sc.getJoinTime()
+                                : (sc.getCreateTime() != null ? sc.getCreateTime() : new Date(0)),
+                        (existing, replacement) -> existing));
+
+        List<String> enrolledCourseIds = new ArrayList<>(courseJoinTimeMap.keySet());
+
+        // 如果指定了 courseId，检查是否已选修且为学习状态
+        if (courseId != null && !courseId.isEmpty() && !"null".equals(courseId)) {
+            if (!courseJoinTimeMap.containsKey(courseId)) {
+                return new ArrayList<>(); // 未选修此课或非在听课状态，无权查看
+            }
+            enrolledCourseIds = Collections.singletonList(courseId);
+        }
+
+        // 2. 查询这些课程的考试
+        QueryWrapper<Exam> examWrapper = new QueryWrapper<>();
+        examWrapper.in("course_id", enrolledCourseIds);
+
+        // 3. 处理状态过滤 (默认为非草稿)
+        if ("DRAFT".equals(status)) {
+            return new ArrayList<>();
+        }
+        examWrapper.eq("status", 1); // 只显示已发布的
+
+        // 4. 获取学生的答题记录 (先查出来用于合并过滤逻辑)
+        QueryWrapper<StudentExam> seWrapper = new QueryWrapper<>();
+        seWrapper.eq("student_id", studentId);
+        List<StudentExam> studentExams = studentExamMapper.selectList(seWrapper);
+        Map<Long, StudentExam> studentExamMap = studentExams.stream()
+                .collect(Collectors.toMap(StudentExam::getExamId, se -> se, (v1, v2) -> v1));
+
+        examWrapper.orderByDesc("create_time");
+        List<Exam> exams = examMapper.selectList(examWrapper);
+
+        Date now = new Date();
+        // 5. 应用加入时间过滤逻辑
+        List<Exam> filteredExams = new ArrayList<>();
+        for (Exam exam : exams) {
+            Date joinTime = courseJoinTimeMap.get(exam.getCourseId());
+            Date createTime = exam.getCreateTime();
+            Date endTime = exam.getEndTime();
+
+            // 逻辑：
+            // 1. 加入后发布的考试 (createTime >= joinTime)
+            // 2. 加入前发布但未截止的考试 (createTime < joinTime && endTime > now)
+            // 3. 特殊情况：如果学生已经提交了，无论如何都应该显示
+            boolean isJoinedAfterPublish = createTime != null && joinTime != null
+                    && (createTime.after(joinTime) || createTime.equals(joinTime));
+            boolean isNotExpired = endTime != null && endTime.after(now);
+            boolean hasSubmitted = studentExamMap.containsKey(exam.getExamId());
+
+            if (isJoinedAfterPublish || isNotExpired || hasSubmitted) {
+                // 如果还指定了前端的状态过滤 (ONGOING, ENDED 等)，则在这里进一步判断
+                if (status != null && !status.isEmpty()) {
+                    boolean statusMatch = false;
+                    if ("ONGOING".equals(status)) {
+                        statusMatch = now.after(exam.getStartTime()) && now.before(exam.getEndTime());
+                    } else if ("FUTURE".equals(status) || "PUBLISHED".equals(status)) {
+                        statusMatch = now.before(exam.getStartTime());
+                    } else if ("ENDED".equals(status)) {
+                        statusMatch = now.after(exam.getEndTime());
+                    } else {
+                        statusMatch = true;
+                    }
+                    if (!statusMatch)
+                        continue;
+                }
+                filteredExams.add(exam);
+            }
+        }
+        exams = filteredExams;
+
+        // 5. 组装结果
+        List<Map<String, Object>> resultList = new ArrayList<>();
+        for (Exam exam : exams) {
+            enrichExamInfo(exam);
+
+            Map<String, Object> map = new HashMap<>();
+            // Manually put essential fields or use BeanUtils to map -> object then convert
+            // Simple way:
+            map.put("examId", exam.getExamId());
+            map.put("examTitle", exam.getExamTitle());
+            map.put("courseId", exam.getCourseId());
+            map.put("courseName", exam.getCourseName());
+            map.put("startTime", exam.getStartTime());
+            map.put("endTime", exam.getEndTime());
+            map.put("duration", exam.getDuration());
+            map.put("totalScore", exam.getTotalScore());
+            map.put("passScore", exam.getPassScore());
+
+            StudentExam se = studentExamMap.get(exam.getExamId());
+            if (se != null) {
+                map.put("studentExamId", se.getStudentExamId());
+                map.put("studentScore", se.getObtainedScore());
+                map.put("isSubmitted", true);
+                map.put("studentStatus", se.getStatus());
+            } else {
+                map.put("isSubmitted", false);
+                map.put("studentScore", null);
+            }
+
+            resultList.add(map);
+        }
+
+        return resultList;
+    }
+
+    @Override
+    public Map<String, Object> getStudentExamResult(Long examId, String studentId) {
+        Map<String, Object> result = new HashMap<>();
+
+        // 1. 获取考试信息
+        Exam exam = examMapper.selectById(examId);
+        if (exam == null) {
+            throw new RuntimeException("考试不存在");
+        }
+        enrichExamInfo(exam);
+        result.put("exam", exam);
+
+        // 2. 获取学生考试记录
+        QueryWrapper<StudentExam> seWrapper = new QueryWrapper<>();
+        seWrapper.eq("exam_id", examId);
+        seWrapper.eq("student_id", studentId);
+        StudentExam studentExam = studentExamMapper.selectOne(seWrapper);
+
+        if (studentExam == null) {
+            throw new RuntimeException("未找到考试记录");
+        }
+        result.put("studentExam", studentExam);
+
+        // 3. 获取题目列表
+        QueryWrapper<ExamQuestion> eqWrapper = new QueryWrapper<>();
+        eqWrapper.eq("exam_id", examId);
+        List<ExamQuestion> questions = examQuestionMapper.selectList(eqWrapper);
+        result.put("questions", questions);
+
+        // 4. 获取学生答案
+        QueryWrapper<StudentAnswer> saWrapper = new QueryWrapper<>();
+        saWrapper.eq("student_exam_id", studentExam.getStudentExamId());
+        List<StudentAnswer> answers = studentAnswerMapper.selectList(saWrapper);
+        result.put("answers", answers);
+
+        return result;
     }
 }

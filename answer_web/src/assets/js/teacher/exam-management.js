@@ -1,4 +1,4 @@
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getCourseList } from '@/api/course.js'
@@ -43,6 +43,10 @@ export function useExamManagement() {
             { required: true, message: '请选择课程', trigger: 'change' }
         ]
     }
+
+    watch(() => examForm.totalScore, (newTotal) => {
+        examForm.passScore = Math.floor(newTotal * 0.6)
+    }, { immediate: true })
 
     const loadCourses = async () => {
         try {

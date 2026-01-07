@@ -71,6 +71,15 @@ public interface LabReportService {
     LabReport getLabReportById(Long reportId);
 
     /**
+     * 更新实验报告
+     * 
+     * @param reportId   实验报告ID
+     * @param labReport  实验报告信息
+     * @param attachment 附件文件
+     */
+    void updateLabReport(Long reportId, LabReport labReport, MultipartFile attachment);
+
+    /**
      * 学生提交实验报告
      * 
      * @param studentReport 学生报告信息

@@ -90,15 +90,31 @@
         <div class="q-card-content">
           <p class="stem-text">{{ q.content }}</p>
 
-          <ul class="option-list" v-if="['SINGLE', 'MULTIPLE'].includes(q.type)">
-            <li v-for="(opt, oIdx) in q.options" :key="oIdx" :class="{ 'is-correct': opt.isCorrect }">
-              <span class="prefix">{{ String.fromCharCode(65 + oIdx) }}</span>
-              <span class="text">{{ opt.text }}</span>
-              <el-icon v-if="opt.isCorrect" class="check-mark"><Check /></el-icon>
-            </li>
+          <ul class="option-list" v-if="['SINGLE', 'MULTIPLE', 'JUDGE'].includes(q.type)">
+          
+            <template v-if="q.type === 'JUDGE'">
+              <li :class="{ 'is-correct': q.answer === 'A' || q.answer === '错误' }">
+                <span class="prefix">A</span>
+                <span class="text">正确</span>
+                <el-icon v-if="q.answer === 'A' || q.answer === '错误'" class="check-mark"><Check /></el-icon>
+              </li>
+              <li :class="{ 'is-correct': q.answer === 'B' || q.answer === '正确' }">
+                <span class="prefix">B</span>
+                <span class="text">错误</span>
+                <el-icon v-if="q.answer === 'B' || q.answer === '正确'" class="check-mark"><Check /></el-icon>
+              </li>
+            </template>
+            <!-- 单选/多选：显示数据库中的选项 -->
+            <template v-else>
+              <li v-for="(opt, oIdx) in q.options" :key="oIdx" :class="{ 'is-correct': opt.isCorrect }">
+                <span class="prefix">{{ String.fromCharCode(65 + oIdx) }}</span>
+                <span class="text">{{ opt.text }}</span>
+                <el-icon v-if="opt.isCorrect" class="check-mark"><Check /></el-icon>
+              </li>
+            </template>
           </ul>
 
-          <div class="answer-box" v-else>
+          <div class="answer-box" v-else-if="q.type === 'ESSAY'">
             <div class="answer-label">参考答案</div>
             <div class="answer-content">{{ q.answer }}</div>
           </div>
@@ -162,8 +178,8 @@
 
         <el-form-item label="正确答案" v-if="form.type === 'JUDGE'">
           <el-radio-group v-model="form.answer">
-            <el-radio label="正确">正确</el-radio>
-            <el-radio label="错误">错误</el-radio>
+            <el-radio label="A">A. 正确</el-radio>
+            <el-radio label="B">B. 错误</el-radio>
           </el-radio-group>
         </el-form-item>
 
@@ -256,27 +272,52 @@ const editQuestion = (q) => {
 }
 
 const saveQuestion = async () => {
-  const data = { ...form.value, teacherId: getTeacherId() }
-  if(['SINGLE', 'MULTIPLE'].includes(data.type)) {
+  // 克隆表单数据，避免修改原始表单状态
+  const data = JSON.parse(JSON.stringify(form.value))
+  data.teacherId = getTeacherId()
+  
+  // 处理题目逻辑
+  // 处理题目逻辑
+  if(['SINGLE', 'MULTIPLE', 'JUDGE'].includes(data.type)) {
     if(data.type === 'SINGLE') {
+      // 这里的 data.options 已经是克隆出来的，可以安全修改
       data.options.forEach((o, i) => o.isCorrect = (i === data.correctIndex))
-
       data.answer = String.fromCharCode(65 + data.correctIndex)
-    } else {
+    } else if (data.type === 'MULTIPLE') {
       // 多选题：收集正确选项的字母
       const correctChars = data.options
         .map((o, i) => o.isCorrect ? String.fromCharCode(65 + i) : null)
         .filter(c => c !== null)
       data.answer = correctChars.join('')
+    } else if (data.type === 'JUDGE') {
+      // 判断题：构造标准选项，不再为null
+      data.options = [
+        { text: '正确', isCorrect: data.answer === 'A' },
+        { text: '错误', isCorrect: data.answer === 'B' }
+      ]
     }
+    // 关键修复：将选项数组转为 JSON 字符串，匹配后端 String 类型
     data.options = JSON.stringify(data.options)
+  } else {
+    // 简答题不需要选项
+    data.options = null
   }
 
-  const res = isEdit.value ? await updateQuestion(data) : await createQuestion(data)
-  if(res.success) {
-    ElMessage.success('操作成功')
-    dialogVisible.value = false
-    loadQuestions()
+  // 移除前端辅助字段，保持 payload 干净
+  delete data.correctIndex
+
+  try {
+    const res = isEdit.value ? await updateQuestion(data) : await createQuestion(data)
+    if(res.success) {
+      ElMessage.success('操作成功')
+      dialogVisible.value = false
+      loadQuestions()
+    } else {
+      ElMessage.error(res.message || '操作失败')
+    }
+  } catch (error) {
+    console.error('保存题目失败:', error)
+    ElMessage.error('服务器错误，请稍后重试')
   }
 }
 
@@ -288,7 +329,7 @@ const handleDeleteQuestion = (q) => {
 }
 
 // 辅助函数
-const handleTypeChange = (v) => { if(v === 'JUDGE') form.value.answer = '正确' }
+const handleTypeChange = (v) => { if(v === 'JUDGE') form.value.answer = 'A' }
 const addOption = () => form.value.options.push({ text: '', isCorrect: false })
 const removeOption = (idx) => form.value.options.splice(idx, 1)
 const getTypeLabel = (t) => ({ SINGLE:'单选', MULTIPLE:'多选', JUDGE:'判断', ESSAY:'简答' }[t])

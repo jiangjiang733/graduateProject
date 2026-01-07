@@ -206,3 +206,32 @@ body {
         grid-template-columns: 1fr;
     }
 }
+
+/* Question Editor Styles */
+.options-edit-area {
+    margin: 20px 0;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.sub-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 12px;
+}
+
+.opt-edit-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.opt-tag {
+    font-weight: bold;
+    color: #10b981;
+    min-width: 24px;
+}

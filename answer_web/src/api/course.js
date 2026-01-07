@@ -137,6 +137,11 @@ export const joinCourse = (studentId, courseId) => request.post('/course/analyti
 export const updateStudentProgress = (studentId, courseId, progress, studyTime = 0) =>
   request.post('/course/analytics/progress', null, { params: { studentId, courseId, progress, studyTime } })
 
+/**
+ * 获取学生已加入的课程列表
+ */
+export const getStudentJoinedCourses = (studentId) => request.get(`/course/analytics/student/${studentId}/courses`)
+
 
 // ==================== 章节管理 API  ====================
 

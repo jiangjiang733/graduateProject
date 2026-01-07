@@ -3,6 +3,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getCourseList } from '@/api/course.js'
 import { getQuestionList } from '@/api/question.js'
+import { generateQuestionsWithAi } from '@/api/exam.js'
 import {
     getCourseLabReportList,
     getLabReportsByTeacher,
@@ -20,6 +21,77 @@ export function useHomeworkManagement() {
     const isEdit = ref(false)
     const submitting = ref(false)
     const formRef = ref()
+
+    // AI 生成相关状态
+    const aiDialogVisible = ref(false)
+    const aiLoading = ref(false)
+    const aiForm = reactive({
+        topic: '',
+        count: 3,
+        types: ['SINGLE', 'JUDGE']
+    })
+
+    const openAiDialog = () => {
+        aiForm.topic = ''
+        aiForm.count = 3
+        aiForm.types = ['SINGLE', 'JUDGE']
+        aiDialogVisible.value = true
+    }
+
+    const handleAiGenerate = async () => {
+        if (!aiForm.topic) {
+            ElMessage.warning('请输入生成主题或课程名称')
+            return
+        }
+        if (aiForm.types.length === 0) {
+            ElMessage.warning('请至少选择一种题型')
+            return
+        }
+
+        aiLoading.value = true
+        try {
+            const res = await generateQuestionsWithAi({
+                courseName: aiForm.topic,
+                questionCount: aiForm.count,
+                questionTypes: aiForm.types.join(',')
+            })
+
+            if (res.success && res.data) {
+                const aiQs = res.data.map(q => {
+                    let ans = q.correctAnswer || q.answer
+
+                    if (q.questionType === 'JUDGE') {
+                        if (ans === '正确' || ans === '对' || ans === 'B' || String(ans).toLowerCase() === 'true') ans = 'A'
+                        else if (ans === '错误' || ans === '错' || ans === 'A' || String(ans).toLowerCase() === 'false') ans = 'B'
+                    }
+
+                    return {
+                        questionType: q.questionType,
+                        questionContent: q.questionContent,
+                        questionOptions: q.questionOptions,
+                        correctAnswer: ans,
+                        score: q.score || 5,
+                        analysis: q.analysis
+                    }
+                })
+
+                if (!homeworkForm.questions) homeworkForm.questions = []
+                homeworkForm.questions.push(...aiQs)
+
+                aiDialogVisible.value = false
+                ElMessage.success(`成功生成 ${aiQs.length} 道题目`)
+                // 同步更新总分
+                calculateHomeworkTotalScore()
+            } else {
+                ElMessage.error(res.message || '生成失败')
+            }
+        } catch (e) {
+            console.error(e)
+            ElMessage.error('AI 生成请求失败')
+        } finally {
+            aiLoading.value = false
+        }
+    }
 
     // 题库选择相关状态
     const bankDialogVisible = ref(false)
@@ -56,7 +128,8 @@ export function useHomeworkManagement() {
         description: '',
         deadline: '',
         totalScore: 100,
-        attachments: []
+        attachments: [],
+        questions: []
     })
 
     // 文件列表
@@ -64,18 +137,102 @@ export function useHomeworkManagement() {
 
     // 表单验证规则
     const rules = {
-        title: [
-            { required: true, message: '请输入作业题目/名称', trigger: 'blur' }
-        ],
-        description: [
-            { required: true, message: '请输入作业要求/内容', trigger: 'blur' }
-        ],
-        courseId: [
-            { required: true, message: '请选择课程', trigger: 'change' }
-        ],
-        deadline: [
-            { required: true, message: '请选择截止时间', trigger: 'change' }
-        ]
+        title: [{ required: true, message: '请输入作业题目/名称', trigger: 'blur' }],
+        courseId: [{ required: true, message: '请选择课程', trigger: 'change' }],
+        deadline: [{ required: true, message: '请选择截止时间', trigger: 'change' }]
+    }
+
+    // --- 题目编辑相关 ---
+    const editQuestionDialogVisible = ref(false)
+    const editingQuestionIndex = ref(-1)
+    const editingQuestion = reactive({
+        questionType: 'SINGLE',
+        questionContent: '',
+        questionOptions: '',
+        options: [], // 用于编辑的数组格式
+        correctAnswer: '',
+        score: 5,
+        analysis: ''
+    })
+
+    const openEditQuestion = (index) => {
+        const q = homeworkForm.questions[index]
+        editingQuestionIndex.value = index
+
+        // 深拷贝数据到编辑表单
+        editingQuestion.questionType = q.questionType
+        editingQuestion.questionContent = q.questionContent
+        editingQuestion.score = q.score || 5
+        editingQuestion.analysis = q.analysis || ''
+        editingQuestion.correctAnswer = q.correctAnswer || q.answer
+
+        // 处理选项
+        if (['SINGLE', 'MULTIPLE'].includes(q.questionType)) {
+            const opts = typeof q.questionOptions === 'string' ? JSON.parse(q.questionOptions) : q.questionOptions
+            editingQuestion.options = Array.isArray(opts) ? JSON.parse(JSON.stringify(opts)) : [{ text: '' }, { text: '' }, { text: '' }, { text: '' }]
+        } else {
+            editingQuestion.options = []
+        }
+
+        editQuestionDialogVisible.value = true
+    }
+
+    const saveEditQuestion = () => {
+        if (!editingQuestion.questionContent) {
+            return ElMessage.warning('请输入题目内容')
+        }
+
+        const q = homeworkForm.questions[editingQuestionIndex.value]
+        q.questionContent = editingQuestion.questionContent
+        q.questionType = editingQuestion.questionType
+        q.score = editingQuestion.score
+        q.analysis = editingQuestion.analysis
+        q.correctAnswer = editingQuestion.correctAnswer
+
+        if (['SINGLE', 'MULTIPLE'].includes(q.questionType)) {
+            q.questionOptions = JSON.stringify(editingQuestion.options)
+        } else {
+            q.questionOptions = null
+        }
+
+        editQuestionDialogVisible.value = false
+        ElMessage.success('题目已修改')
+        calculateHomeworkTotalScore()
+    }
+
+    const addOption = () => {
+        editingQuestion.options.push({ text: '' })
+    }
+
+    const removeOption = (idx) => {
+        editingQuestion.options.splice(idx, 1)
+    }
+
+    // 保存到题库
+    const saveToBank = async (q) => {
+        try {
+            const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
+            const postData = {
+                type: q.questionType,
+                content: q.questionContent,
+                options: q.questionOptions,
+                answer: q.correctAnswer || q.answer,
+                score: q.score,
+                analysis: q.analysis,
+                courseId: homeworkForm.courseId,
+                difficulty: 1, // 默认难度
+                creatorId: teacherId
+            }
+
+            const res = await createQuestion(postData)
+            if (res.success) {
+                ElMessage.success('已成功存入题库')
+            } else {
+                ElMessage.error(res.message || '存入题库失败')
+            }
+        } catch (e) {
+            ElMessage.error('网络错误，存入失败')
+        }
     }
 
     const openQuestionBank = async () => {
@@ -113,42 +270,64 @@ export function useHomeworkManagement() {
     const confirmImportQuestions = () => {
         if (selectedQuestions.value.length === 0) return
 
-        let importText = '\n────────────────────────\n'
-        importText += '【题库导入题目】\n'
+        const newQs = selectedQuestions.value.map(bq => {
+            let opts = bq.options
+            if (typeof opts === 'object' && opts !== null) opts = JSON.stringify(opts)
 
-        selectedQuestions.value.forEach((q, index) => {
-            const typeText = getQuestionTypeText(q.type)
-            importText += `\n第 ${index + 1} 题 [${typeText}]\n`
-            importText += `${q.content}\n`
+            let ans = bq.answer
+            // 题库导入时，也将判断题文字答案转为 A/B 代码 (A正确 B错误)
+            if (bq.type === 'JUDGE') {
+                if (ans === '正确') ans = 'A'
+                else if (ans === '错误') ans = 'B'
+            }
 
-            if (['SINGLE', 'MULTIPLE'].includes(q.type) || q.type === 'SINGLE' || q.type === 'MULTIPLE' || q.type === 1 || q.type === 2) {
-                let opts = q.options
-                if (typeof opts === 'string') {
-                    try { opts = JSON.parse(opts) } catch (e) { opts = [] }
-                }
-
-                if (Array.isArray(opts)) {
-                    opts.forEach((opt, i) => {
-                        importText += `  ${String.fromCharCode(65 + i)}. ${opt.text || opt}\n`
-                    })
-                }
-            } else if (q.type === 'JUDGE' || q.type === 3) {
-                importText += `  A. 正确\n  B. 错误\n`
+            return {
+                questionType: bq.type,
+                questionContent: bq.content,
+                questionOptions: opts,
+                correctAnswer: ans,
+                score: 5,
+                analysis: bq.analysis
             }
         })
 
-        importText += '────────────────────────\n'
+        if (!homeworkForm.questions) homeworkForm.questions = []
+        homeworkForm.questions.push(...newQs)
 
-        const count = selectedQuestions.value.length
-        homeworkForm.description = (homeworkForm.description || '') + importText
+        const count = newQs.length
         bankDialogVisible.value = false
         selectedQuestions.value = []
         ElMessage.success(`成功导入 ${count} 道题目`)
+        calculateHomeworkTotalScore()
+    }
+
+    const removeHomeworkQuestion = (index) => {
+        homeworkForm.questions.splice(index, 1)
+        calculateHomeworkTotalScore()
+    }
+
+    const moveHomeworkQuestion = (index, delta) => {
+        const newIdx = index + delta
+        if (newIdx < 0 || newIdx >= homeworkForm.questions.length) return
+        const temp = homeworkForm.questions[index]
+        homeworkForm.questions[index] = homeworkForm.questions[newIdx]
+        homeworkForm.questions[newIdx] = temp
+    }
+
+    const calculateHomeworkTotalScore = () => {
+        const total = homeworkForm.questions.reduce((sum, q) => sum + (q.score || 0), 0)
+        if (total > 0) homeworkForm.totalScore = total
     }
 
     const getQuestionTypeText = (type) => {
-        const types = { 1: '单选题', 2: '多选题', 3: '判断题', 4: '填空题', 5: '简答题' }
-        return types[type] || '未知'
+        const types = {
+            1: '单选题', 'SINGLE': '单选题',
+            2: '多选题', 'MULTIPLE': '多选题',
+            3: '判断题', 'JUDGE': '判断题',
+            4: '填空题', 'COMPLETION': '填空题',
+            5: '简答题', 'ESSAY': '简答题'
+        }
+        return types[type] || type || '未知'
     }
 
     // 加载课程列表
@@ -173,10 +352,16 @@ export function useHomeworkManagement() {
     const loadHomeworks = async () => {
         loading.value = true
         try {
-            // 首先确保课程已加载（如果尚未加载）
+            // 尝试加载课程，但不阻塞主要的作业加载
             if (courses.value.length === 0) {
-                await loadCourses()
+                try {
+                    await loadCourses()
+                } catch (e) {
+                    console.warn('预加载课程列表失败，继续加载作业:', e)
+                }
             }
+
+            console.log('开始加载作业列表, 筛选条件:', filterForm)
 
             // 如果选择了特定课程，加载该课程的作业
             if (filterForm.courseId) {
@@ -189,10 +374,15 @@ export function useHomeworkManagement() {
             } else {
                 // 如果没有选择课程记录，加载教师的所有作业
                 const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
+                console.log('Teacher ID:', teacherId)
+
                 const response = await getLabReportsByTeacher(teacherId)
+                console.log('API响应:', response)
+
                 if (response.success && response.data) {
                     processReports(response.data)
                 } else {
+                    console.warn('API返回成功但无数据或格式不正确')
                     homeworks.value = []
                 }
             }
@@ -207,6 +397,7 @@ export function useHomeworkManagement() {
 
     // 辅助处理函数
     const processReports = (data) => {
+        console.log('处理作业数据:', data)
         let reports = []
         if (Array.isArray(data)) {
             reports = data
@@ -215,6 +406,8 @@ export function useHomeworkManagement() {
         } else if (data.records && Array.isArray(data.records)) {
             reports = data.records
         }
+
+        console.log('解析后的列表:', reports)
 
         // 应用关键词搜索
         if (filterForm.keyword) {
@@ -239,6 +432,8 @@ export function useHomeworkManagement() {
             totalStudents: report.totalStudents || 0
         }))
 
+        console.log('映射后的数据:', mappedReports)
+
         // 应用状态筛选
         if (filterForm.status !== '' && filterForm.status !== null) {
             mappedReports = mappedReports.filter(h => h.status == filterForm.status)
@@ -251,6 +446,7 @@ export function useHomeworkManagement() {
         const start = (pagination.current - 1) * pagination.size
         const end = start + pagination.size
         homeworks.value = mappedReports.slice(start, end)
+        console.log('最终显示的作业列表:', homeworks.value)
     }
 
     const handlePageChange = (page) => {
@@ -273,7 +469,8 @@ export function useHomeworkManagement() {
             description: '',
             deadline: '',
             totalScore: 100,
-            attachments: []
+            attachments: [],
+            questions: []
         })
         fileList.value = []
         dialogVisible.value = true
@@ -284,58 +481,22 @@ export function useHomeworkManagement() {
         fileList.value = files
     }
 
-    // 保存草稿
-    const saveAsDraft = async () => {
-        try {
-            await formRef.value.validate()
-            submitting.value = true
 
-            const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
+    // 提交/发布作业
+    const submitHomework = async (statusOverride = 1) => {
+        // 修正：防止点击事件对象 (PointerEvent) 被误作为 statusOverride 传入
+        const status = (typeof statusOverride === 'number') ? statusOverride : 1
 
-            // 创建FormData对象
-            const formData = new FormData()
-            formData.append('courseId', homeworkForm.courseId)
-            formData.append('teacherId', teacherId)
-            formData.append('reportTitle', homeworkForm.title)
-            formData.append('reportDescription', homeworkForm.description)
-            formData.append('deadline', homeworkForm.deadline)
-            formData.append('totalScore', homeworkForm.totalScore)
-            formData.append('status', 0) // 设置状态为草稿
-            // 添加附件（如果有）
-            if (fileList.value.length > 0) {
-                formData.append('attachment', fileList.value[0].raw)
-            }
-
-            // 调用保存草稿API (使用相同的创建接口，但状态为DRAFT)
-            const response = await createLabReport(formData)
-
-            if (response.success) {
-                ElMessage.success('草稿保存成功')
-                dialogVisible.value = false
-                loadHomeworks()
-            } else {
-                ElMessage.error(response.message || '草稿保存失败')
-            }
-        } catch (error) {
-            if (error.errors) return
-            console.error('保存草稿失败:', error)
-            ElMessage.error('保存草稿失败')
-        } finally {
-            submitting.value = false
-        }
-    }
-
-    // 提交作业
-    const submitHomework = async () => {
         // 如果是编辑模式，调用更新函数
         if (isEdit.value) {
-            return updateHomeworkData()
+            return updateHomeworkData(status)
         }
 
         try {
             await formRef.value.validate()
             submitting.value = true
             const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
+
             // 创建FormData对象
             const formData = new FormData()
             formData.append('courseId', homeworkForm.courseId)
@@ -343,32 +504,48 @@ export function useHomeworkManagement() {
             formData.append('reportTitle', homeworkForm.title)
             formData.append('reportDescription', homeworkForm.description)
             formData.append('deadline', homeworkForm.deadline)
-            formData.append('totalScore', homeworkForm.totalScore)
+
+            // 确保总分为数字，如果为空则传 0 或不传
+            if (homeworkForm.totalScore !== null && homeworkForm.totalScore !== '') {
+                formData.append('totalScore', homeworkForm.totalScore)
+            }
+
+            // 设置状态：1-直接发布，0-保存草稿
+            formData.append('status', status)
+
+            // 添加结构化题目列表
+            if (homeworkForm.questions && homeworkForm.questions.length > 0) {
+                formData.append('questionList', JSON.stringify(homeworkForm.questions))
+            }
 
             // 添加附件（如果有）
             if (fileList.value.length > 0) {
-                formData.append('attachment', fileList.value[0].raw)
+                // 如果是 el-upload 的原始文件对象
+                const file = fileList.value[0].raw || fileList.value[0]
+                formData.append('attachment', file)
             }
 
             // 调用发布作业API
             const response = await createLabReport(formData)
 
             if (response.success) {
-                ElMessage.success('作业发布成功')
+                ElMessage.success(status === 0 ? '草稿保存成功' : '作业发布成功')
                 dialogVisible.value = false
                 loadHomeworks()
             } else {
-                console.log(response.message)
-                ElMessage.error(response.message || '作业发布失败')
+                ElMessage.error(response.message || '发布失败')
             }
         } catch (error) {
-            if (error.errors) return
-            console.error('发布作业失败:', error)
-            ElMessage.error('发布作业失败')
+            if (error.name === 'ValidationError') return
+            console.error('操作作业失败:', error)
+            ElMessage.error('网络或系统错误，请稍后刷新重试')
         } finally {
             submitting.value = false
         }
     }
+
+    // 保存草稿的快捷方式
+    const saveAsDraft = () => submitHomework(0)
 
     // 查看作业详情
     const viewHomework = (homework) => {
@@ -395,8 +572,20 @@ export function useHomeworkManagement() {
                     courseId: detail.courseId,
                     description: detail.reportDescription || detail.description,
                     deadline: detail.deadline,
-                    totalScore: detail.totalScore
+                    totalScore: detail.totalScore,
+                    questions: []
                 })
+
+                // 解析题目列表
+                const qList = detail.questionList || detail.questions
+                if (qList) {
+                    try {
+                        homeworkForm.questions = typeof qList === 'string' ? JSON.parse(qList) : qList
+                    } catch (e) {
+                        console.error('解析题目列表失败:', e)
+                        homeworkForm.questions = []
+                    }
+                }
             } else {
                 // 如果获取详情失败，使用列表数据
                 Object.assign(homeworkForm, {
@@ -425,8 +614,9 @@ export function useHomeworkManagement() {
         dialogVisible.value = true
     }
 
-    // 更新作业
-    const updateHomeworkData = async () => {
+    // 更新作业数据
+    const updateHomeworkData = async (statusOverride = 1) => {
+        const status = (typeof statusOverride === 'number') ? statusOverride : 1
         try {
             await formRef.value.validate()
             submitting.value = true
@@ -440,27 +630,39 @@ export function useHomeworkManagement() {
             formData.append('reportTitle', homeworkForm.title)
             formData.append('reportDescription', homeworkForm.description)
             formData.append('deadline', homeworkForm.deadline)
-            formData.append('totalScore', homeworkForm.totalScore)
+
+            if (homeworkForm.totalScore !== null && homeworkForm.totalScore !== '') {
+                formData.append('totalScore', homeworkForm.totalScore)
+            }
+
+            // 更新时也允许修改状态（例如从草稿箱发布）
+            formData.append('status', status)
+
+            // 添加结构化题目列表
+            if (homeworkForm.questions && homeworkForm.questions.length > 0) {
+                formData.append('questionList', JSON.stringify(homeworkForm.questions))
+            }
 
             // 添加附件（如果有）
             if (fileList.value.length > 0) {
-                formData.append('attachment', fileList.value[0].raw)
+                const file = fileList.value[0].raw || fileList.value[0]
+                formData.append('attachment', file)
             }
 
             // 调用更新作业API
             const response = await updateLabReport(homeworkForm.id, formData)
 
             if (response.success) {
-                ElMessage.success('作业更新成功')
+                ElMessage.success(statusOverride === 0 ? '草稿更新成功' : '作业更新成功')
                 dialogVisible.value = false
                 loadHomeworks()
             } else {
-                ElMessage.error(response.message || '作业更新失败')
+                ElMessage.error(response.message || '更新失败')
             }
         } catch (error) {
-            if (error.errors) return
+            if (error.name === 'ValidationError') return
             console.error('更新作业失败:', error)
-            ElMessage.error('更新作业失败')
+            ElMessage.error('更新失败，服务繁忙')
         } finally {
             submitting.value = false
         }
@@ -583,6 +785,22 @@ export function useHomeworkManagement() {
         getQuestionTypeText,
         pagination,
         handlePageChange,
-        handleSizeChange
+        handleSizeChange,
+        aiDialogVisible,
+        aiLoading,
+        aiForm,
+        openAiDialog,
+        openAiDialog,
+        handleAiGenerate,
+        removeHomeworkQuestion,
+        moveHomeworkQuestion,
+        calculateHomeworkTotalScore,
+        editQuestionDialogVisible,
+        editingQuestion,
+        openEditQuestion,
+        saveEditQuestion,
+        addOption,
+        removeOption,
+        saveToBank
     }
 }

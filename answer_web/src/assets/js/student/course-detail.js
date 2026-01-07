@@ -1,7 +1,8 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getCourseDetail, getCourseChapters, joinCourse } from '@/api/course.js'
+import { getCourseDetail, getCourseChapters } from '@/api/course.js'
+import { applyEnrollment, checkEnrollmentStatus } from '@/api/enrollment.js'
 
 export function useCourseDetail() {
     const route = useRoute()
@@ -13,22 +14,33 @@ export function useCourseDetail() {
     const chapters = ref([])
     const activeTab = ref('intro')
     const loading = ref(false)
-    const isEnrolled = ref(false) // 模拟已报名状态
+    const enrollmentStatus = ref('none') // none, pending, approved, rejected
+    const isEnrolled = ref(false) // 只有为 approved 时才算真正加入
 
     // 方法
     const loadData = async () => {
+        const studentId = localStorage.getItem('s_id')
         loading.value = true
         try {
-            // 获取课程详情
+            // 1. 获取课程详情
             const courseRes = await getCourseDetail(courseId)
             if (courseRes.success && courseRes.data) {
                 course.value = courseRes.data
             }
 
-            // 获取章节列表
+            // 2. 获取章节列表
             const chapterRes = await getCourseChapters(courseId)
             if (chapterRes.success && chapterRes.data) {
                 chapters.value = buildChapterTree(chapterRes.data)
+            }
+
+            // 3. 检查报名状态
+            if (studentId) {
+                const statusRes = await checkEnrollmentStatus(studentId, courseId)
+                if (statusRes.success && statusRes.data) {
+                    enrollmentStatus.value = statusRes.data.status || 'none'
+                    isEnrolled.value = enrollmentStatus.value === 'approved'
+                }
             }
         } catch (error) {
             console.error('获取课程详情失败:', error)
@@ -39,14 +51,12 @@ export function useCourseDetail() {
     }
 
     const buildChapterTree = (flatChapters) => {
-        // 简单的树构建逻辑，假设 parentId 为 0 是根节点
         const roots = flatChapters.filter(c => c.parentId === 0 || !c.parentId)
         const map = {}
         flatChapters.forEach(c => map[c.id] = { ...c, children: [] })
 
         roots.forEach(root => {
             if (map[root.id]) {
-                // 查找子节点
                 flatChapters.forEach(c => {
                     if (c.parentId === root.id) {
                         map[root.id].children.push(map[c.id])
@@ -67,20 +77,36 @@ export function useCourseDetail() {
                 return
             }
 
-            // 调用加入课程API
-            await joinCourse(studentId, courseId)
-            ElMessage.success('报名成功，开始学习吧！')
-            isEnrolled.value = true
-            // 跳转到学习页
-            router.push(`/student/learn/${courseId}`)
+            // 构造报名数据
+            const applyData = {
+                studentId: studentId,
+                courseId: courseId,
+                courseName: course.value.courseName,
+                teacherId: course.value.teacherId
+            }
+
+            // 调用申请报名API (带审核机制)
+            const res = await applyEnrollment(applyData)
+            if (res.success || res.code === 200) {
+                ElMessage.success('申请提交成功，请等待教师审核')
+                enrollmentStatus.value = 'pending'
+            } else {
+                ElMessage.error(res.message || '申请失败')
+            }
         } catch (error) {
-            console.error('报名失败:', error)
-            ElMessage.error('报名失败')
+            console.error('报名申请失败:', error)
+            ElMessage.error(error.response?.data?.message || '报名申请失败')
         }
     }
 
     const startLearning = () => {
-        router.push(`/student/learn/${courseId}`)
+        if (enrollmentStatus.value === 'approved') {
+            router.push(`/student/learn/${courseId}`)
+        } else if (enrollmentStatus.value === 'pending') {
+            ElMessage.info('您的报名申请正在审核中，请稍后再试')
+        } else {
+            handleEnroll()
+        }
     }
 
     onMounted(() => {
@@ -93,6 +119,7 @@ export function useCourseDetail() {
         activeTab,
         loading,
         isEnrolled,
+        enrollmentStatus,
         handleEnroll,
         startLearning
     }

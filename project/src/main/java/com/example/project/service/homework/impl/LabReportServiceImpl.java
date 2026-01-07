@@ -105,11 +105,17 @@ public class LabReportServiceImpl implements LabReportService {
             BeanUtils.copyProperties(report, dto);
 
             // 统计提交情况
-            QueryWrapper<StudentLabReport> submitWrapper = new QueryWrapper<>();
-            submitWrapper.eq("report_id", report.getReportId());
-            submitWrapper.ge("status", 1); // 1-已提交待批改, 2-已批改
-            Integer submittedCount = Math.toIntExact(studentLabReportMapper.selectCount(submitWrapper));
-            dto.setSubmittedCount(submittedCount);
+            try {
+                QueryWrapper<StudentLabReport> submitWrapper = new QueryWrapper<>();
+                submitWrapper.eq("report_id", report.getReportId());
+                submitWrapper.ge("status", 1); // 1-已提交待批改, 2-已批改
+                Integer submittedCount = Math.toIntExact(studentLabReportMapper.selectCount(submitWrapper));
+                dto.setSubmittedCount(submittedCount);
+            } catch (Exception e) {
+                // 表可能不存在，暂时忽略
+                System.err.println("统计提交人数失败: " + e.getMessage());
+                dto.setSubmittedCount(0);
+            }
 
             // 获取参与人数和课程名称
             if (report.getCourseId() != null) {
@@ -143,6 +149,47 @@ public class LabReportServiceImpl implements LabReportService {
         wrapper.orderByDesc("submit_time");
 
         return studentLabReportMapper.selectList(wrapper);
+    }
+
+    @Override
+    @Transactional
+    public void updateLabReport(Long reportId, LabReport labReport, MultipartFile attachment) {
+        LabReport existingReport = labReportMapper.selectById(reportId);
+        if (existingReport == null) {
+            throw new ResourceNotFoundException("实验报告不存在");
+        }
+
+        // 仅在字段不为 null 时更新，防止误删原有属性
+        if (labReport.getCourseId() != null)
+            existingReport.setCourseId(labReport.getCourseId());
+        if (labReport.getReportTitle() != null)
+            existingReport.setReportTitle(labReport.getReportTitle());
+        if (labReport.getReportDescription() != null)
+            existingReport.setReportDescription(labReport.getReportDescription());
+        if (labReport.getDeadline() != null)
+            existingReport.setDeadline(labReport.getDeadline());
+        if (labReport.getTotalScore() != null)
+            existingReport.setTotalScore(labReport.getTotalScore());
+        if (labReport.getQuestionList() != null)
+            existingReport.setQuestionList(labReport.getQuestionList());
+
+        // 如果需要更新状态（例如从草稿发布或提前截止）
+        if (labReport.getStatus() != null) {
+            existingReport.setStatus(labReport.getStatus());
+        }
+
+        // 处理附件更新
+        if (attachment != null && !attachment.isEmpty()) {
+            // 删除旧附件
+            if (existingReport.getAttachmentUrl() != null && !existingReport.getAttachmentUrl().isEmpty()) {
+                deleteFile(existingReport.getAttachmentUrl());
+            }
+            // 保存新附件
+            String attachmentUrl = saveAttachment(attachment);
+            existingReport.setAttachmentUrl(attachmentUrl);
+        }
+
+        labReportMapper.updateById(existingReport);
     }
 
     @Override
@@ -294,40 +341,94 @@ public class LabReportServiceImpl implements LabReportService {
 
     @Override
     public List<Map<String, Object>> getStudentLabReports(String studentId) {
-        // 获取学生所有的实验报告（包括未提交的）
         List<Map<String, Object>> result = new ArrayList<>();
 
-        // 查询学生已提交的报告
+        // 获取学生选修的通过的课程及其加入时间
+        QueryWrapper<com.example.project.entity.course.StudentCourse> courseWrapper = new QueryWrapper<>();
+        try {
+            courseWrapper.eq("student_id", Integer.parseInt(studentId));
+        } catch (Exception e) {
+            courseWrapper.eq("student_id", studentId);
+        }
+        courseWrapper.eq("status", 1); // 1-已通过
+        List<com.example.project.entity.course.StudentCourse> enrolledCourses = studentCourseMapper
+                .selectList(courseWrapper);
+        if (enrolledCourses.isEmpty()) {
+            return result;
+        }
+
+        List<String> enrolledCourseIds = enrolledCourses.stream()
+                .map(sc -> sc.getCourseId())
+                .collect(Collectors.toList());
+
+        // 查询这些课程的所有作业
+        QueryWrapper<LabReport> reportWrapper = new QueryWrapper<>();
+        reportWrapper.in("course_id", enrolledCourseIds);
+        reportWrapper.eq("status", 1); // 1-已发布
+        reportWrapper.orderByDesc("create_time");
+        List<LabReport> courseReports = labReportMapper.selectList(reportWrapper);
+
+        // 2. 获取学生已有的提交记录
         QueryWrapper<StudentLabReport> submitWrapper = new QueryWrapper<>();
         submitWrapper.eq("student_id", studentId);
-        submitWrapper.orderByDesc("submit_time");
         List<StudentLabReport> submittedReports = studentLabReportMapper.selectList(submitWrapper);
+        Map<Long, StudentLabReport> submissionMap = submittedReports.stream()
+                .collect(Collectors.toMap(StudentLabReport::getReportId, s -> s));
 
-        // 为每个提交的报告获取实验报告详情
-        for (StudentLabReport studentReport : submittedReports) {
-            LabReport labReport = labReportMapper.selectById(studentReport.getReportId());
-            if (labReport != null) {
-                Map<String, Object> reportMap = new HashMap<>();
-                reportMap.put("reportId", labReport.getReportId());
-                reportMap.put("reportTitle", labReport.getReportTitle());
-                reportMap.put("reportDescription", labReport.getReportDescription());
-                reportMap.put("courseId", labReport.getCourseId());
-                reportMap.put("deadline", labReport.getDeadline());
-                reportMap.put("totalScore", labReport.getTotalScore());
-                reportMap.put("attachmentUrl", labReport.getAttachmentUrl());
-                reportMap.put("createTime", labReport.getCreateTime());
+        // 3. 合并结果
+        for (LabReport report : courseReports) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("reportId", report.getReportId());
+            map.put("reportTitle", report.getReportTitle());
+            map.put("reportDescription", report.getReportDescription());
+            map.put("courseId", report.getCourseId());
+            map.put("deadline", report.getDeadline());
+            map.put("totalScore", report.getTotalScore());
+            map.put("attachmentUrl", report.getAttachmentUrl());
+            map.put("createTime", report.getCreateTime());
 
-                // 学生提交信息
-                reportMap.put("studentReportId", studentReport.getStudentReportId());
-                reportMap.put("submitTime", studentReport.getSubmitTime());
-                reportMap.put("score", studentReport.getScore());
-                reportMap.put("teacherComment", studentReport.getTeacherComment());
-                reportMap.put("status", studentReport.getStatus());
-                reportMap.put("studentAttachmentUrl", studentReport.getAttachmentUrl());
-
-                result.add(reportMap);
+            // 获取课程名称
+            try {
+                Course course = courseMapper.selectById(report.getCourseId());
+                if (course != null)
+                    map.put("courseName", course.getCourseName());
+            } catch (Exception e) {
             }
+
+            StudentLabReport submission = submissionMap.get(report.getReportId());
+            if (submission != null) {
+                // 已提交
+                map.put("studentReportId", submission.getStudentReportId());
+                map.put("submitTime", submission.getSubmitTime());
+                map.put("score", submission.getScore());
+                map.put("teacherComment", submission.getTeacherComment());
+                map.put("status", submission.getStatus()); // 1, 2
+                map.put("studentAttachmentUrl", submission.getAttachmentUrl());
+            } else {
+                // 未提交
+                map.put("studentReportId", null);
+                map.put("status", 0); // 0-未提交
+                map.put("submitTime", null);
+                map.put("score", null);
+            }
+            result.add(map);
         }
+
+        // 排序：未提交在前 (status 0), 然后按截止时间
+        result.sort((a, b) -> {
+            Integer s1 = (Integer) a.get("status");
+            Integer s2 = (Integer) b.get("status");
+            if (!s1.equals(s2))
+                return s1 - s2;
+
+            Date d1 = (Date) a.get("deadline");
+            Date d2 = (Date) b.get("deadline");
+            if (d1 == null)
+                return 1;
+            if (d2 == null)
+                return -1;
+            return d1.compareTo(d2);
+        });
 
         return result;
     }

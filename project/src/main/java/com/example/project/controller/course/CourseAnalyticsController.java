@@ -18,10 +18,10 @@ import java.util.Map;
 @RequestMapping("/api/course/analytics")
 @CrossOrigin(origins = "*")
 public class CourseAnalyticsController {
-    
+
     @Autowired
     private StudentCourseService studentCourseService;
-    
+
     /**
      * 获取特定课程的详细分析数据
      * 
@@ -30,30 +30,30 @@ public class CourseAnalyticsController {
     @GetMapping("/{courseId}")
     public ResponseEntity<Map<String, Object>> getCourseAnalytics(@PathVariable String courseId) {
         Map<String, Object> response = new HashMap<>();
-        
+
         try {
             // 获取课程学生统计
             Map<String, Object> studentStats = studentCourseService.getCourseStudentStats(courseId);
-            
+
             // 获取活跃度数据（最近30天）
             List<Map<String, Object>> activityData = studentCourseService.getCourseActivityData(courseId, 30);
-            
+
             Map<String, Object> analytics = new HashMap<>();
             analytics.put("studentStats", studentStats);
             analytics.put("activityData", activityData);
-            
+
             response.put("success", true);
             response.put("data", analytics);
-            
+
             return ResponseEntity.ok(response);
-            
+
         } catch (Exception e) {
             response.put("success", false);
             response.put("message", "获取分析数据失败: " + e.getMessage());
             return ResponseEntity.internalServerError().body(response);
         }
     }
-    
+
     /**
      * 获取课程的学生列表
      * 
@@ -64,24 +64,24 @@ public class CourseAnalyticsController {
             @PathVariable String courseId,
             @RequestParam(defaultValue = "1") int pageNumber,
             @RequestParam(defaultValue = "20") int pageSize) {
-        
+
         Map<String, Object> response = new HashMap<>();
-        
+
         try {
             List<StudentCourse> students = studentCourseService.getCourseStudents(courseId, pageNumber, pageSize);
-            
+
             response.put("success", true);
             response.put("data", students);
-            
+
             return ResponseEntity.ok(response);
-            
+
         } catch (Exception e) {
             response.put("success", false);
             response.put("message", "获取学生列表失败: " + e.getMessage());
             return ResponseEntity.internalServerError().body(response);
         }
     }
-    
+
     /**
      * 获取教师所有课程的学生数据
      * 
@@ -94,25 +94,25 @@ public class CourseAnalyticsController {
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "1") int pageNumber,
             @RequestParam(defaultValue = "20") int pageSize) {
-        
+
         Map<String, Object> response = new HashMap<>();
-        
+
         try {
             List<StudentCourse> students = studentCourseService.getTeacherStudents(
-                teacherId, courseId, keyword, pageNumber, pageSize);
-            
+                    teacherId, courseId, keyword, pageNumber, pageSize);
+
             response.put("success", true);
             response.put("data", students);
-            
+
             return ResponseEntity.ok(response);
-            
+
         } catch (Exception e) {
             response.put("success", false);
             response.put("message", "获取学生数据失败: " + e.getMessage());
             return ResponseEntity.internalServerError().body(response);
         }
     }
-    
+
     /**
      * 获取课程活跃度趋势数据
      * 
@@ -122,24 +122,24 @@ public class CourseAnalyticsController {
     public ResponseEntity<Map<String, Object>> getCourseActivity(
             @PathVariable String courseId,
             @RequestParam(defaultValue = "30") int days) {
-        
+
         Map<String, Object> response = new HashMap<>();
-        
+
         try {
             List<Map<String, Object>> activityData = studentCourseService.getCourseActivityData(courseId, days);
-            
+
             response.put("success", true);
             response.put("data", activityData);
-            
+
             return ResponseEntity.ok(response);
-            
+
         } catch (Exception e) {
             response.put("success", false);
             response.put("message", "获取活跃度数据失败: " + e.getMessage());
             return ResponseEntity.internalServerError().body(response);
         }
     }
-    
+
     /**
      * 学生加入课程
      * 
@@ -149,12 +149,12 @@ public class CourseAnalyticsController {
     public ResponseEntity<Map<String, Object>> joinCourse(
             @RequestParam String studentId,
             @RequestParam String courseId) {
-        
+
         Map<String, Object> response = new HashMap<>();
-        
+
         try {
             boolean success = studentCourseService.joinCourse(studentId, courseId);
-            
+
             if (success) {
                 response.put("success", true);
                 response.put("message", "加入课程成功");
@@ -162,16 +162,16 @@ public class CourseAnalyticsController {
                 response.put("success", false);
                 response.put("message", "加入课程失败，可能已经加入过该课程");
             }
-            
+
             return ResponseEntity.ok(response);
-            
+
         } catch (Exception e) {
             response.put("success", false);
             response.put("message", "加入课程失败: " + e.getMessage());
             return ResponseEntity.internalServerError().body(response);
         }
     }
-    
+
     /**
      * 更新学生学习进度
      * 
@@ -183,12 +183,12 @@ public class CourseAnalyticsController {
             @RequestParam String courseId,
             @RequestParam int progress,
             @RequestParam(defaultValue = "0") int studyTime) {
-        
+
         Map<String, Object> response = new HashMap<>();
-        
+
         try {
             boolean success = studentCourseService.updateStudentProgress(studentId, courseId, progress, studyTime);
-            
+
             if (success) {
                 response.put("success", true);
                 response.put("message", "进度更新成功");
@@ -196,12 +196,32 @@ public class CourseAnalyticsController {
                 response.put("success", false);
                 response.put("message", "进度更新失败");
             }
-            
+
             return ResponseEntity.ok(response);
-            
+
         } catch (Exception e) {
             response.put("success", false);
             response.put("message", "进度更新失败: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
+    /**
+     * 获取学生加入的所有课程
+     * 
+     * GET /api/course/analytics/student/{studentId}/courses
+     */
+    @GetMapping("/student/{studentId}/courses")
+    public ResponseEntity<Map<String, Object>> getStudentCourses(@PathVariable String studentId) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            List<Map<String, Object>> courses = studentCourseService.getStudentJoinedCourses(studentId);
+            response.put("success", true);
+            response.put("data", courses);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "获取学生课程失败: " + e.getMessage());
             return ResponseEntity.internalServerError().body(response);
         }
     }

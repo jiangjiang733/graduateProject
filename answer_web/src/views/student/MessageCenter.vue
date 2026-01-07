@@ -1,7 +1,6 @@
 <template>
   <div class="message-center modern-page">
     <div class="chat-container">
-      <!-- Side: Teacher List -->
       <aside class="chat-sidebar glass-panel">
         <div class="sidebar-header">
           <h3>

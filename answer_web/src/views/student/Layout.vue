@@ -36,11 +36,6 @@
           <!-- 右侧操作区 -->
           <div class="header-actions">
             <!-- 搜索框 -->
-            <div class="search-box glass-input">
-              <el-icon class="search-icon"><Search /></el-icon>
-              <input type="text" placeholder="查找课程/资料..." class="search-input" />
-            </div>
-
             <!-- 通知 / 答疑入口 -->
             <div class="action-btn" @click="$router.push('/student/messages')" title="我的消息">
               <el-badge :value="2" class="notification-badge" is-dot>
@@ -117,7 +112,6 @@ const menuItems = [
   { path: '/student/courses', label: '课程中心', icon: 'Reading' },
   { path: '/student/homework', label: '我的作业', icon: 'EditPen' },
   { path: '/student/exams', label: '在线考试', icon: 'Collection' },
-  { path: '/student/messages', label: '答疑', icon: 'ChatDotRound' }
 ]
 
 const isActive = (path) => {
@@ -146,7 +140,6 @@ const handleCommand = (command) => {
 </script>
 
 <style scoped>
-/* Reuse specific layout styles if needed that are not in modern-theme.css */
 .modern-layout {
   min-height: 100vh;
   position: relative;
