@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.project.util.AESUtil;
 import java.io.File;
 import java.io.IOException;
 import java.util.UUID;
@@ -54,21 +55,34 @@ public class StudentUserServiceImpl implements StudentUserService {
 
         org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder passwordEncoder = new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
 
-        // Check if the current password in DB is hashed (starts with $2a$)
-        boolean isHash = student.getStudentsPassword().startsWith("$2a$");
-
-        if (isHash) {
-            if (!passwordEncoder.matches(oldPassword, student.getStudentsPassword())) {
-                throw new RuntimeException("原密码错误");
+        String storedPassword = student.getStudentsPassword();
+        boolean match = false;
+        if (storedPassword != null) {
+            // 1. BCrypt
+            if (storedPassword.startsWith("$2a$")) {
+                match = passwordEncoder.matches(oldPassword, storedPassword);
             }
-        } else {
-            // Fallback for old plain text passwords
-            if (!student.getStudentsPassword().equals(oldPassword)) {
-                throw new RuntimeException("原密码错误");
+            // 2. AES
+            if (!match) {
+                try {
+                    String decrypted = AESUtil.decrypt(storedPassword);
+                    if (oldPassword.equals(decrypted)) {
+                        match = true;
+                    }
+                } catch (Exception e) {
+                }
+            }
+            // 3. Plain text
+            if (!match && oldPassword.equals(storedPassword)) {
+                match = true;
             }
         }
 
-        student.setStudentsPassword(passwordEncoder.encode(newPassword));
+        if (!match) {
+            throw new RuntimeException("原密码错误");
+        }
+
+        student.setStudentsPassword(AESUtil.encrypt(newPassword));
         studentUserMapper.updateById(student);
     }
 

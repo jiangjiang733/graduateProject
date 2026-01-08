@@ -101,9 +101,6 @@
                 {{ course.courseDescription || course.description || '探索核心知识点，通过实战案例快速掌握专业技能。' }}
               </p>
 
-              <div class="card-meta">
-                <div class="meta-item"><el-icon><Reading /></el-icon>{{ course.chapterCount }} 课时</div>
-              </div>
 
               <div class="card-footer">
                 <el-button

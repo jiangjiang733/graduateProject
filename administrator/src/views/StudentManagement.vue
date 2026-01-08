@@ -25,17 +25,7 @@
           </template>
         </el-input>
         
-        <el-select
-          v-model="searchForm.status"
-          placeholder="状态"
-          style="width: 150px; margin-left: 10px"
-          clearable
-          @change="loadStudents"
-        >
-          <el-option label="全部" :value="undefined" />
-          <el-option label="正常" :value="1" />
-          <el-option label="禁用" :value="0" />
-        </el-select>
+
         
         <el-button type="primary" @click="loadStudents" style="margin-left: 10px">
           搜索
@@ -59,29 +49,33 @@
         @selection-change="handleSelectionChange"
       >
         <el-table-column type="selection" width="55" />
-        <el-table-column prop="studentId" label="学号" width="120" />
-        <el-table-column prop="studentName" label="姓名" width="120" />
-        <el-table-column prop="email" label="邮箱" />
-        <el-table-column prop="phone" label="电话" width="130" />
-        <el-table-column prop="major" label="专业" width="120" />
-        <el-table-column prop="grade" label="年级" width="100" />
-        <el-table-column label="状态" width="100">
+        <el-table-column prop="studentsId" label="学号" width="120" />
+        <el-table-column prop="studentsUsername" label="姓名" width="120" />
+        <el-table-column prop="studentsEmail" label="邮箱" />
+        <el-table-column prop="studentsMajor" label="专业" width="120" />
+        <el-table-column prop="studentsGrade" label="年级" width="100" />
+        <el-table-column label="密码" width="150">
           <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-              {{ row.status === 1 ? '正常' : '禁用' }}
-            </el-tag>
+            <div class="password-cell">
+              <span v-if="visiblePasswords['s' + row.studentsId]">
+                {{ row.studentsPassword || row.students_password || '-' }}
+              </span>
+              <span v-else style="color: #909399; font-family: monospace;">••••••••</span>
+              <el-button 
+                type="primary" 
+                link 
+                id="toggle-password-btn"
+                @click="togglePasswordVisibility('s' + row.studentsId)"
+                style="margin-left: 8px"
+              >
+                <el-icon><View v-if="!visiblePasswords['s' + row.studentsId]" /><Hide v-else /></el-icon>
+              </el-button>
+            </div>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="250" fixed="right">
           <template #default="{ row }">
             <el-button size="small" @click="handleEdit(row)">编辑</el-button>
-            <el-button
-              size="small"
-              :type="row.status === 1 ? 'warning' : 'success'"
-              @click="handleToggleStatus(row)"
-            >
-              {{ row.status === 1 ? '禁用' : '启用' }}
-            </el-button>
             <el-button size="small" type="info" @click="handleResetPassword(row)">
               重置密码
             </el-button>
@@ -117,32 +111,28 @@
         :rules="formRules"
         label-width="100px"
       >
-        <el-form-item label="学号" prop="studentId">
-          <el-input v-model="form.studentId" :disabled="isEdit" />
+        <!-- studentsId is auto-increment, maybe not input? Or is it manually entered? User interface says "学号" -->
+        <!-- Looking at entity: studentsId is AUTO. So add hidden id field. -->
+        <!-- Need a username field -->
+        
+        <el-form-item label="姓名" prop="studentsUsername">
+          <el-input v-model="form.studentsUsername" />
         </el-form-item>
         
-        <el-form-item label="姓名" prop="studentName">
-          <el-input v-model="form.studentName" />
+        <el-form-item label="邮箱" prop="studentsEmail">
+          <el-input v-model="form.studentsEmail" />
         </el-form-item>
         
-        <el-form-item label="邮箱" prop="email">
-          <el-input v-model="form.email" />
+        <el-form-item label="专业" prop="studentsMajor">
+          <el-input v-model="form.studentsMajor" />
         </el-form-item>
         
-        <el-form-item label="电话" prop="phone">
-          <el-input v-model="form.phone" />
+        <el-form-item label="年级" prop="studentsGrade">
+          <el-input v-model="form.studentsGrade" />
         </el-form-item>
         
-        <el-form-item label="专业" prop="major">
-          <el-input v-model="form.major" />
-        </el-form-item>
-        
-        <el-form-item label="年级" prop="grade">
-          <el-input v-model="form.grade" />
-        </el-form-item>
-        
-        <el-form-item label="密码" prop="password" v-if="!isEdit">
-          <el-input v-model="form.password" type="password" />
+        <el-form-item label="密码" prop="studentsPassword" v-if="!isEdit">
+          <el-input v-model="form.studentsPassword" type="password" />
         </el-form-item>
       </el-form>
       
@@ -159,17 +149,22 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import { Plus, Search } from '@element-plus/icons-vue'
+import { Plus, Search, View, Hide } from '@element-plus/icons-vue'
 import {
   getStudentList,
   createStudent,
   updateStudent,
   deleteStudent,
   batchDeleteStudents,
-  toggleStudentStatus,
   resetStudentPassword,
   type Student
 } from '@/api/user'
+
+const visiblePasswords = reactive<Record<string, boolean>>({})
+
+const togglePasswordVisibility = (id: string) => {
+  visiblePasswords[id] = !visiblePasswords[id]
+}
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -180,8 +175,7 @@ const students = ref<Student[]>([])
 const selectedIds = ref<number[]>([])
 
 const searchForm = reactive({
-  keyword: '',
-  status: undefined as number | undefined
+  keyword: ''
 })
 
 const pagination = reactive({
@@ -191,24 +185,21 @@ const pagination = reactive({
 })
 
 const form = reactive({
-  id: 0,
-  studentId: '',
-  studentName: '',
-  email: '',
-  phone: '',
-  major: '',
-  grade: '',
-  password: ''
+  studentsId: 0, // PK
+  studentsUsername: '',
+  studentsEmail: '',
+  studentsMajor: '',
+  studentsGrade: '',
+  studentsPassword: ''
 })
 
 const formRules: FormRules = {
-  studentId: [{ required: true, message: '请输入学号', trigger: 'blur' }],
-  studentName: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
-  email: [
+  studentsUsername: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
+  studentsEmail: [
     { required: true, message: '请输入邮箱', trigger: 'blur' },
     { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
   ],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+  studentsPassword: [{ required: true, message: '请输入密码', trigger: 'blur' }]
 }
 
 const loadStudents = async () => {
@@ -217,8 +208,7 @@ const loadStudents = async () => {
     const response = await getStudentList({
       pageNumber: pagination.pageNumber,
       pageSize: pagination.pageSize,
-      keyword: searchForm.keyword,
-      status: searchForm.status
+      keyword: searchForm.keyword
     })
     
     if (response.code === 200 && response.data) {
@@ -253,7 +243,7 @@ const handleSubmit = async () => {
     submitting.value = true
     try {
       if (isEdit.value) {
-        await updateStudent(form.id, form)
+        await updateStudent(form.studentsId, form)
         ElMessage.success('更新成功')
       } else {
         await createStudent(form)
@@ -278,7 +268,7 @@ const handleDelete = async (row: Student) => {
       type: 'warning'
     })
     
-    await deleteStudent(row.id)
+    await deleteStudent(row.studentsId!)
     ElMessage.success('删除成功')
     loadStudents()
   } catch (error) {
@@ -307,37 +297,29 @@ const handleBatchDelete = async () => {
   }
 }
 
-const handleToggleStatus = async (row: Student) => {
-  const newStatus = row.status === 1 ? 0 : 1
-  const action = newStatus === 1 ? '启用' : '禁用'
-  
-  try {
-    await ElMessageBox.confirm(`确定要${action}该学生账号吗？`, '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
-    
-    await toggleStudentStatus(row.id, newStatus)
-    ElMessage.success(`${action}成功`)
-    loadStudents()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error(`${action}失败:`, error)
-    }
-  }
-}
-
 const handleResetPassword = async (row: Student) => {
   try {
-    await ElMessageBox.confirm('确定要重置该学生的密码吗？密码将重置为默认密码。', '提示', {
-      confirmButtonText: '确定',
+    await ElMessageBox.confirm('确定要重置该学生的密码吗？密码将重置为默认密码。', '重置确认', {
+      confirmButtonText: '确定重置',
       cancelButtonText: '取消',
       type: 'warning'
     })
     
-    await resetStudentPassword(row.id)
-    ElMessage.success('密码重置成功，默认密码为: 123456')
+    await resetStudentPassword(row.studentsId!)
+    
+    await ElMessageBox.alert(
+      '<div style="text-align: center; padding: 10px;">' +
+      '<p style="font-size: 16px; margin-bottom: 10px;">密码重置成功！</p>' +
+      '<p style="color: #666;">重置后的密码为：</p>' +
+      '<div style="background: #f0f9eb; color: #67c23a; font-size: 24px; font-weight: bold; padding: 15px; border-radius: 8px; margin-top: 5px; letter-spacing: 2px;">123456</div>' +
+      '</div>',
+      '重置结果',
+      {
+        dangerouslyUseHTMLString: true,
+        confirmButtonText: '知道了',
+        center: true
+      }
+    )
   } catch (error) {
     if (error !== 'cancel') {
       console.error('重置密码失败:', error)
@@ -346,19 +328,18 @@ const handleResetPassword = async (row: Student) => {
 }
 
 const handleSelectionChange = (selection: Student[]) => {
-  selectedIds.value = selection.map(item => item.id)
+  // Use studentsId for selection
+  selectedIds.value = selection.map(item => item.studentsId!)
 }
 
 const resetForm = () => {
   Object.assign(form, {
-    id: 0,
-    studentId: '',
-    studentName: '',
-    email: '',
-    phone: '',
-    major: '',
-    grade: '',
-    password: ''
+    studentsId: 0,
+    studentsUsername: '',
+    studentsEmail: '',
+    studentsMajor: '',
+    studentsGrade: '',
+    studentsPassword: ''
   })
   formRef.value?.clearValidate()
 }
@@ -370,17 +351,64 @@ onMounted(() => {
 
 <style scoped>
 .student-management {
-  padding: 20px;
+  padding: 24px;
+  background-color: #f8fafc;
+  min-height: 100vh;
+}
+
+.el-card {
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: none;
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e293b;
 }
 
 .search-bar {
   display: flex;
   align-items: center;
+  margin-bottom: 24px;
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+:deep(.el-table) {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+:deep(.el-table th) {
+  background-color: #f8fafc !important;
+  color: #475569;
+  font-weight: 600;
+}
+
+:deep(.el-table--striped .el-table__body tr.el-table__row--striped td) {
+  background: #f8fafc;
+}
+
+:deep(.el-button--primary) {
+  background-color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+:deep(.el-button--primary:hover) {
+  background-color: #2563eb;
+  border-color: #2563eb;
+}
+
+:deep(.el-button--danger) {
+  background-color: #ef4444;
+  border-color: #ef4444;
 }
 </style>

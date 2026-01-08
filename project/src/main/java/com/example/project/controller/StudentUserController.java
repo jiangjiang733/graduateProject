@@ -10,8 +10,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.example.project.util.AESUtil;
 import java.util.HashMap;
 import java.util.Map;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 // 学生用户控制器
 @RestController
@@ -41,7 +43,32 @@ public class StudentUserController {
             return Result.error("用户不存在");
         }
 
-        if (!dbStudent.getStudentsPassword().equals(student.getStudentsPassword())) {
+        String storedPassword = dbStudent.getStudentsPassword();
+        boolean match = false;
+        BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
+        if (storedPassword != null) {
+            // 1. BCrypt
+            if (storedPassword.startsWith("$2a$")) {
+                match = passwordEncoder.matches(student.getStudentsPassword(), storedPassword);
+            }
+            // 2. AES
+            if (!match) {
+                try {
+                    String decrypted = AESUtil.decrypt(storedPassword);
+                    if (student.getStudentsPassword().equals(decrypted)) {
+                        match = true;
+                    }
+                } catch (Exception e) {
+                }
+            }
+            // 3. Plain text
+            if (!match && student.getStudentsPassword().equals(storedPassword)) {
+                match = true;
+            }
+        }
+
+        if (!match) {
             return Result.error("密码错误");
         }
 
@@ -76,6 +103,9 @@ public class StudentUserController {
         }
 
         try {
+            if (student.getStudentsPassword() != null) {
+                student.setStudentsPassword(AESUtil.encrypt(student.getStudentsPassword()));
+            }
             studentUserMapper.insert(student);
             return Result.success("注册成功");
         } catch (Exception e) {

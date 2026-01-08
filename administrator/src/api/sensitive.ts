@@ -6,9 +6,9 @@ import request from './request'
 export interface SensitiveWord {
   id: number
   word: string
-  category: string // 'PROFANITY' | 'POLITICAL' | 'VIOLENCE' | 'OTHER'
-  level: number // 1: 轻度, 2: 中度, 3: 严重
-  action: string // 'REPLACE' | 'BLOCK' | 'WARN'
+  category?: string // 'PROFANITY' | 'POLITICAL' | 'VIOLENCE' | 'OTHER'
+  level?: number // 1: 轻度, 2: 中度, 3: 严重
+  action?: string // 'REPLACE' | 'BLOCK' | 'WARN'
   replacement?: string
   status: number // 0: 禁用, 1: 启用
   createTime?: string
@@ -83,6 +83,6 @@ export const toggleSensitiveWordStatus = (id: number, status: number): Promise<a
 /**
  * 测试文本是否包含敏感词
  */
-export const testSensitiveWords = (text: string): Promise<any> => {
+export const testSensitiveWord = (text: string): Promise<any> => {
   return request.post('/admin/sensitive-words/test', { text })
 }

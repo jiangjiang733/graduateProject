@@ -25,19 +25,7 @@
         </el-input>
         
         <el-select
-          v-model="searchForm.type"
-          placeholder="类型"
-          style="width: 150px; margin-left: 10px"
-          clearable
-        >
-          <el-option label="全部" value="" />
-          <el-option label="系统公告" value="SYSTEM" />
-          <el-option label="通知" value="NOTICE" />
-          <el-option label="紧急" value="URGENT" />
-        </el-select>
-        
-        <el-select
-          v-model="searchForm.target"
+          v-model="searchForm.targetType"
           placeholder="目标"
           style="width: 150px; margin-left: 10px"
           clearable
@@ -56,45 +44,43 @@
       <!-- 表格 -->
       <el-table :data="announcements" v-loading="loading" style="margin-top: 20px">
         <el-table-column prop="title" label="标题" />
-        <el-table-column label="类型" width="100">
+        <el-table-column label="优先级" width="100">
           <template #default="{ row }">
-            <el-tag :type="getTypeTag(row.type)">
-              {{ getTypeText(row.type) }}
+            <el-tag :type="getPriorityTag(row.priority)">
+              {{ getPriorityText(row.priority) }}
             </el-tag>
           </template>
         </el-table-column>
         <el-table-column label="目标" width="100">
           <template #default="{ row }">
-            {{ getTargetText(row.target) }}
+            {{ getTargetText(row.targetType) }}
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="100">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'info'">
-              {{ row.status === 1 ? '已发布' : '草稿' }}
-            </el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="publishTime" label="发布时间" width="180" />
+        <el-table-column prop="createTime" label="发布时间" width="180" />
         <el-table-column label="操作" width="250" fixed="right">
           <template #default="{ row }">
             <el-button size="small" @click="handleView(row)">查看</el-button>
             <el-button size="small" @click="handleEdit(row)">编辑</el-button>
+            <!-- Withdraw if not expired? Backend withdraw sets expireTime.
+                 If expireTime exists and < now, it is withdrawn.
+                 For simplicity, always show Withdraw button if active (expireTime null or > now).
+                 Show Publish if withdrawn?
+            -->
             <el-button
-              v-if="row.status === 0"
-              size="small"
-              type="success"
-              @click="handlePublish(row)"
-            >
-              发布
-            </el-button>
-            <el-button
-              v-else
+              v-if="!isExpired(row)"
               size="small"
               type="warning"
               @click="handleWithdraw(row)"
             >
               撤回
+            </el-button>
+            <el-button
+              v-else
+              size="small"
+              type="success"
+              @click="handlePublish(row)"
+            >
+              重新发布
             </el-button>
             <el-button size="small" type="danger" @click="handleDelete(row)">
               删除
@@ -127,16 +113,16 @@
           <el-input v-model="form.title" />
         </el-form-item>
         
-        <el-form-item label="类型" prop="type">
-          <el-select v-model="form.type" style="width: 100%">
-            <el-option label="系统公告" value="SYSTEM" />
-            <el-option label="通知" value="NOTICE" />
-            <el-option label="紧急" value="URGENT" />
+        <el-form-item label="优先级" prop="priority">
+          <el-select v-model="form.priority" style="width: 100%">
+            <el-option label="通知" :value="1" />
+            <el-option label="系统公告" :value="2" />
+            <el-option label="紧急" :value="3" />
           </el-select>
         </el-form-item>
         
-        <el-form-item label="目标" prop="target">
-          <el-select v-model="form.target" style="width: 100%">
+        <el-form-item label="目标" prop="targetType">
+          <el-select v-model="form.targetType" style="width: 100%">
             <el-option label="所有人" value="ALL" />
             <el-option label="学生" value="STUDENT" />
             <el-option label="教师" value="TEACHER" />
@@ -155,11 +141,8 @@
       
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button @click="handleSubmit(0)" :loading="submitting">
-          保存草稿
-        </el-button>
-        <el-button type="primary" @click="handleSubmit(1)" :loading="submitting">
-          发布
+        <el-button type="primary" @click="handleSubmit" :loading="submitting">
+          {{ isEdit ? '更新' : '发布' }}
         </el-button>
       </template>
     </el-dialog>
@@ -169,9 +152,9 @@
       <div class="announcement-detail">
         <h3>{{ viewData.title }}</h3>
         <div class="meta">
-          <el-tag :type="getTypeTag(viewData.type)">{{ getTypeText(viewData.type) }}</el-tag>
-          <span style="margin-left: 10px">目标: {{ getTargetText(viewData.target) }}</span>
-          <span style="margin-left: 10px">发布时间: {{ viewData.publishTime }}</span>
+          <el-tag :type="getPriorityTag(viewData.priority || 1)">{{ getPriorityText(viewData.priority || 1) }}</el-tag>
+          <span style="margin-left: 10px">目标: {{ getTargetText(viewData.targetType || 'ALL') }}</span>
+          <span style="margin-left: 10px">发布时间: {{ viewData.createTime }}</span>
         </div>
         <div class="content">
           {{ viewData.content }}
@@ -206,8 +189,7 @@ const viewData = ref<Partial<Announcement>>({})
 
 const searchForm = reactive({
   keyword: '',
-  type: '',
-  target: ''
+  targetType: ''
 })
 
 const pagination = reactive({
@@ -217,37 +199,36 @@ const pagination = reactive({
 })
 
 const form = reactive({
-  id: 0,
+  notificationId: 0,
   title: '',
   content: '',
-  type: 'NOTICE',
-  target: 'ALL',
-  status: 0
+  priority: 1,
+  targetType: 'ALL'
 })
 
 const formRules: FormRules = {
   title: [{ required: true, message: '请输入标题', trigger: 'blur' }],
-  type: [{ required: true, message: '请选择类型', trigger: 'change' }],
-  target: [{ required: true, message: '请选择目标', trigger: 'change' }],
+  priority: [{ required: true, message: '请选择优先级', trigger: 'change' }],
+  targetType: [{ required: true, message: '请选择目标', trigger: 'change' }],
   content: [{ required: true, message: '请输入内容', trigger: 'blur' }]
 }
 
-const getTypeTag = (type: string) => {
-  const map: Record<string, string> = {
-    SYSTEM: 'primary',
-    NOTICE: 'success',
-    URGENT: 'danger'
+const getPriorityTag = (priority: number) => {
+  const map: Record<number, string> = {
+    2: 'primary',
+    1: 'success',
+    3: 'danger'
   }
-  return map[type] || 'info'
+  return map[priority] || 'info'
 }
 
-const getTypeText = (type: string) => {
-  const map: Record<string, string> = {
-    SYSTEM: '系统公告',
-    NOTICE: '通知',
-    URGENT: '紧急'
+const getPriorityText = (priority: number) => {
+  const map: Record<number, string> = {
+    2: '系统公告',
+    1: '通知',
+    3: '紧急'
   }
-  return map[type] || type
+  return map[priority] || '普通'
 }
 
 const getTargetText = (target: string) => {
@@ -259,6 +240,11 @@ const getTargetText = (target: string) => {
   return map[target] || target
 }
 
+const isExpired = (row: Announcement) => {
+  if (!row.expireTime) return false
+  return new Date(row.expireTime).getTime() <= Date.now()
+}
+
 const loadAnnouncements = async () => {
   loading.value = true
   try {
@@ -266,8 +252,7 @@ const loadAnnouncements = async () => {
       pageNumber: pagination.pageNumber,
       pageSize: pagination.pageSize,
       keyword: searchForm.keyword,
-      type: searchForm.type,
-      target: searchForm.target
+      type: searchForm.targetType // this is targetType
     })
     
     if (response.code === 200 && response.data) {
@@ -298,7 +283,7 @@ const handleEdit = (row: Announcement) => {
   dialogVisible.value = true
 }
 
-const handleSubmit = async (status: number) => {
+const handleSubmit = async () => {
   if (!formRef.value) return
   
   await formRef.value.validate(async (valid) => {
@@ -306,14 +291,12 @@ const handleSubmit = async (status: number) => {
     
     submitting.value = true
     try {
-      form.status = status
-      
       if (isEdit.value) {
-        await updateAnnouncement(form.id, form)
+        await updateAnnouncement(form.notificationId, form)
         ElMessage.success('更新成功')
       } else {
         await createAnnouncement(form)
-        ElMessage.success(status === 1 ? '发布成功' : '保存成功')
+        ElMessage.success('发布成功')
       }
       
       dialogVisible.value = false
@@ -328,7 +311,7 @@ const handleSubmit = async (status: number) => {
 
 const handlePublish = async (row: Announcement) => {
   try {
-    await publishAnnouncement(row.id)
+    await publishAnnouncement(row.notificationId)
     ElMessage.success('发布成功')
     loadAnnouncements()
   } catch (error) {
@@ -344,7 +327,7 @@ const handleWithdraw = async (row: Announcement) => {
       type: 'warning'
     })
     
-    await withdrawAnnouncement(row.id)
+    await withdrawAnnouncement(row.notificationId)
     ElMessage.success('撤回成功')
     loadAnnouncements()
   } catch (error) {
@@ -362,7 +345,7 @@ const handleDelete = async (row: Announcement) => {
       type: 'warning'
     })
     
-    await deleteAnnouncement(row.id)
+    await deleteAnnouncement(row.notificationId)
     ElMessage.success('删除成功')
     loadAnnouncements()
   } catch (error) {
@@ -374,12 +357,11 @@ const handleDelete = async (row: Announcement) => {
 
 const resetForm = () => {
   Object.assign(form, {
-    id: 0,
+    notificationId: 0,
     title: '',
     content: '',
-    type: 'NOTICE',
-    target: 'ALL',
-    status: 0
+    priority: 1,
+    targetType: 'ALL'
   })
   formRef.value?.clearValidate()
 }

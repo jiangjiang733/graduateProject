@@ -1,191 +1,252 @@
 package com.example.project.controller.admin;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.project.common.Result;
 import com.example.project.entity.Student;
 import com.example.project.entity.Teacher;
+import com.example.project.mapper.StudentUserMapper;
+import com.example.project.mapper.TeacherUserMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+import com.example.project.util.AESUtil;
 import java.util.*;
 
 /**
- * 管理员用户管理控制器
+ * 管理员用户 management controller
  */
 @RestController
 @RequestMapping("/api/admin")
 @CrossOrigin(origins = "*")
 public class AdminUserController {
 
-    // 学生管理
+    @Autowired
+    private StudentUserMapper studentUserMapper;
+
+    @Autowired
+    private TeacherUserMapper teacherUserMapper;
 
     /**
-     * 获取学生列表
+     * Get student list
      */
     @GetMapping("/students")
     public Result<Map<String, Object>> getStudentList(
             @RequestParam(defaultValue = "1") Integer pageNumber,
             @RequestParam(defaultValue = "10") Integer pageSize,
-            @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) Integer status
-    ) {
-        // TODO: 实现实际的数据库查询
+            @RequestParam(required = false) String keyword) {
+        Page<Student> page = new Page<>(pageNumber, pageSize);
+        LambdaQueryWrapper<Student> queryWrapper = new LambdaQueryWrapper<>();
+
+        if (StringUtils.hasText(keyword)) {
+            queryWrapper.and(w -> w
+                    .like(Student::getStudentsUsername, keyword)
+                    .or()
+                    .like(Student::getStudentsEmail, keyword));
+        }
+
+        queryWrapper.orderByDesc(Student::getStudentsId);
+        Page<Student> studentPage = studentUserMapper.selectPage(page, queryWrapper);
+
+        List<Student> students = studentPage.getRecords();
+        for (Student s : students) {
+            if (StringUtils.hasText(s.getStudentsPassword())) {
+                s.setStudentsPassword(AESUtil.decrypt(s.getStudentsPassword()));
+            }
+        }
+
         Map<String, Object> data = new HashMap<>();
-        data.put("list", new ArrayList<>());
-        data.put("total", 0);
+        data.put("list", students);
+        data.put("total", studentPage.getTotal());
         data.put("pageNumber", pageNumber);
         data.put("pageSize", pageSize);
-        
+
         return Result.success(data);
     }
 
     /**
-     * 获取学生详情
+     * Get student detail
      */
     @GetMapping("/students/{id}")
-    public Result<Student> getStudentDetail(@PathVariable Long id) {
-        // TODO: 实现实际的数据库查询
-        return Result.success(new Student());
+    public Result<Student> getStudentDetail(@PathVariable Integer id) {
+        Student student = studentUserMapper.selectById(id);
+        if (student != null && StringUtils.hasText(student.getStudentsPassword())) {
+            student.setStudentsPassword(AESUtil.decrypt(student.getStudentsPassword()));
+        }
+        if (student == null) {
+            return Result.error("学生不存在");
+        }
+        return Result.success(student);
     }
 
     /**
-     * 创建学生
+     * Create student
      */
     @PostMapping("/students")
-    public Result<Long> createStudent(@RequestBody Student student) {
-        // TODO: 实现实际的数据库插入
-        return Result.success(1L);
+    public Result<Integer> createStudent(@RequestBody Student student) {
+        if (StringUtils.hasText(student.getStudentsPassword())) {
+            student.setStudentsPassword(AESUtil.encrypt(student.getStudentsPassword()));
+        }
+        studentUserMapper.insert(student);
+        return Result.success(student.getStudentsId());
     }
 
     /**
-     * 更新学生信息
+     * Update student info
      */
     @PutMapping("/students/{id}")
-    public Result<Void> updateStudent(@PathVariable Long id, @RequestBody Student student) {
-        // TODO: 实现实际的数据库更新
+    public Result<Void> updateStudent(@PathVariable Integer id, @RequestBody Student student) {
+        student.setStudentsId(id);
+        if (StringUtils.hasText(student.getStudentsPassword())) {
+            student.setStudentsPassword(AESUtil.encrypt(student.getStudentsPassword()));
+        }
+        studentUserMapper.updateById(student);
         return Result.success();
     }
 
     /**
-     * 删除学生
+     * Delete student
      */
     @DeleteMapping("/students/{id}")
-    public Result<Void> deleteStudent(@PathVariable Long id) {
-        // TODO: 实现实际的数据库删除
+    public Result<Void> deleteStudent(@PathVariable Integer id) {
+        studentUserMapper.deleteById(id);
         return Result.success();
     }
 
     /**
-     * 批量删除学生
+     * Batch delete students
      */
     @PostMapping("/students/batch-delete")
-    public Result<Void> batchDeleteStudents(@RequestBody Map<String, List<Long>> data) {
-        List<Long> ids = data.get("ids");
-        // TODO: 实现实际的批量删除
+    public Result<Void> batchDeleteStudents(@RequestBody Map<String, List<Integer>> data) {
+        List<Integer> ids = data.get("ids");
+        if (ids != null && !ids.isEmpty()) {
+            studentUserMapper.deleteBatchIds(ids);
+        }
         return Result.success();
     }
 
     /**
-     * 启用/禁用学生账号
-     */
-    @PutMapping("/students/{id}/status")
-    public Result<Void> toggleStudentStatus(@PathVariable Long id, @RequestBody Map<String, Integer> data) {
-        Integer status = data.get("status");
-        // TODO: 实现实际的状态更新
-        return Result.success();
-    }
-
-    /**
-     * 重置学生密码
+     * Reset student password
      */
     @PutMapping("/students/{id}/reset-password")
-    public Result<Void> resetStudentPassword(@PathVariable Long id) {
-        // TODO: 实现实际的密码重置，默认密码 123456
+    public Result<Void> resetStudentPassword(@PathVariable Integer id) {
+        Student student = new Student();
+        student.setStudentsId(id);
+        student.setStudentsPassword(AESUtil.encrypt("123456")); // Default password encrypted
+        studentUserMapper.updateById(student);
         return Result.success();
     }
 
-    // ==================== 教师管理 ====================
+    // ==================== Teacher Management ====================
 
     /**
-     * 获取教师列表
+     * Get teacher list
      */
     @GetMapping("/teachers")
     public Result<Map<String, Object>> getTeacherList(
             @RequestParam(defaultValue = "1") Integer pageNumber,
             @RequestParam(defaultValue = "10") Integer pageSize,
-            @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) Integer status
-    ) {
-        // TODO: 实现实际的数据库查询
+            @RequestParam(required = false) String keyword) {
+        Page<Teacher> page = new Page<>(pageNumber, pageSize);
+        LambdaQueryWrapper<Teacher> queryWrapper = new LambdaQueryWrapper<>();
+
+        if (StringUtils.hasText(keyword)) {
+            queryWrapper.and(w -> w
+                    .like(Teacher::getTeacherUsername, keyword)
+                    .or()
+                    .like(Teacher::getTeacherEmail, keyword));
+        }
+
+        queryWrapper.orderByDesc(Teacher::getTeacherId);
+        Page<Teacher> teacherPage = teacherUserMapper.selectPage(page, queryWrapper);
+
+        List<Teacher> teachers = teacherPage.getRecords();
+        for (Teacher t : teachers) {
+            if (StringUtils.hasText(t.getTeacherPassword())) {
+                t.setTeacherPassword(AESUtil.decrypt(t.getTeacherPassword()));
+            }
+        }
+
         Map<String, Object> data = new HashMap<>();
-        data.put("list", new ArrayList<>());
-        data.put("total", 0);
+        data.put("list", teachers);
+        data.put("total", teacherPage.getTotal());
         data.put("pageNumber", pageNumber);
         data.put("pageSize", pageSize);
-        
+
         return Result.success(data);
     }
 
     /**
-     * 获取教师详情
+     * Get teacher detail
      */
     @GetMapping("/teachers/{id}")
-    public Result<Teacher> getTeacherDetail(@PathVariable Long id) {
-        // TODO: 实现实际的数据库查询
-        return Result.success(new Teacher());
+    public Result<Teacher> getTeacherDetail(@PathVariable Integer id) {
+        Teacher teacher = teacherUserMapper.selectById(id);
+        if (teacher != null && StringUtils.hasText(teacher.getTeacherPassword())) {
+            teacher.setTeacherPassword(AESUtil.decrypt(teacher.getTeacherPassword()));
+        }
+        if (teacher == null) {
+            return Result.error("教师不存在");
+        }
+        return Result.success(teacher);
     }
 
     /**
-     * 创建教师
+     * Create teacher
      */
     @PostMapping("/teachers")
-    public Result<Long> createTeacher(@RequestBody Teacher teacher) {
-        // TODO: 实现实际的数据库插入
-        return Result.success(1L);
+    public Result<Integer> createTeacher(@RequestBody Teacher teacher) {
+        if (StringUtils.hasText(teacher.getTeacherPassword())) {
+            teacher.setTeacherPassword(AESUtil.encrypt(teacher.getTeacherPassword()));
+        }
+        teacherUserMapper.insert(teacher);
+        return Result.success(teacher.getTeacherId());
     }
 
     /**
-     * 更新教师信息
+     * Update teacher info
      */
     @PutMapping("/teachers/{id}")
-    public Result<Void> updateTeacher(@PathVariable Long id, @RequestBody Teacher teacher) {
-        // TODO: 实现实际的数据库更新
+    public Result<Void> updateTeacher(@PathVariable Integer id, @RequestBody Teacher teacher) {
+        teacher.setTeacherId(id);
+        if (StringUtils.hasText(teacher.getTeacherPassword())) {
+            teacher.setTeacherPassword(AESUtil.encrypt(teacher.getTeacherPassword()));
+        }
+        teacherUserMapper.updateById(teacher);
         return Result.success();
     }
 
     /**
-     * 删除教师
+     * Delete teacher
      */
     @DeleteMapping("/teachers/{id}")
-    public Result<Void> deleteTeacher(@PathVariable Long id) {
-        // TODO: 实现实际的数据库删除
+    public Result<Void> deleteTeacher(@PathVariable Integer id) {
+        teacherUserMapper.deleteById(id);
         return Result.success();
     }
 
     /**
-     * 批量删除教师
+     * Batch delete teachers
      */
     @PostMapping("/teachers/batch-delete")
-    public Result<Void> batchDeleteTeachers(@RequestBody Map<String, List<Long>> data) {
-        List<Long> ids = data.get("ids");
-        // TODO: 实现实际的批量删除
+    public Result<Void> batchDeleteTeachers(@RequestBody Map<String, List<Integer>> data) {
+        List<Integer> ids = data.get("ids");
+        if (ids != null && !ids.isEmpty()) {
+            teacherUserMapper.deleteBatchIds(ids);
+        }
         return Result.success();
     }
 
     /**
-     * 启用/禁用教师账号
-     */
-    @PutMapping("/teachers/{id}/status")
-    public Result<Void> toggleTeacherStatus(@PathVariable Long id, @RequestBody Map<String, Integer> data) {
-        Integer status = data.get("status");
-        // TODO: 实现实际的状态更新
-        return Result.success();
-    }
-
-    /**
-     * 重置教师密码
+     * Reset teacher password
      */
     @PutMapping("/teachers/{id}/reset-password")
-    public Result<Void> resetTeacherPassword(@PathVariable Long id) {
-        // TODO: 实现实际的密码重置，默认密码 123456
+    public Result<Void> resetTeacherPassword(@PathVariable Integer id) {
+        Teacher teacher = new Teacher();
+        teacher.setTeacherId(id);
+        teacher.setTeacherPassword(AESUtil.encrypt("123456")); // Default password encrypted
+        teacherUserMapper.updateById(teacher);
         return Result.success();
     }
 }

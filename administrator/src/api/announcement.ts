@@ -4,14 +4,14 @@
 import request from './request'
 
 export interface Announcement {
-  id: number
+  notificationId: number
   title: string
   content: string
-  type: string // 'SYSTEM' | 'NOTICE' | 'URGENT'
-  target: string // 'ALL' | 'STUDENT' | 'TEACHER'
-  status: number // 0: 草稿, 1: 已发布
-  publishTime?: string
+  targetType: string // 'ALL' | 'STUDENT' | 'TEACHER'
+  priority: number // 1: NOTICE, 2: SYSTEM, 3: URGENT
+  createBy?: string
   createTime?: string
+  expireTime?: string
   updateTime?: string
 }
 
@@ -20,8 +20,6 @@ export interface AnnouncementListParams {
   pageSize?: number
   keyword?: string
   type?: string
-  target?: string
-  status?: number
 }
 
 /**

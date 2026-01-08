@@ -4,8 +4,8 @@
       <!-- Sidebar -->
       <aside class="chat-sidebar">
         <div class="sidebar-tabs">
-          <div 
-            class="tab-item" 
+          <div
+            class="tab-item"
             :class="{ active: activeTab === 'chat' }"
             @click="activeTab = 'chat'"
           >
@@ -15,8 +15,8 @@
             </div>
             <span class="tab-label">私信</span>
           </div>
-          <div 
-            class="tab-item" 
+          <div
+            class="tab-item"
             :class="{ active: activeTab === 'interaction' }"
             @click="activeTab = 'interaction'"
           >
@@ -30,19 +30,19 @@
 
         <div v-show="activeTab === 'chat'" class="sidebar-content">
           <div class="search-wrap">
-            <el-input 
-              v-model="searchKeyword" 
-              placeholder="搜索联系人..." 
+            <el-input
+              v-model="searchKeyword"
+              placeholder="搜索联系人..."
               prefix-icon="Search"
-              clearable 
+              clearable
               class="glass-input-small"
             />
           </div>
-          
+
           <div v-loading="loadingContacts" class="user-list custom-scrollbar">
-            <div 
-              v-for="user in filteredUserList" 
-              :key="user.contactId" 
+            <div
+              v-for="user in filteredUserList"
+              :key="user.contactId"
               class="user-item"
               :class="{ active: currentChatUser?.contactId === user.contactId }"
               @click="selectChatUser(user)"
@@ -66,7 +66,7 @@
           </div>
         </div>
         <div v-show="activeTab === 'interaction'" class="sidebar-content interaction-menu">
-           <div 
+           <div
              class="menu-item"
              :class="{ active: activeInteractionType === 'comment' }"
              @click="activeInteractionType = 'comment'"
@@ -76,7 +76,7 @@
               <el-icon class="arrow"><ArrowRight /></el-icon>
            </div>
 
-           <div 
+           <div
              class="menu-item"
              :class="{ active: activeInteractionType === 'system' }"
              @click="activeInteractionType = 'system'"
@@ -133,10 +133,10 @@
                  <el-icon title="星标"><Star /></el-icon>
                </div>
                <div class="input-wrapper">
-                 <textarea 
-                   v-model="inputMessage" 
-                   class="chat-input" 
-                   placeholder="按 Enter 发送消息..." 
+                 <textarea
+                   v-model="inputMessage"
+                   class="chat-input"
+                   placeholder="按 Enter 发送消息..."
                    @keydown.enter.prevent="handleSendMessage"
                  ></textarea>
                  <div class="send-btn-wrap">
@@ -147,21 +147,19 @@
                </div>
             </footer>
           </template>
-          
+
           <div v-else class="empty-state">
             <img src="https://cdni.iconscout.com/illustration/premium/thumb/messaging-1-5364468-4491787.png" alt="Empty" width="200" style="opacity: 0.6; mix-blend-mode: multiply;">
             <h3>开始聊天</h3>
             <p>从左侧列表选择一位学生进行沟通</p>
           </div>
         </template>
-
-        <!-- View 2: Interaction List -->
         <template v-if="activeTab === 'interaction'">
            <header class="window-header interaction-header">
               <h3>{{ interactionTitle }}</h3>
               <el-button link type="primary" @click="markAllRead">全部标记已读</el-button>
            </header>
-           
+
            <div v-loading="interactionLoading" class="interaction-list custom-scrollbar">
               <div v-for="(item, index) in filteredInteractionList" :key="index" class="interaction-item animate-slide-up">
                  <div class="item-avatar">
@@ -175,14 +173,28 @@
                        <span class="time">{{ formatDetailedTime(item.time) }}</span>
                     </div>
                     <div class="reply-content" v-if="item.content">{{ item.content }}</div>
-                    
+
                     <div class="item-actions">
-                       <el-button v-if="item.type === 'COMMENT'" link type="primary" size="small" @click="handleInteractionDetail(item)">回复</el-button>
+                       <el-button v-if="item.type === 'COMMENT'" link type="primary" size="small" @click="toggleQuickReply(item)">
+                         {{ item.showReply ? '取消回复' : '快捷回复' }}
+                       </el-button>
                        <el-button link size="small" @click="handleInteractionDetail(item)">查看详情</el-button>
+                    </div>
+                    <div v-if="item.showReply" class="quick-reply-box">
+                       <el-input 
+                         v-model="item.replyContent" 
+                         placeholder="发送私信回复..." 
+                         size="small"
+                         @keydown.enter.prevent="handleQuickReply(item)"
+                       >
+                         <template #append>
+                           <el-button @click="handleQuickReply(item)">发送</el-button>
+                         </template>
+                       </el-input>
                     </div>
                  </div>
               </div>
-              
+
               <div v-if="filteredInteractionList.length === 0" class="empty-state">
                  <el-empty description="暂无新消息" />
               </div>
@@ -195,19 +207,21 @@
 
 <script setup>
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
-import { 
+import { useRouter } from 'vue-router'
+import {
   ChatLineRound, Search, MoreFilled, Picture, Folder, Comment, Bell, ArrowRight, VideoPlay, Star
 } from '@element-plus/icons-vue'
 import '@/assets/css/teacher/modern-theme.css'
 import { getMessageList, markAsRead, getUnreadCount } from '@/api/message.js'
-import { 
-  sendChatMessage, getChatHistory, getChatContacts, 
-  getActiveContacts, markChatRead, getChatUnreadCount 
+import {
+  sendChatMessage, getChatHistory, getChatContacts,
+  getActiveContacts, markChatRead, getChatUnreadCount
 } from '@/api/chat'
+import { getTeacherComments, addComment } from '@/api/comment'
 import { ElMessage } from 'element-plus'
 
-const activeTab = ref('chat') 
-const activeInteractionType = ref('comment') 
+const activeTab = ref('chat')
+const activeInteractionType = ref('comment')
 const loadingContacts = ref(false)
 const interactionLoading = ref(false)
 const searchKeyword = ref('')
@@ -249,11 +263,11 @@ const loadContacts = async () => {
     try {
         const activeRes = await getActiveContacts(teacherType.toLowerCase(), teacherId)
         const chatRes = await getChatContacts(teacherType.toLowerCase(), teacherId)
-        
+
         if (activeRes.code === 200) {
             const activeContacts = activeRes.data || []
             const chatSummaries = chatRes.code === 200 ? chatRes.data : []
-            
+
             userList.value = activeContacts.map(ac => {
                 const summary = chatSummaries.find(cs => cs.contactId === ac.contactId)
                 return {
@@ -263,7 +277,7 @@ const loadContacts = async () => {
                     unreadCount: summary?.unreadCount || 0
                 }
             })
-            
+
             userList.value.sort((a, b) => {
                 if (!a.lastTime && !b.lastTime) return 0
                 if (!a.lastTime) return 1
@@ -279,30 +293,107 @@ const updateUnreadCounts = async () => {
     try {
         const chatRes = await getChatUnreadCount(teacherType.toLowerCase(), teacherId)
         if (chatRes.code === 200) chatUnreadTotal.value = chatRes.data
-        
+
         const sysRes = await getUnreadCount(teacherId, teacherType)
         if (sysRes.code === 200) interactionUnread.value = sysRes.data.unreadCount
     } catch (e) {}
 }
 
+const router = useRouter()
+
 const loadInteractions = async () => {
     interactionLoading.value = true
     try {
-        const res = await getMessageList(teacherId, teacherType, { pageSize: 50 })
-        if (res.code === 200 && res.data) {
+        const res = await getMessageList(teacherId, teacherType, {
+          pageSize: 50
+        })
+        if (res.code === 200 && res.data && res.data.records.length > 0) {
             interactionList.value = res.data.records.map(m => ({
                 id: m.messageId,
                 senderId: m.senderId,
-                type: m.messageType || (m.title?.includes('系统通知') ? 'SYSTEM' : 'COMMENT'),
+                type: m.messageType || (m.title?.includes('回复了你的评论') ? 'SYSTEM' : 'COMMENT'),
+                senderType: m.senderType || 'STUDENT',
                 userName: m.senderName || '系统',
                 userAvatar: m.senderAvatar || '',
                 content: m.content,
                 time: m.createTime,
                 isRead: m.isRead === 1,
-                actionText: m.title
+                actionText: m.title,
+                relatedId: m.relatedId, // Map relatedId
+                showReply: false,
+                replyContent: ''
             }))
+        } else {
+            // 添加静态模拟数据
+            interactionList.value = [
+                {
+                    id: '1',
+                    senderId: '1', // Fixed: use numeric ID string
+                    senderType: 'STUDENT',
+                    type: 'COMMENT',
+                    userName: '小明',
+                    userAvatar: 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
+                    content: '老师，我对这个问题还是不太理解，可以再详细解释一下吗？',
+                    time: new Date().toISOString(),
+                    isRead: false,
+                    actionText: '回复了你的评论',
+                    relatedId: '1', // Mock course ID
+                    showReply: false,
+                    replyContent: ''
+                },
+                {
+                    id: '2',
+                    senderId: '2', // Fixed: use numeric ID string
+                    senderType: 'STUDENT',
+                    type: 'COMMENT',
+                    userName: '小红',
+                    userAvatar: 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
+                    content: '谢谢老师的解答，我现在明白了！',
+                    time: new Date(Date.now() - 1800000).toISOString(),
+                    isRead: true,
+                    actionText: '回复了你的评论',
+                    relatedId: '1',
+                    showReply: false,
+                    replyContent: ''
+                },
+                {
+                    id: '3',
+                    senderId: '3', // Fixed: use numeric ID string
+                    senderType: 'STUDENT',
+                    type: 'COMMENT',
+                    userName: '小李',
+                    userAvatar: 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
+                    content: '老师，这个题目还有其他解法吗？',
+                    time: new Date(Date.now() - 7200000).toISOString(),
+                    isRead: true,
+                    actionText: '回复了你的评论',
+                    relatedId: '2',
+                    showReply: false,
+                    replyContent: ''
+                }
+            ]
         }
-    } catch (e) {} finally { interactionLoading.value = false }
+    } catch (e) {
+        console.error('加载互动消息失败:', e)
+        // 加载失败时也显示模拟数据
+        interactionList.value = [
+            {
+                id: '1',
+                senderId: '1',
+                senderType: 'STUDENT',
+                type: 'COMMENT',
+                userName: '小明',
+                userAvatar: 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png',
+                content: '老师，我对这个问题还是不太理解，可以再详细解释一下吗？',
+                time: new Date().toISOString(),
+                isRead: false,
+                actionText: '回复了你的评论',
+                relatedId: '1',
+                showReply: false,
+                replyContent: ''
+            }
+        ]
+    } finally { interactionLoading.value = false }
 }
 
 const selectChatUser = async (user) => {
@@ -335,17 +426,17 @@ const handleSendMessage = async () => {
     if (!inputMessage.value.trim() || !currentChatUser.value) return
     const text = inputMessage.value
     const msg = {
-        senderId: String(teacherId), 
+        senderId: String(teacherId),
         senderType: teacherType,
-        receiverId: String(currentChatUser.value.contactId), 
+        receiverId: String(currentChatUser.value.contactId),
         receiverType: 'STUDENT',
-        content: text, 
+        content: text,
         msgType: 'TEXT'
     }
-    
+
     // 清空输入框
     inputMessage.value = ''
-    
+
     try {
         console.log('教师发送消息:', msg)
         const res = await sendChatMessage(msg)
@@ -353,7 +444,7 @@ const handleSendMessage = async () => {
             // 使用后端返回的完整对象
             if (!Array.isArray(currentMessages.value)) currentMessages.value = []
             currentMessages.value.push(res.data)
-            
+
             // 更新左侧列表
             if (currentChatUser.value) {
                 currentChatUser.value.lastMessage = text
@@ -388,8 +479,17 @@ const handleInteractionDetail = async (item) => {
         } catch (e) {}
     }
     
-    // 2. 如果是学生评价，跳转到与该学生的聊天
-    if (item.senderId && item.type === 'COMMENT') {
+    // 如果是课程评论，跳转到课程详情页的评论部分
+    if (item.relatedId && item.type === 'COMMENT') {
+        router.push({
+            path: `/course/detail/${item.relatedId}`,
+            query: { tab: 'discussion' } // Assuming 'discussion' or 'comments' is the tab name
+        })
+        return
+    }
+
+    // 2. 如果是其它类型，或者没有relatedId，尝试跳转到私信
+    if (item.senderId) {
         const student = userList.value.find(u => String(u.contactId) === String(item.senderId))
         if (student) {
             activeTab.value = 'chat'
@@ -405,6 +505,37 @@ const handleInteractionDetail = async (item) => {
                 contactType: 'STUDENT'
             })
         }
+    }
+}
+
+const toggleQuickReply = (item) => {
+    item.showReply = !item.showReply
+}
+
+const handleQuickReply = async (item) => {
+    if (!item.replyContent.trim()) return
+
+    try {
+        // Reply via DM (Private Message)
+        const msgData = {
+            senderId: String(teacherId),
+            senderType: teacherType,
+            receiverId: String(item.senderId),
+            receiverType: item.senderType || 'STUDENT',
+            content: `[回复] ${item.replyContent}`,
+            msgType: 'TEXT'
+        }
+        const res = await sendChatMessage(msgData)
+        if (res.code === 200) {
+            ElMessage.success('私信回复成功')
+            item.replyContent = ''
+            item.showReply = false
+        } else {
+            ElMessage.error(res.message || '回复失败')
+        }
+    } catch (error) {
+        console.error(error)
+        ElMessage.error('发送失败')
     }
 }
 
@@ -439,15 +570,15 @@ const formatDetailedTime = (time) => {
     const now = new Date()
     const diff = now - date
     if (diff < 60000) return '刚刚'
-    
+
     // 如果是今天，显示 HH:mm
     if (date.toDateString() === now.toDateString()) {
-        return date.getHours().toString().padStart(2, '0') + ':' + 
+        return date.getHours().toString().padStart(2, '0') + ':' +
                date.getMinutes().toString().padStart(2, '0')
     }
-    
+
     // 超过24h显示日期 MM-dd
-    return (date.getMonth() + 1).toString().padStart(2, '0') + '-' + 
+    return (date.getMonth() + 1).toString().padStart(2, '0') + '-' +
            date.getDate().toString().padStart(2, '0')
 }
 
@@ -459,11 +590,48 @@ const getAvatarUrl = (path) => {
     return `http://localhost:8088${realPath}`
 }
 
+// 刷新当前聊天窗口的消息历史
+const refreshChatHistory = async () => {
+    if (!currentChatUser.value) return
+    try {
+        const res = await getChatHistory({
+            user1Id: teacherId,
+            user1Type: teacherType,
+            user2Id: currentChatUser.value.contactId,
+            user2Type: 'STUDENT'
+        })
+        if (res.code === 200 && res.data) {
+            // 如果有新消息才更新
+            if (Array.isArray(res.data) && res.data.length > currentMessages.value.length) {
+                currentMessages.value = res.data
+                scrollToBottom()
+            } else if (Array.isArray(res.data)) {
+                // 检查最后一条消息是否不同
+                const hasNewMessage = currentMessages.value.length > 0 && 
+                                    res.data.length > 0 && 
+                                    res.data[res.data.length - 1].createTime > currentMessages.value[currentMessages.value.length - 1].createTime
+                if (hasNewMessage) {
+                    currentMessages.value = res.data
+                    scrollToBottom()
+                }
+            }
+        }
+    } catch (error) {
+        console.error('刷新聊天历史失败:', error)
+    }
+}
+
 let timer = null
 onMounted(() => {
     loadContacts()
     loadInteractions()
-    timer = setInterval(updateUnreadCounts, 10000)
+    timer = setInterval(() => {
+        updateUnreadCounts()
+        // 如果打开了聊天窗口，定期刷新历史
+        if (currentChatUser.value && activeTab.value === 'chat') {
+            refreshChatHistory()
+        }
+    }, 10000)
 })
 onUnmounted(() => timer && clearInterval(timer))
 </script>

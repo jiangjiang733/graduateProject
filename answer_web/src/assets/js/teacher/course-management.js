@@ -219,7 +219,6 @@ export function useCourseManagement() {
         try {
             const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
 
-            // 验证teacherId是否存在
             if (!teacherId) {
                 ElMessage.error('未找到教师ID，请重新登录')
                 return

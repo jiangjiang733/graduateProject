@@ -4,27 +4,23 @@
 import request from './request'
 
 export interface Student {
-  id: number
-  studentId: string
-  studentName: string
-  email?: string
-  phone?: string
-  major?: string
-  grade?: string
-  status: number
-  createTime?: string
+  studentsId: number
+  studentsUsername: string
+  studentsEmail?: string
+  studentsMajor?: string
+  studentsGrade?: string
+  studentsPassword?: string
 }
 
 export interface Teacher {
-  id: number
-  teacherId: string
-  teacherName: string
-  email?: string
-  phone?: string
-  department?: string
-  title?: string
-  status: number
-  createTime?: string
+  teacherId: number
+  teacherUsername: string
+  teacherEmail?: string
+  teacherPhone?: string
+  teacherDepartment?: string
+  teacherLevel?: string
+  teacherPassword?: string
+  // Status removed
 }
 
 export interface UserListParams {

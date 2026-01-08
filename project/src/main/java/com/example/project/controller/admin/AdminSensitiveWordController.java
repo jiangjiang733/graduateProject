@@ -1,6 +1,10 @@
 package com.example.project.controller.admin;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.project.common.Result;
+import com.example.project.entity.SensitiveWord;
+import com.example.project.service.SensitiveWordService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -13,6 +17,9 @@ import java.util.*;
 @CrossOrigin(origins = "*")
 public class AdminSensitiveWordController {
 
+    @Autowired
+    private SensitiveWordService sensitiveWordService;
+
     /**
      * 获取敏感词列表
      */
@@ -23,9 +30,13 @@ public class AdminSensitiveWordController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String category,
             @RequestParam(required = false) Integer level) {
+
+        Page<SensitiveWord> page = sensitiveWordService.getSensitiveWordList(pageNumber, pageSize, keyword, category,
+                level);
+
         Map<String, Object> data = new HashMap<>();
-        data.put("list", new ArrayList<>());
-        data.put("total", 0);
+        data.put("list", page.getRecords());
+        data.put("total", page.getTotal());
         data.put("pageNumber", pageNumber);
         data.put("pageSize", pageSize);
 
@@ -36,17 +47,11 @@ public class AdminSensitiveWordController {
      * 获取敏感词详情
      */
     @GetMapping("/{id}")
-    public Result<Map<String, Object>> getSensitiveWordDetail(@PathVariable Long id) {
-        // TODO: 实现实际的数据库查询
-        Map<String, Object> word = new HashMap<>();
-        word.put("id", id);
-        word.put("word", "示例敏感词");
-        word.put("category", "OTHER");
-        word.put("level", 1);
-        word.put("action", "REPLACE");
-        word.put("replacement", "***");
-        word.put("status", 1);
-
+    public Result<SensitiveWord> getSensitiveWordDetail(@PathVariable Long id) {
+        SensitiveWord word = sensitiveWordService.getById(id);
+        if (word == null) {
+            return Result.error("敏感词不存在");
+        }
         return Result.success(word);
     }
 
@@ -54,17 +59,23 @@ public class AdminSensitiveWordController {
      * 创建敏感词
      */
     @PostMapping
-    public Result<Long> createSensitiveWord(@RequestBody Map<String, Object> word) {
-        // TODO: 实现实际的数据库插入
-        return Result.success(1L);
+    public Result<Long> createSensitiveWord(@RequestBody SensitiveWord word) {
+        if (word.getCreateTime() == null) {
+            word.setCreateTime(new Date());
+        }
+        word.setUpdateTime(new Date());
+        sensitiveWordService.save(word);
+        return Result.success(word.getId());
     }
 
     /**
      * 更新敏感词
      */
     @PutMapping("/{id}")
-    public Result<Void> updateSensitiveWord(@PathVariable Long id, @RequestBody Map<String, Object> word) {
-        // TODO: 实现实际的数据库更新
+    public Result<Void> updateSensitiveWord(@PathVariable Long id, @RequestBody SensitiveWord word) {
+        word.setId(id);
+        word.setUpdateTime(new Date());
+        sensitiveWordService.updateById(word);
         return Result.success();
     }
 
@@ -73,7 +84,7 @@ public class AdminSensitiveWordController {
      */
     @DeleteMapping("/{id}")
     public Result<Void> deleteSensitiveWord(@PathVariable Long id) {
-        // TODO: 实现实际的数据库删除
+        sensitiveWordService.removeById(id);
         return Result.success();
     }
 
@@ -83,8 +94,9 @@ public class AdminSensitiveWordController {
     @PostMapping("/batch-delete")
     public Result<Void> batchDeleteSensitiveWords(@RequestBody Map<String, List<Long>> data) {
         List<Long> ids = data.get("ids");
-        System.out.println("Batch delete ids: " + ids);
-        // TODO: 实现实际的批量删除
+        if (ids != null && !ids.isEmpty()) {
+            sensitiveWordService.removeBatchByIds(ids);
+        }
         return Result.success();
     }
 
@@ -97,9 +109,9 @@ public class AdminSensitiveWordController {
         List<String> words = (List<String>) data.get("words");
         String category = (String) data.get("category");
         Integer level = (Integer) data.get("level");
-        System.out.println("Importing words: " + words + ", category: " + category + ", level: " + level);
+        String createBy = "admin"; // Should get from token
 
-        // TODO: 实现实际的批量导入
+        sensitiveWordService.importWords(words, category, level, createBy);
         return Result.success();
     }
 
@@ -109,8 +121,11 @@ public class AdminSensitiveWordController {
     @PutMapping("/{id}/status")
     public Result<Void> toggleSensitiveWordStatus(@PathVariable Long id, @RequestBody Map<String, Integer> data) {
         Integer status = data.get("status");
-        System.out.println("Toggle status to: " + status);
-        // TODO: 实现实际的状态更新
+        SensitiveWord word = new SensitiveWord();
+        word.setId(id);
+        word.setStatus(status);
+        word.setUpdateTime(new Date());
+        sensitiveWordService.updateById(word);
         return Result.success();
     }
 
@@ -120,12 +135,12 @@ public class AdminSensitiveWordController {
     @PostMapping("/test")
     public Result<Map<String, Object>> testSensitiveWords(@RequestBody Map<String, String> data) {
         String text = data.get("text");
-        System.out.println("Testing text: " + text);
+        boolean hasWords = sensitiveWordService.hasSensitiveWords(text);
+        String filtered = sensitiveWordService.filterText(text);
 
-        // TODO: 实现实际的敏感词检测
         Map<String, Object> result = new HashMap<>();
-        result.put("hasSensitiveWords", false);
-        result.put("words", new ArrayList<>());
+        result.put("hasSensitiveWords", hasWords);
+        result.put("filteredText", filtered);
 
         return Result.success(result);
     }

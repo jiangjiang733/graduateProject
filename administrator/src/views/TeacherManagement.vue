@@ -25,17 +25,7 @@
           </template>
         </el-input>
         
-        <el-select
-          v-model="searchForm.status"
-          placeholder="状态"
-          style="width: 150px; margin-left: 10px"
-          clearable
-          @change="loadTeachers"
-        >
-          <el-option label="全部" :value="undefined" />
-          <el-option label="正常" :value="1" />
-          <el-option label="禁用" :value="0" />
-        </el-select>
+
         
         <el-button type="primary" @click="loadTeachers" style="margin-left: 10px">
           搜索
@@ -60,28 +50,33 @@
       >
         <el-table-column type="selection" width="55" />
         <el-table-column prop="teacherId" label="工号" width="120" />
-        <el-table-column prop="teacherName" label="姓名" width="120" />
-        <el-table-column prop="email" label="邮箱" />
-        <el-table-column prop="phone" label="电话" width="130" />
-        <el-table-column prop="department" label="院系" width="150" />
-        <el-table-column prop="title" label="职称" width="100" />
-        <el-table-column label="状态" width="100">
+        <el-table-column prop="teacherUsername" label="姓名" width="120" />
+        <el-table-column prop="teacherEmail" label="邮箱" />
+        <el-table-column prop="teacherPhone" label="电话" width="130" />
+        <el-table-column prop="teacherDepartment" label="院系" width="150" />
+        <el-table-column prop="teacherLevel" label="职称" width="100" />
+        <el-table-column label="密码" width="150">
           <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'danger'">
-              {{ row.status === 1 ? '正常' : '禁用' }}
-            </el-tag>
+            <div class="password-cell">
+              <span v-if="visiblePasswords['t' + row.teacherId]">
+                {{ row.teacherPassword || row.teacher_password || '-' }}
+              </span>
+              <span v-else style="color: #909399; font-family: monospace;">••••••••</span>
+              <el-button 
+                type="primary" 
+                link 
+                id="toggle-password-btn"
+                @click="togglePasswordVisibility('t' + row.teacherId)"
+                style="margin-left: 8px"
+              >
+                <el-icon><View v-if="!visiblePasswords['t' + row.teacherId]" /><Hide v-else /></el-icon>
+              </el-button>
+            </div>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="250" fixed="right">
           <template #default="{ row }">
             <el-button size="small" @click="handleEdit(row)">编辑</el-button>
-            <el-button
-              size="small"
-              :type="row.status === 1 ? 'warning' : 'success'"
-              @click="handleToggleStatus(row)"
-            >
-              {{ row.status === 1 ? '禁用' : '启用' }}
-            </el-button>
             <el-button size="small" type="info" @click="handleResetPassword(row)">
               重置密码
             </el-button>
@@ -121,24 +116,24 @@
           <el-input v-model="form.teacherId" :disabled="isEdit" />
         </el-form-item>
         
-        <el-form-item label="姓名" prop="teacherName">
-          <el-input v-model="form.teacherName" />
+        <el-form-item label="姓名" prop="teacherUsername">
+          <el-input v-model="form.teacherUsername" />
         </el-form-item>
         
-        <el-form-item label="邮箱" prop="email">
-          <el-input v-model="form.email" />
+        <el-form-item label="邮箱" prop="teacherEmail">
+          <el-input v-model="form.teacherEmail" />
         </el-form-item>
         
-        <el-form-item label="电话" prop="phone">
-          <el-input v-model="form.phone" />
+        <el-form-item label="电话" prop="teacherPhone">
+          <el-input v-model="form.teacherPhone" />
         </el-form-item>
         
-        <el-form-item label="院系" prop="department">
-          <el-input v-model="form.department" />
+        <el-form-item label="院系" prop="teacherDepartment">
+          <el-input v-model="form.teacherDepartment" />
         </el-form-item>
         
-        <el-form-item label="职称" prop="title">
-          <el-select v-model="form.title" style="width: 100%">
+        <el-form-item label="职称" prop="teacherLevel">
+          <el-select v-model="form.teacherLevel" style="width: 100%">
             <el-option label="助教" value="助教" />
             <el-option label="讲师" value="讲师" />
             <el-option label="副教授" value="副教授" />
@@ -146,8 +141,8 @@
           </el-select>
         </el-form-item>
         
-        <el-form-item label="密码" prop="password" v-if="!isEdit">
-          <el-input v-model="form.password" type="password" />
+        <el-form-item label="密码" prop="teacherPassword" v-if="!isEdit">
+          <el-input v-model="form.teacherPassword" type="password" />
         </el-form-item>
       </el-form>
       
@@ -164,17 +159,22 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import { Plus, Search } from '@element-plus/icons-vue'
+import { Plus, Search, View, Hide } from '@element-plus/icons-vue'
 import {
   getTeacherList,
   createTeacher,
   updateTeacher,
   deleteTeacher,
   batchDeleteTeachers,
-  toggleTeacherStatus,
   resetTeacherPassword,
   type Teacher
 } from '@/api/user'
+
+const visiblePasswords = reactive<Record<string, boolean>>({})
+
+const togglePasswordVisibility = (id: string) => {
+  visiblePasswords[id] = !visiblePasswords[id]
+}
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -185,8 +185,7 @@ const teachers = ref<Teacher[]>([])
 const selectedIds = ref<number[]>([])
 
 const searchForm = reactive({
-  keyword: '',
-  status: undefined as number | undefined
+  keyword: ''
 })
 
 const pagination = reactive({
@@ -196,24 +195,36 @@ const pagination = reactive({
 })
 
 const form = reactive({
-  id: 0,
-  teacherId: '',
-  teacherName: '',
-  email: '',
-  phone: '',
-  department: '',
-  title: '',
-  password: ''
+
+  // But display prompt has "工号" binding to teacherId (String/Int?).
+  // Entity has private Integer teacherId; (PK) AND private String teacherName (username).
+  // Is there a separate "Work ID" (工号)?
+  // In Teacher.java: teacherId (Integer PK), teacherUsername, teacherPassword, teacherEmail...
+  // Usually PK is hidden. But here "工号" is bound to teacherId.
+  // Given I cannot see a "workId" field, I assume ID is the work ID.
+  // In form, teacherId is disabled in edit mode.
+  // Wait, form.teacherId in previous code was string?
+  // Previous `form` had `teacherId: ''`.
+  // If backend teacherId is Integer PK, then "工号" is the PK.
+  // I'll stick to teacherId.
+  
+  teacherId: '', // as string for input
+  teacherUsername: '',
+  teacherEmail: '',
+  teacherPhone: '',
+  teacherDepartment: '',
+  teacherLevel: '',
+  teacherPassword: ''
 })
 
 const formRules: FormRules = {
   teacherId: [{ required: true, message: '请输入工号', trigger: 'blur' }],
-  teacherName: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
-  email: [
+  teacherUsername: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
+  teacherEmail: [
     { required: true, message: '请输入邮箱', trigger: 'blur' },
     { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
   ],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+  teacherPassword: [{ required: true, message: '请输入密码', trigger: 'blur' }]
 }
 
 const loadTeachers = async () => {
@@ -222,8 +233,7 @@ const loadTeachers = async () => {
     const response = await getTeacherList({
       pageNumber: pagination.pageNumber,
       pageSize: pagination.pageSize,
-      keyword: searchForm.keyword,
-      status: searchForm.status
+      keyword: searchForm.keyword
     })
     
     if (response.code === 200 && response.data) {
@@ -245,6 +255,8 @@ const showAddDialog = () => {
 
 const handleEdit = (row: Teacher) => {
   isEdit.value = true
+  // We need to map row to form. Row has numerical teacherId. Form expects string/number.
+  // row contains all entity fields.
   Object.assign(form, row)
   dialogVisible.value = true
 }
@@ -258,10 +270,10 @@ const handleSubmit = async () => {
     submitting.value = true
     try {
       if (isEdit.value) {
-        await updateTeacher(form.id, form)
+        await updateTeacher(Number(form.teacherId), { ...form, teacherId: Number(form.teacherId) })
         ElMessage.success('更新成功')
       } else {
-        await createTeacher(form)
+        await createTeacher({ ...form, teacherId: Number(form.teacherId) })
         ElMessage.success('添加成功')
       }
       
@@ -283,7 +295,7 @@ const handleDelete = async (row: Teacher) => {
       type: 'warning'
     })
     
-    await deleteTeacher(row.id)
+    await deleteTeacher(row.teacherId!)
     ElMessage.success('删除成功')
     loadTeachers()
   } catch (error) {
@@ -312,37 +324,29 @@ const handleBatchDelete = async () => {
   }
 }
 
-const handleToggleStatus = async (row: Teacher) => {
-  const newStatus = row.status === 1 ? 0 : 1
-  const action = newStatus === 1 ? '启用' : '禁用'
-  
-  try {
-    await ElMessageBox.confirm(`确定要${action}该教师账号吗？`, '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    })
-    
-    await toggleTeacherStatus(row.id, newStatus)
-    ElMessage.success(`${action}成功`)
-    loadTeachers()
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error(`${action}失败:`, error)
-    }
-  }
-}
-
 const handleResetPassword = async (row: Teacher) => {
   try {
-    await ElMessageBox.confirm('确定要重置该教师的密码吗？密码将重置为默认密码。', '提示', {
-      confirmButtonText: '确定',
+    await ElMessageBox.confirm('确定要重置该教师的密码吗？密码将重置为默认密码。', '重置确认', {
+      confirmButtonText: '确定重置',
       cancelButtonText: '取消',
       type: 'warning'
     })
     
-    await resetTeacherPassword(row.id)
-    ElMessage.success('密码重置成功，默认密码为: 123456')
+    await resetTeacherPassword(row.teacherId!)
+    
+    await ElMessageBox.alert(
+      '<div style="text-align: center; padding: 10px;">' +
+      '<p style="font-size: 16px; margin-bottom: 10px;">密码重置成功！</p>' +
+      '<p style="color: #666;">重置后的密码为：</p>' +
+      '<div style="background: #f0f9eb; color: #67c23a; font-size: 24px; font-weight: bold; padding: 15px; border-radius: 8px; margin-top: 5px; letter-spacing: 2px;">123456</div>' +
+      '</div>',
+      '重置结果',
+      {
+        dangerouslyUseHTMLString: true,
+        confirmButtonText: '知道了',
+        center: true
+      }
+    )
   } catch (error) {
     if (error !== 'cancel') {
       console.error('重置密码失败:', error)
@@ -351,19 +355,18 @@ const handleResetPassword = async (row: Teacher) => {
 }
 
 const handleSelectionChange = (selection: Teacher[]) => {
-  selectedIds.value = selection.map(item => item.id)
+  selectedIds.value = selection.map(item => item.teacherId!)
 }
 
 const resetForm = () => {
   Object.assign(form, {
-    id: 0,
     teacherId: '',
-    teacherName: '',
-    email: '',
-    phone: '',
-    department: '',
-    title: '',
-    password: ''
+    teacherUsername: '',
+    teacherEmail: '',
+    teacherPhone: '',
+    teacherDepartment: '',
+    teacherLevel: '',
+    teacherPassword: ''
   })
   formRef.value?.clearValidate()
 }
@@ -375,17 +378,71 @@ onMounted(() => {
 
 <style scoped>
 .teacher-management {
-  padding: 20px;
+  padding: 24px;
+  background-color: #f8fafc;
+  min-height: 100vh;
+}
+
+.el-card {
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: none;
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e293b;
 }
 
 .search-bar {
   display: flex;
   align-items: center;
+  margin-bottom: 24px;
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+:deep(.el-table) {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+:deep(.el-table th) {
+  background-color: #f8fafc !important;
+  color: #475569;
+  font-weight: 600;
+}
+
+:deep(.el-table--striped .el-table__body tr.el-table__row--striped td) {
+  background: #f8fafc;
+}
+
+:deep(.el-button--primary) {
+  background-color: #3b82f6;
+  border-color: #3b82f6;
+}
+
+:deep(.el-button--primary:hover) {
+  background-color: #2563eb;
+  border-color: #2563eb;
+}
+
+:deep(.el-button--danger) {
+  background-color: #ef4444;
+  border-color: #ef4444;
+}
+
+:deep(.el-tag) {
+  border-radius: 4px;
+  padding: 0 12px;
+  height: 28px;
+  line-height: 26px;
 }
 </style>

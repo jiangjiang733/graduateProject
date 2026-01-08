@@ -59,7 +59,7 @@
           <el-option label="严重" :value="3" />
         </el-select>
         
-        <el-button type="primary" @click="loadWords" style="margin-left: 10px">
+        <el-button type="primary" @click="loadSensitiveWords" style="margin-left: 10px">
           搜索
         </el-button>
         
@@ -75,40 +75,41 @@
       
       <!-- 表格 -->
       <el-table
-        :data="words"
+        :data="sensitiveWords"
         v-loading="loading"
         style="margin-top: 20px"
         @selection-change="handleSelectionChange"
       >
         <el-table-column type="selection" width="55" />
-        <el-table-column prop="word" label="敏感词" width="200" />
-        <el-table-column label="分类" width="100">
+        <el-table-column prop="word" label="敏感词" />
+        <el-table-column prop="category" label="分类" width="120">
           <template #default="{ row }">
-            <el-tag :type="getCategoryTag(row.category)">
-              {{ getCategoryText(row.category) }}
-            </el-tag>
+            <el-tag>{{ row.category || '通用' }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="级别" width="100">
+        <el-table-column prop="level" label="敏感级别" width="100">
           <template #default="{ row }">
-            <el-tag :type="getLevelTag(row.level)">
-              {{ getLevelText(row.level) }}
-            </el-tag>
+            <el-tag :type="getLevelTag(row.level)">{{ getLevelText(row.level) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="处理方式" width="120">
+        <el-table-column prop="action" label="处理动作" width="100">
           <template #default="{ row }">
             {{ getActionText(row.action) }}
           </template>
         </el-table-column>
-        <el-table-column prop="replacement" label="替换词" width="150" />
+        <el-table-column prop="replacement" label="替换词" width="120">
+          <template #default="{ row }">
+            {{ row.replacement || '-' }}
+          </template>
+        </el-table-column>
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : 'info'">
+            <el-tag :type="row.status === 1 ? 'success' : 'danger'">
               {{ row.status === 1 ? '启用' : '禁用' }}
             </el-tag>
           </template>
         </el-table-column>
+        <el-table-column prop="createTime" label="创建时间" width="180" />
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <el-button size="small" @click="handleEdit(row)">编辑</el-button>
@@ -134,8 +135,8 @@
         :page-sizes="[10, 20, 50, 100]"
         layout="total, sizes, prev, pager, next"
         style="margin-top: 20px; justify-content: flex-end"
-        @size-change="loadWords"
-        @current-change="loadWords"
+        @size-change="loadSensitiveWords"
+        @current-change="loadSensitiveWords"
       />
     </el-card>
     
@@ -220,7 +221,7 @@
       
       <template #footer>
         <el-button @click="importDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleImport" :loading="importing">
+        <el-button type="primary" @click="handleImport" :loading="submitting">
           导入
         </el-button>
       </template>
@@ -229,23 +230,23 @@
     <!-- 测试对话框 -->
     <el-dialog v-model="testDialogVisible" title="测试敏感词" width="600px">
       <el-input
-        v-model="testText"
+        v-model="testForm.text"
         type="textarea"
         :rows="6"
         placeholder="输入要测试的文本"
       />
       
-      <div v-if="testResult" class="test-result">
+      <div v-if="testForm.result" class="test-result">
         <el-divider />
         <h4>检测结果:</h4>
-        <p v-if="testResult.hasSensitiveWords" style="color: #f56c6c;">
-          检测到 {{ testResult.words?.length || 0 }} 个敏感词
+        <p v-if="testForm.result.hasSensitiveWords" style="color: #f56c6c;">
+          检测到 {{ testForm.result.words?.length || 0 }} 个敏感词
         </p>
         <p v-else style="color: #67c23a;">未检测到敏感词</p>
         
-        <div v-if="testResult.words && testResult.words.length > 0">
+        <div v-if="testForm.result.words && testForm.result.words.length > 0">
           <el-tag
-            v-for="(word, index) in testResult.words"
+            v-for="(word, index) in testForm.result.words"
             :key="index"
             type="danger"
             style="margin: 5px"
@@ -257,7 +258,7 @@
       
       <template #footer>
         <el-button @click="testDialogVisible = false">关闭</el-button>
-        <el-button type="primary" @click="handleTest" :loading="testing">
+        <el-button type="primary" @click="handleTest" :loading="loading">
           测试
         </el-button>
       </template>
@@ -268,7 +269,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus'
-import { Plus, Search, Upload } from '@element-plus/icons-vue'
+import { Plus, Search, Upload, Refresh } from '@element-plus/icons-vue'
 import {
   getSensitiveWordList,
   createSensitiveWord,
@@ -277,23 +278,21 @@ import {
   batchDeleteSensitiveWords,
   importSensitiveWords,
   toggleSensitiveWordStatus,
-  testSensitiveWords,
+  testSensitiveWord,
   type SensitiveWord
 } from '@/api/sensitive'
 
 const loading = ref(false)
 const submitting = ref(false)
-const importing = ref(false)
-const testing = ref(false)
 const dialogVisible = ref(false)
 const importDialogVisible = ref(false)
 const testDialogVisible = ref(false)
 const isEdit = ref(false)
 const formRef = ref<FormInstance>()
-const words = ref<SensitiveWord[]>([])
+const importFormRef = ref<FormInstance>()
+const testFormRef = ref<FormInstance>()
+const sensitiveWords = ref<SensitiveWord[]>([])
 const selectedIds = ref<number[]>([])
-const testText = ref('')
-const testResult = ref<any>(null)
 
 const searchForm = reactive({
   keyword: '',
@@ -310,48 +309,58 @@ const pagination = reactive({
 const form = reactive({
   id: 0,
   word: '',
-  category: 'OTHER',
+  category: '',
   level: 1,
   action: 'REPLACE',
-  replacement: '***'
+  replacement: '',
+  status: 1
 })
 
 const importForm = reactive({
   words: '',
-  category: 'OTHER',
+  category: '',
   level: 1
+})
+
+const testForm = reactive({
+  text: '',
+  result: null as any
 })
 
 const formRules: FormRules = {
   word: [{ required: true, message: '请输入敏感词', trigger: 'blur' }],
   category: [{ required: true, message: '请选择分类', trigger: 'change' }],
-  level: [{ required: true, message: '请选择级别', trigger: 'change' }],
-  action: [{ required: true, message: '请选择处理方式', trigger: 'change' }]
+  level: [{ required: true, message: '请选择敏感级别', trigger: 'change' }],
+  action: [{ required: true, message: '请选择处理动作', trigger: 'change' }]
 }
 
 const getCategoryTag = (category: string) => {
   const map: Record<string, string> = {
-    PROFANITY: 'danger',
-    POLITICAL: 'warning',
-    VIOLENCE: 'danger',
-    OTHER: 'info'
+    POLITICAL: 'danger',
+    VIOLENCE: 'warning',
+    PORN: 'danger',
+    ADVERTISEMENT: 'info',
+    PROFANITY: 'danger', // Added PROFANITY
+    OTHER: 'info' // Added OTHER
   }
   return map[category] || 'info'
 }
 
 const getCategoryText = (category: string) => {
   const map: Record<string, string> = {
-    PROFANITY: '脏话',
     POLITICAL: '政治',
     VIOLENCE: '暴力',
-    OTHER: '其他'
+    PORN: '色情',
+    ADVERTISEMENT: '广告',
+    PROFANITY: '脏话', // Added PROFANITY
+    OTHER: '其他' // Added OTHER
   }
-  return map[category] || category
+  return map[category] || category || '通用'
 }
 
 const getLevelTag = (level: number) => {
   const map: Record<number, string> = {
-    1: 'success',
+    1: 'info',
     2: 'warning',
     3: 'danger'
   }
@@ -360,11 +369,11 @@ const getLevelTag = (level: number) => {
 
 const getLevelText = (level: number) => {
   const map: Record<number, string> = {
-    1: '轻度',
-    2: '中度',
-    3: '严重'
+    1: '低',
+    2: '中',
+    3: '高'
   }
-  return map[level] || String(level)
+  return map[level] || '未知'
 }
 
 const getActionText = (action: string) => {
@@ -373,10 +382,10 @@ const getActionText = (action: string) => {
     BLOCK: '屏蔽',
     WARN: '警告'
   }
-  return map[action] || action
+  return map[action] || '未知'
 }
 
-const loadWords = async () => {
+const loadSensitiveWords = async () => {
   loading.value = true
   try {
     const response = await getSensitiveWordList({
@@ -388,7 +397,7 @@ const loadWords = async () => {
     })
     
     if (response.code === 200 && response.data) {
-      words.value = response.data.list || []
+      sensitiveWords.value = response.data.list || []
       pagination.total = response.data.total || 0
     }
   } catch (error) {
@@ -406,15 +415,17 @@ const showAddDialog = () => {
 
 const showImportDialog = () => {
   importForm.words = ''
-  importForm.category = 'OTHER'
+  importForm.category = ''
   importForm.level = 1
   importDialogVisible.value = true
+  importFormRef.value?.resetFields() // Reset validation
 }
 
 const showTestDialog = () => {
-  testText.value = ''
-  testResult.value = null
+  testForm.text = ''
+  testForm.result = null
   testDialogVisible.value = true
+  testFormRef.value?.resetFields() // Reset validation
 }
 
 const handleEdit = (row: SensitiveWord) => {
@@ -440,7 +451,7 @@ const handleSubmit = async () => {
       }
       
       dialogVisible.value = false
-      loadWords()
+      loadSensitiveWords()
     } catch (error) {
       console.error('操作失败:', error)
     } finally {
@@ -450,44 +461,47 @@ const handleSubmit = async () => {
 }
 
 const handleImport = async () => {
-  if (!importForm.words.trim()) {
-    ElMessage.warning('请输入敏感词')
-    return
-  }
+  if (!importFormRef.value) return
   
-  importing.value = true
-  try {
-    const wordList = importForm.words.split('\n').filter(w => w.trim())
-    await importSensitiveWords({
-      words: wordList,
-      category: importForm.category,
-      level: importForm.level
-    })
+  await importFormRef.value.validate(async (valid) => {
+    if (!valid) return
     
-    ElMessage.success(`成功导入 ${wordList.length} 个敏感词`)
-    importDialogVisible.value = false
-    loadWords()
-  } catch (error) {
-    console.error('导入失败:', error)
-  } finally {
-    importing.value = false
-  }
+    submitting.value = true
+    try {
+      const wordList = importForm.words.split('\n').filter(w => w.trim())
+      await importSensitiveWords({
+        words: wordList,
+        category: importForm.category,
+        level: importForm.level
+      })
+      
+      ElMessage.success(`成功导入 ${wordList.length} 个敏感词`)
+      importDialogVisible.value = false
+      loadSensitiveWords()
+    } catch (error) {
+      console.error('导入失败:', error)
+    } finally {
+      submitting.value = false
+    }
+  })
 }
 
 const handleTest = async () => {
-  if (!testText.value.trim()) {
+  if (!testForm.text.trim()) {
     ElMessage.warning('请输入要测试的文本')
     return
   }
   
-  testing.value = true
+  loading.value = true
   try {
-    const response = await testSensitiveWords(testText.value)
-    testResult.value = response.data
+    const response = await testSensitiveWord(testForm.text)
+    if (response.code === 200) {
+      testForm.result = response.data
+    }
   } catch (error) {
     console.error('测试失败:', error)
   } finally {
-    testing.value = false
+    loading.value = false
   }
 }
 
@@ -501,7 +515,7 @@ const handleDelete = async (row: SensitiveWord) => {
     
     await deleteSensitiveWord(row.id)
     ElMessage.success('删除成功')
-    loadWords()
+    loadSensitiveWords()
   } catch (error) {
     if (error !== 'cancel') {
       console.error('删除失败:', error)
@@ -520,7 +534,7 @@ const handleBatchDelete = async () => {
     await batchDeleteSensitiveWords(selectedIds.value)
     ElMessage.success('批量删除成功')
     selectedIds.value = []
-    loadWords()
+    loadSensitiveWords()
   } catch (error) {
     if (error !== 'cancel') {
       console.error('批量删除失败:', error)
@@ -533,11 +547,19 @@ const handleToggleStatus = async (row: SensitiveWord) => {
   const action = newStatus === 1 ? '启用' : '禁用'
   
   try {
+    await ElMessageBox.confirm(`确定要${action}该敏感词吗？`, '提示', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    
     await toggleSensitiveWordStatus(row.id, newStatus)
     ElMessage.success(`${action}成功`)
-    loadWords()
+    loadSensitiveWords()
   } catch (error) {
-    console.error(`${action}失败:`, error)
+    if (error !== 'cancel') {
+      console.error(`${action}失败:`, error)
+    }
   }
 }
 
@@ -549,16 +571,17 @@ const resetForm = () => {
   Object.assign(form, {
     id: 0,
     word: '',
-    category: 'OTHER',
+    category: '',
     level: 1,
     action: 'REPLACE',
-    replacement: '***'
+    replacement: '',
+    status: 1
   })
   formRef.value?.clearValidate()
 }
 
 onMounted(() => {
-  loadWords()
+  loadSensitiveWords()
 })
 </script>
 
