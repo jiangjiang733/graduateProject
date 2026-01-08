@@ -38,6 +38,9 @@ public class DashboardServiceImpl implements DashboardService {
     @Autowired
     private com.example.project.mapper.homework.StudentLabReportMapper studentLabReportMapper;
 
+    @Autowired
+    private com.example.project.mapper.StudentUserMapper studentUserMapper;
+
     @Override
     public DashboardStatisticsDTO getStatistics(String teacherId) {
         DashboardStatisticsDTO statistics = new DashboardStatisticsDTO();
@@ -55,12 +58,14 @@ public class DashboardServiceImpl implements DashboardService {
             List<String> courseIds = courses.stream().map(Course::getId).collect(Collectors.toList());
 
             if (!courseIds.isEmpty()) {
-                // 1. 学生总数
+                // 1. 活跃学生总数 (去重处理：同一学生加入多个课程只算一个)
                 QueryWrapper<com.example.project.entity.course.StudentCourse> scWrapper = new QueryWrapper<>();
                 scWrapper.in("course_id", courseIds);
                 scWrapper.eq("status", 1);
-                Long studentCount = studentCourseMapper.selectCount(scWrapper);
-                statistics.setStudentCount(studentCount.intValue());
+                // 获取所有学生ID并去重
+                scWrapper.select("DISTINCT student_id");
+                List<Object> studentIds = studentCourseMapper.selectObjs(scWrapper);
+                statistics.setStudentCount(studentIds != null ? studentIds.size() : 0);
 
                 // 2. 待批改作业数 (统计已提交但未批改的记录)
                 QueryWrapper<com.example.project.entity.homework.StudentLabReport> slrWrapper = new QueryWrapper<>();
@@ -205,9 +210,21 @@ public class DashboardServiceImpl implements DashboardService {
                 if (report != null && courseIds.contains(report.getCourseId())) {
                     Map<String, Object> msg = new HashMap<>();
                     msg.put("studentName", sub.getStudentName());
+                    msg.put("type", "homework"); // 添加类型字段
                     msg.put("title", "提交了作业");
                     msg.put("content", report.getReportTitle());
                     msg.put("time", sub.getSubmitTime());
+
+                    // 添加学生头像
+                    try {
+                        com.example.project.entity.Student student = studentUserMapper.selectById(sub.getStudentId());
+                        if (student != null && student.getStudentsHead() != null) {
+                            msg.put("studentAvatar", student.getStudentsHead());
+                        }
+                    } catch (Exception e) {
+                        // 如果获取头像失败，不影响其他数据
+                    }
+
                     messages.add(msg);
                 }
             }

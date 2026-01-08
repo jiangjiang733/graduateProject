@@ -2,9 +2,9 @@
   <div class="course-management">
     <div class="course-header">
       <div class="search-input">
-        <el-input 
-          v-model="searchKeyword" 
-          placeholder="搜索课程" 
+        <el-input
+          v-model="searchKeyword"
+          placeholder="搜索课程"
           prefix-icon="Search"
           @keyup.enter="handleSearch"
           clearable
@@ -49,17 +49,17 @@
     </div>
     <!-- 课程列表 -->
     <div v-if="!loading && courses.length > 0" class="course-grid">
-      <el-card 
-        v-for="course in courses" 
+      <el-card
+        v-for="course in courses"
         :key="course.id"
-        class="course-card" 
+        class="course-card"
         shadow="hover"
       >
         <template #header>
           <div class="course-header-content">
             <div class="course-header-title">{{ course.courseName || course.name }}</div>
-            <el-tag 
-              :type="course.state === 1 ? 'success' : 'info'" 
+            <el-tag
+              :type="course.state === 1 ? 'success' : 'info'"
               size="small"
             >
               {{ course.state === 1 ? '已发布' : '草稿' }}
@@ -74,7 +74,7 @@
           />
           <div class="course-info">
             <div class="course-description">{{ course.courseDescription || course.description || '暂无描述' }}</div>
-            
+
             <div class="course-meta-grid">
               <div class="meta-item">
                 <el-icon><User /></el-icon>
@@ -117,7 +117,6 @@
                     {{ course.state === 1 ? '设为草稿' : '发布课程' }}
                   </el-dropdown-item>
                   <el-dropdown-item command="copy-code">复制课程码</el-dropdown-item>
-                  <el-dropdown-item command="export" disabled>导出课程</el-dropdown-item>
                   <el-dropdown-item command="delete" divided>
                     <span style="color: #f56c6c;">删除课程</span>
                   </el-dropdown-item>

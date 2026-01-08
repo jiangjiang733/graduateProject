@@ -50,10 +50,11 @@ public interface CourseEnrollmentService {
      * 教师审核报名申请
      * 
      * @param enrollmentId 报名ID
+     * @param teacherId    审核教师ID
      * @param status       状态 (approved/rejected)
      * @param reason       拒绝原因（可选）
      */
-    void reviewEnrollment(Long enrollmentId, String status, String reason);
+    void reviewEnrollment(Long enrollmentId, String teacherId, String status, String reason);
 
     /**
      * 取消报名

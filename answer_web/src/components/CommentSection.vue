@@ -28,7 +28,9 @@
       
       <div v-for="comment in comments" :key="comment.commentId" class="comment-item">
         <div class="comment-avatar">
-          <el-avatar :size="40">{{ comment.userName?.charAt(0) || 'U' }}</el-avatar>
+          <el-avatar :size="40" :src="formatAvatarUrl(comment.userAvatar)">
+            {{ comment.userName?.charAt(0) || 'U' }}
+          </el-avatar>
         </div>
         <div class="comment-content">
           <div class="comment-header-info">
@@ -75,7 +77,9 @@
           <div v-if="comment.replies && comment.replies.length > 0" class="replies-list">
             <div v-for="reply in comment.replies" :key="reply.commentId" class="reply-item">
               <div class="reply-avatar">
-                <el-avatar :size="32">{{ reply.userName?.charAt(0) || 'U' }}</el-avatar>
+                <el-avatar :size="32" :src="formatAvatarUrl(reply.userAvatar)">
+                  {{ reply.userName?.charAt(0) || 'U' }}
+                </el-avatar>
               </div>
               <div class="reply-content">
                 <div class="reply-header">
@@ -110,12 +114,13 @@ import {
   ChatDotRound,
   Delete
 } from '@element-plus/icons-vue'
-import { getChapterComments, addComment, deleteComment } from '@/api/comment'
+import { getChapterComments, getCourseComments, addComment, deleteComment } from '@/api/comment'
 
 const props = defineProps({
   chapterId: {
     type: Number,
-    required: true
+    required: false,
+    default: null
   },
   courseId: {
     type: String,
@@ -135,29 +140,84 @@ const newComment = ref('')
 const replyingTo = ref(null)
 const replyContent = ref('')
 
+// 头像处理辅助函数
+const formatAvatarUrl = (url) => {
+  if (!url) return '' // 返回空让 el-avatar 显示插槽内容（文字初始）
+  if (url.startsWith('http')) return url
+  return `http://localhost:8088${url}`
+}
+
 // 获取用户信息
 const getUserInfo = () => {
-  if (props.userType === 'TEACHER') {
-    const teacher = JSON.parse(localStorage.getItem('teacher') || '{}')
+  const tId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
+  const tName = localStorage.getItem('teacherName')
+  const tAvatar = localStorage.getItem('teacherHead')
+  
+  const sId = localStorage.getItem('studentId') || localStorage.getItem('s_id')
+  const sName = localStorage.getItem('studentName')
+  const sAvatar = localStorage.getItem('studentHead')
+
+  if (props.userType === 'TEACHER' && tId) {
     return {
-      userId: teacher.teacherId,
-      userName: teacher.teacherName || teacher.teacherUsername
+      userId: tId,
+      userName: tName || '教师',
+      userAvatar: tAvatar || ''
     }
-  } else {
-    const student = JSON.parse(localStorage.getItem('student') || '{}')
+  } else if (sId) {
     return {
-      userId: student.studentsId,
-      userName: student.studentsUsername
+      userId: sId,
+      userName: sName || localStorage.getItem('userName') || '学生',
+      userAvatar: sAvatar || ''
     }
   }
+
+  return { userId: 'unknown', userName: '用户', userAvatar: '' }
+}
+
+// 处理评论列表为树形结构
+const buildTree = (list) => {
+  const map = {}
+  const tree = []
+  
+  // 先把所有项存入 map，并初始化 replies
+  list.forEach(item => {
+    map[item.commentId] = { ...item, replies: [] }
+  })
+  
+  list.forEach(item => {
+    if (item.parentId && map[item.parentId]) {
+      // 如果有父级，且父级在列表中，则加入父级的回复列表
+      map[item.parentId].replies.push(map[item.commentId])
+    } else if (!item.parentId || item.parentId === 0) {
+      // 如果没有父级或父级为 0，则是顶级评论
+      tree.push(map[item.commentId])
+    }
+  })
+  
+  return tree
 }
 
 // 加载评论
 const loadComments = async () => {
   loading.value = true
   try {
-    const response = await getChapterComments(props.chapterId)
-    comments.value = response.data || []
+    let response
+    if (props.chapterId) {
+      response = await getChapterComments(props.chapterId)
+      // 章节接口通常后端已经处理好树形，如果未处理则调用 buildTree
+      const data = response.data || []
+      comments.value = Array.isArray(data[0]?.replies) ? data : buildTree(data)
+    } else {
+      // 课程全局接口返回的是扁平列表，需要前端过滤并构建树
+      response = await getCourseComments(props.courseId)
+      const allComments = response.data || []
+      
+      // 1. 严格过滤：在课程详情页，只展示针对课程本身的评论（chapterId 为空或 0）
+      const courseLevelComments = allComments.filter(c => !c.chapterId || c.chapterId === 0)
+      
+      // 2. 构建层级结构
+      comments.value = buildTree(courseLevelComments)
+    }
   } catch (error) {
     console.error('加载评论失败:', error)
     ElMessage.error('加载评论失败')
@@ -178,9 +238,10 @@ const postComment = async () => {
     const userInfo = getUserInfo()
     const commentData = {
       courseId: props.courseId,
-      chapterId: props.chapterId,
+      chapterId: props.chapterId || null, // 显式确保为空
       userId: userInfo.userId,
       userName: userInfo.userName,
+      userAvatar: userInfo.userAvatar,
       userType: props.userType,
       content: newComment.value.trim()
     }
@@ -221,9 +282,10 @@ const postReply = async (comment) => {
     const userInfo = getUserInfo()
     const replyData = {
       courseId: props.courseId,
-      chapterId: props.chapterId,
+      chapterId: props.chapterId || null,
       userId: userInfo.userId,
       userName: userInfo.userName,
+      userAvatar: userInfo.userAvatar,
       userType: props.userType,
       content: replyContent.value.trim(),
       parentId: comment.commentId

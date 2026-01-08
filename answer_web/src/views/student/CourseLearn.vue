@@ -82,7 +82,6 @@
               <div v-if="currentChapter.textContent" class="parsed-content-container">
                 <div class="content-label">
                   <el-icon><Edit /></el-icon>
-                  <span>文档解析正文</span>
                 </div>
                 <div class="rich-text-content" v-html="formatTextContent(currentChapter.textContent)"></div>
               </div>

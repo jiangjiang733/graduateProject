@@ -7,6 +7,7 @@ import com.example.project.mapper.notification.MessageMapper;
 import com.example.project.service.notification.MessageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 
@@ -17,9 +18,12 @@ public class MessageServiceImpl implements MessageService {
     private MessageMapper messageMapper;
 
     @Override
-    public Message sendMessage(String receiverId, String receiverType, String messageType,
+    public Message sendMessage(String senderId, String senderType, String receiverId, String receiverType,
+            String messageType,
             String title, String content, String relatedId) {
         Message message = new Message();
+        message.setSenderId(senderId);
+        message.setSenderType(senderType);
         message.setReceiverId(receiverId);
         message.setReceiverType(receiverType);
         message.setMessageType(messageType);
@@ -45,11 +49,12 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
-    public Page<Message> getMessageList(String teacherId, Integer isRead, Integer pageNumber, Integer pageSize) {
+    public Page<Message> getMessageList(String receiverId, String receiverType, Integer isRead, Integer pageNumber,
+            Integer pageSize) {
         Page<Message> page = new Page<>(pageNumber, pageSize);
         QueryWrapper<Message> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("receiver_id", teacherId);
-        queryWrapper.eq("receiver_type", "TEACHER");
+        queryWrapper.eq("receiver_id", receiverId);
+        queryWrapper.eq("receiver_type", receiverType);
 
         if (isRead != null) {
             queryWrapper.eq("is_read", isRead);
@@ -61,8 +66,13 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
-    public void markAsRead(Long messageId) {
-        Message message = messageMapper.selectById(messageId);
+    public void markAsRead(Long messageId, String receiverId, String receiverType) {
+        QueryWrapper<Message> wrapper = new QueryWrapper<>();
+        wrapper.eq("message_id", messageId);
+        wrapper.eq("receiver_id", receiverId);
+        wrapper.eq("receiver_type", receiverType);
+
+        Message message = messageMapper.selectOne(wrapper);
         if (message != null) {
             message.setIsRead(1);
             messageMapper.updateById(message);
@@ -70,15 +80,36 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
-    public void deleteMessage(Long messageId) {
-        messageMapper.deleteById(messageId);
+    @Transactional
+    public void markAsReadBatch(java.util.List<Long> messageIds, String receiverId, String receiverType) {
+        if (messageIds == null || messageIds.isEmpty())
+            return;
+
+        Message update = new Message();
+        update.setIsRead(1);
+
+        QueryWrapper<Message> wrapper = new QueryWrapper<>();
+        wrapper.in("message_id", messageIds);
+        wrapper.eq("receiver_id", receiverId);
+        wrapper.eq("receiver_type", receiverType);
+
+        messageMapper.update(update, wrapper);
     }
 
     @Override
-    public Integer getUnreadCount(String teacherId) {
+    public void deleteMessage(Long messageId, String receiverId, String receiverType) {
+        QueryWrapper<Message> wrapper = new QueryWrapper<>();
+        wrapper.eq("message_id", messageId);
+        wrapper.eq("receiver_id", receiverId);
+        wrapper.eq("receiver_type", receiverType);
+        messageMapper.delete(wrapper);
+    }
+
+    @Override
+    public Integer getUnreadCount(String receiverId, String receiverType) {
         QueryWrapper<Message> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("receiver_id", teacherId);
-        queryWrapper.eq("receiver_type", "TEACHER");
+        queryWrapper.eq("receiver_id", receiverId);
+        queryWrapper.eq("receiver_type", receiverType);
         queryWrapper.eq("is_read", 0);
 
         return Math.toIntExact(messageMapper.selectCount(queryWrapper));

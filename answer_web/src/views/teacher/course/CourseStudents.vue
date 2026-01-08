@@ -25,17 +25,14 @@
         <div class="students-grid">
           <div v-for="student in pagedStudents" :key="student.id" class="student-card glass-panel animate-slide-up">
             <div class="student-header">
-              <el-avatar :size="48" :src="student.studentAvatar" class="student-avatar">
-                {{ student.studentName?.charAt(0) || 'S' }}
+              <el-avatar :size="48" :src="getStudentAvatar(student)" class="student-avatar">
+                {{ getStudentInitial(student) }}
               </el-avatar>
               <div class="activity-badge"></div>
             </div>
             
             <div class="student-body">
-              <h4 class="student-name">{{ student.studentName }}</h4>
-              <div class="student-meta">
-                <span class="student-id">ID: {{ student.studentId }}</span>
-              </div>
+              <h4 class="student-name">{{ student.studentName || '未知学生' }}</h4>
               <div class="enroll-time">
                 <el-icon><Calendar /></el-icon>
                 {{ formatDate(student.applyTime) }} 加入
@@ -223,6 +220,21 @@ const submitInvite = async () => {
 const formatDate = (dateStr) => {
   if (!dateStr) return '-'
   return new Date(dateStr).toLocaleDateString()
+}
+
+// 获取学生头像URL
+const getStudentAvatar = (student) => {
+  if (!student.studentAvatar) return ''
+  if (student.studentAvatar.startsWith('http')) return student.studentAvatar
+  return `http://localhost:8088${student.studentAvatar}`
+}
+
+// 获取学生名字首字母
+const getStudentInitial = (student) => {
+  if (student.studentName && student.studentName.length > 0) {
+    return student.studentName.charAt(0)
+  }
+  return 'S'
 }
 
 onMounted(() => {

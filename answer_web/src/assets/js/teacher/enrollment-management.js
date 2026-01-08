@@ -160,8 +160,9 @@ export function useEnrollmentManagement() {
             )
 
             enrollment.approving = true
+            const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
 
-            const response = await reviewEnrollment(enrollment.id, 'approved')
+            const response = await reviewEnrollment(enrollment.id, teacherId, 'approved')
 
             if (response.success) {
                 ElMessage.success('已通过报名申请')
@@ -193,8 +194,10 @@ export function useEnrollmentManagement() {
             await rejectFormRef.value.validate()
             submitting.value = true
 
+            const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
             const response = await reviewEnrollment(
                 currentEnrollment.value.id,
+                teacherId,
                 'rejected',
                 rejectForm.reason
             )
@@ -313,6 +316,21 @@ export function useEnrollmentManagement() {
         }
     }
 
+    // 获取学生头像URL
+    const getStudentAvatar = (student) => {
+        if (!student.studentAvatar) return ''
+        if (student.studentAvatar.startsWith('http')) return student.studentAvatar
+        return `http://localhost:8088${student.studentAvatar}`
+    }
+
+    // 获取学生名字首字母
+    const getStudentInitial = (student) => {
+        if (student.studentName && student.studentName.length > 0) {
+            return student.studentName.charAt(0)
+        }
+        return 'S'
+    }
+
     onMounted(async () => {
         await loadCourses()
         loadEnrollments()
@@ -353,6 +371,8 @@ export function useEnrollmentManagement() {
         inviteFormRef,
         inviteSubmitting,
         submitInvite,
-        handleRemoveStudent
+        handleRemoveStudent,
+        getStudentAvatar,
+        getStudentInitial
     }
 }

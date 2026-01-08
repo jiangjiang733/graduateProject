@@ -68,7 +68,7 @@ export function useStudentDashboard() {
             const courseRes = await getStudentJoinedCourses(studentId)
             if (courseRes && courseRes.success && Array.isArray(courseRes.data)) {
                 allJoinedCourses.value = courseRes.data.map(course => ({
-                    id: course.courseId || course.id,
+                    id: course.course_id || course.courseId || course.id,
                     courseName: course.courseName || '未命名课程',
                     teacherName: course.teacherName || '教师',
                     classification: course.classification || '综合',
@@ -94,7 +94,7 @@ export function useStudentDashboard() {
     }
 
     const continueLearning = (courseId) => {
-        router.push(`/student/learn/${courseId}`)
+        router.push(`/student/course/${courseId}`)
     }
 
     const viewAllCourses = () => {

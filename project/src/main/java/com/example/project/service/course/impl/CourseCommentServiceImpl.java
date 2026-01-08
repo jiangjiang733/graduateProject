@@ -2,9 +2,13 @@ package com.example.project.service.course.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.example.project.dto.CourseCommentDTO;
+import com.example.project.entity.course.Course;
 import com.example.project.entity.course.CourseComment;
+import com.example.project.entity.notification.Message;
 import com.example.project.mapper.course.CourseCommentMapper;
+import com.example.project.mapper.course.CourseMapper;
 import com.example.project.service.course.CourseCommentService;
+import com.example.project.service.notification.MessageService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -23,13 +27,42 @@ public class CourseCommentServiceImpl implements CourseCommentService {
     private CourseCommentMapper courseCommentMapper;
 
     @Autowired
-    private com.example.project.service.notification.MessageService messageService;
+    private CourseMapper courseMapper;
+
+    @Autowired
+    private MessageService messageService;
 
     @Override
     @Transactional
     public CourseComment addComment(CourseComment comment) {
         comment.setCreateTime(new Date());
         courseCommentMapper.insert(comment);
+
+        // 如果是新话题（无parentId），通知课程教师
+        if ((comment.getParentId() == null || comment.getParentId() == 0) && comment.getCourseId() != null) {
+            try {
+                Course course = courseMapper.selectById(comment.getCourseId());
+                if (course != null && course.getTeacherId() != null
+                        && !course.getTeacherId().equals(comment.getUserId())) {
+                    Message message = new Message();
+                    message.setReceiverId(course.getTeacherId());
+                    message.setReceiverType("TEACHER");
+                    message.setSenderId(comment.getUserId());
+                    message.setSenderName(comment.getUserName());
+                    message.setSenderAvatar(comment.getUserAvatar());
+                    message.setMessageType("INTERACTION");
+                    message.setTitle("新课程讨论通知");
+                    message.setContent("在课程《" + (course.getCourseName() != null ? course.getCourseName() : "")
+                            + "》中发布了新评论: " + comment.getContent());
+                    message.setRelatedId(comment.getCommentId().toString());
+                    message.setCreateTime(new Date());
+                    message.setIsRead(0);
+                    messageService.saveMessage(message);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
         return comment;
     }
 
@@ -72,14 +105,14 @@ public class CourseCommentServiceImpl implements CourseCommentService {
     @Override
     @Transactional
     public CourseComment replyComment(CourseComment comment) {
-        // 回复评论本质上也是添加评论，只是设置了parentId
         comment.setCreateTime(new Date());
         courseCommentMapper.insert(comment);
 
-        // 创建消息通知给目标用户
-        if (comment.getTargetUserId() != null && !comment.getTargetUserId().isEmpty()) {
+        // 创建消息通知给被回复的用户
+        if (comment.getTargetUserId() != null && !comment.getTargetUserId().isEmpty()
+                && !comment.getTargetUserId().equals(comment.getUserId())) {
             try {
-                com.example.project.entity.notification.Message message = new com.example.project.entity.notification.Message();
+                Message message = new Message();
                 message.setReceiverId(comment.getTargetUserId());
                 message.setSenderId(comment.getUserId());
                 message.setSenderName(comment.getUserName());
@@ -91,21 +124,31 @@ public class CourseCommentServiceImpl implements CourseCommentService {
                 message.setIsRead(0);
                 message.setCreateTime(new Date());
 
-                // 如果目标是老师，设置receiverType (这里简化逻辑，通常根据userId前缀或表判断)
+                // 确定接收者类型
                 String receiverType = "STUDENT";
-                if (comment.getTargetUserId() != null && comment.getTargetUserId().startsWith("T")) {
+                // 如果是老师（通常以T开头或者是课程的创建者）
+                if (comment.getTargetUserId().startsWith("T") || (comment.getCourseId() != null
+                        && isTeacherOfCourse(comment.getTargetUserId(), comment.getCourseId()))) {
                     receiverType = "TEACHER";
                 }
                 message.setReceiverType(receiverType);
 
                 messageService.saveMessage(message);
             } catch (Exception e) {
-                // 仅打印错误，允许业务继续
                 e.printStackTrace();
             }
         }
 
         return comment;
+    }
+
+    private boolean isTeacherOfCourse(String userId, String courseId) {
+        try {
+            Course course = courseMapper.selectById(courseId);
+            return course != null && userId.equals(course.getTeacherId());
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     @Override
@@ -172,5 +215,44 @@ public class CourseCommentServiceImpl implements CourseCommentService {
         }
 
         return rootComments;
+    }
+
+    /**
+     * 删除章节的所有评论（级联删除，包括所有回复）
+     */
+    @Override
+    @Transactional
+    public void deleteChapterComments(Long chapterId) {
+        // 获取章节的所有评论
+        List<CourseComment> comments = getChapterComments(chapterId);
+
+        if (comments == null || comments.isEmpty()) {
+            return;
+        }
+
+        // 递归删除每个评论及其所有回复
+        for (CourseComment comment : comments) {
+            deleteCommentRecursively(comment.getCommentId());
+        }
+    }
+
+    /**
+     * 递归删除评论及其所有回复
+     */
+    private void deleteCommentRecursively(Long commentId) {
+        // 获取所有回复
+        QueryWrapper<CourseComment> replyWrapper = new QueryWrapper<>();
+        replyWrapper.eq("parent_id", commentId);
+        List<CourseComment> replies = courseCommentMapper.selectList(replyWrapper);
+
+        // 递归删除所有回复
+        if (replies != null && !replies.isEmpty()) {
+            for (CourseComment reply : replies) {
+                deleteCommentRecursively(reply.getCommentId());
+            }
+        }
+
+        // 删除当前评论
+        courseCommentMapper.deleteById(commentId);
     }
 }

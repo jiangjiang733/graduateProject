@@ -1,12 +1,5 @@
 <template>
   <div class="modern-layout">
-    <!-- 动态背景 -->
-    <div class="modern-bg">
-      <div class="bg-blob-1"></div>
-      <div class="bg-blob-2"></div>
-      <div class="bg-blob-3"></div>
-    </div>
-
     <el-container class="layout-container">
       <!-- 顶部 Header & Nav -->
       <el-header class="top-header glass-panel">

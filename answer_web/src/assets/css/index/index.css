@@ -7,22 +7,23 @@
 
 .index-container {
   min-height: 100vh;
-  background-image:
-          radial-gradient(circle, transparent, rgba(220, 244, 244, 0.62)),/* 上层：高透明度蓝紫 */
-          radial-gradient(circle, rgba(218, 218, 236, 0.6), transparent); /* 下层：低透明度浅蓝紫 */
+  background-color: #f8fafc;
   animation: index 3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
   animation-delay: 0.1s;
 }
+
 @keyframes index {
-  from{
-  opacity: 0;
+  from {
+    opacity: 0;
     transform: translateY(100px);
-}
-  to{
+  }
+
+  to {
     opacity: 1;
     transform: translateY(0);
   }
 }
+
 /* 顶部导航栏 */
 .index-header {
   height: 80px;
@@ -141,6 +142,7 @@
   font-weight: 500;
   transition: all 0.3s ease;
 }
+
 .teacher-login-btn:hover,
 .student-login-btn:hover {
   transform: translateY(-2px);
@@ -192,7 +194,8 @@
   justify-content: center;
   margin: 0 auto 20px;
 }
-img{
+
+.feature-icon img {
   width: 90px;
   height: 90px;
   border-radius: 50%;
@@ -273,8 +276,10 @@ img{
 
 .dashboard-btn {
   background-image:
-   radial-gradient(circle, transparent, rgba(220, 244, 244, 0.62)),/* 上层：高透明度蓝紫 */
-   radial-gradient(circle, rgba(218, 218, 236, 0.6), transparent); /* 下层：低透明度浅蓝紫 */
+    radial-gradient(circle, transparent, rgba(220, 244, 244, 0.62)),
+    /* 上层：高透明度蓝紫 */
+    radial-gradient(circle, rgba(218, 218, 236, 0.6), transparent);
+  /* 下层：低透明度浅蓝紫 */
   color: white;
   border: none;
   border-radius: 30px;
@@ -302,34 +307,34 @@ img{
     gap: 40px;
     text-align: center;
   }
-  
+
   .hero-title {
     font-size: 32px;
   }
-  
+
   .hero-features {
     justify-content: center;
     flex-wrap: wrap;
   }
-  
+
   .features-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .login-card {
     padding: 24px;
   }
-  
+
   .quick-start-content {
     grid-template-columns: 1fr;
     gap: 40px;
     text-align: center;
   }
-  
+
   .quick-start-text h2 {
     font-size: 28px;
   }
-  
+
   .footer-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -339,7 +344,7 @@ img{
   .footer-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .quick-feature {
     justify-content: center;
   }

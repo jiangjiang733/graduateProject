@@ -1,200 +1,455 @@
+/* 课程详情页样式 */
 .course-detail-page {
-    background-color: #f5f7fa;
+    background-color: #f8fafc;
     min-height: 100vh;
+    padding-bottom: 60px;
 }
 
-/* 顶部 Banner */
+/* Banner 视觉区域 */
 .course-banner {
-    background-color: #2a2e3a;
-    color: white;
-    padding: 40px 0;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    position: relative;
+    background-color: #1a2233;
+    padding: 60px 0;
+    color: #fff;
+    overflow: hidden;
+    z-index: 1;
+}
+
+.course-banner::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-size: cover;
+    background-position: center;
+    filter: blur(50px) brightness(0.5);
+    transform: scale(1.15);
+    z-index: -1;
+    transition: background-image 0.5s ease-in-out;
+}
+
+/* 遮罩层，让文字更清晰 */
+.course-banner::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(to right, rgba(15, 23, 42, 0.8), rgba(15, 23, 42, 0.4));
+    z-index: -1;
 }
 
 .banner-content {
-    max-width: 1200px;
+    max-width: 1240px;
     margin: 0 auto;
-    padding: 0 24px;
     display: flex;
-    gap: 40px;
+    gap: 60px;
+    padding: 0 40px;
+    position: relative;
+    z-index: 1;
 }
 
 .banner-cover {
-    width: 400px;
-    height: 250px;
-    border-radius: 12px;
+    position: relative;
+    width: 440px;
+    height: 248px;
+    border-radius: 16px;
     overflow: hidden;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-    flex-shrink: 0;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    border: 4px solid rgba(255, 255, 255, 0.1);
+    background: #000;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.banner-cover:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 35px 60px -15px rgba(0, 0, 0, 0.6);
 }
 
 .banner-cover img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
+    transition: transform 0.6s ease;
+    border-radius: 0 !important;
+}
+
+.rect-img {
+    border-radius: 0 !important;
 }
 
 .banner-info {
     flex: 1;
     display: flex;
     flex-direction: column;
+    justify-content: center;
 }
 
 .course-title {
-    font-size: 32px;
-    font-weight: 700;
-    margin: 0 0 16px 0;
+    font-size: 38px;
+    font-weight: 800;
+    margin-bottom: 20px;
+    line-height: 1.25;
+    letter-spacing: -0.03em;
+    color: #ffffff;
 }
 
 .course-subtitle {
-    font-size: 16px;
-    color: rgba(255, 255, 255, 0.8);
-    margin: 0 0 24px 0;
-    line-height: 1.6;
+    font-size: 17px;
+    color: rgba(255, 255, 255, 0.75);
+    margin-bottom: 32px;
+    line-height: 1.7;
+    max-width: 700px;
 }
 
 .course-meta {
     display: flex;
     align-items: center;
-    gap: 24px;
-    margin-top: auto;
+    gap: 32px;
+    margin-bottom: 40px;
 }
 
 .meta-item {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 14px;
+    gap: 10px;
+    font-size: 15px;
+    color: #e2e8f0;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.rating-score {
-    font-size: 18px;
-    font-weight: 700;
-    color: #ff9900;
+.action-btn {
+    padding: 16px 48px !important;
+    font-size: 17px !important;
+    font-weight: 700 !important;
+    border-radius: 14px !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
-/* 主体内容 */
+.action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 20px -5px rgba(59, 130, 246, 0.5);
+}
+
+/* 主容器布局 */
 .main-container {
-    max-width: 1200px;
-    margin: 24px auto;
-    padding: 0 24px;
+    max-width: 1240px;
+    margin: -40px auto 0;
+    padding: 0 40px;
     display: grid;
-    grid-template-columns: 1fr 320px;
-    gap: 24px;
+    grid-template-columns: 1fr 360px;
+    gap: 32px;
+    position: relative;
+    z-index: 2;
 }
 
-/* 左侧内容 */
 .content-wrapper {
-    background-color: white;
-    border-radius: 12px;
-    padding: 24px;
-    min-height: 500px;
+    background: #fff;
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+    border: 1px solid #f1f5f9;
 }
 
+/* Tabs 优化 */
+.custom-tabs .el-tabs__nav-wrap::after {
+    height: 1px;
+    background-color: #f1f5f9;
+}
+
+.custom-tabs .el-tabs__item {
+    font-size: 17px;
+    font-weight: 700;
+    height: 64px;
+    color: #64748b;
+    transition: all 0.2s;
+}
+
+.custom-tabs .el-tabs__item.is-active {
+    color: #3b82f6;
+}
+
+/* 章节列表美化 */
 .chapter-list {
-    margin-top: 20px;
+    padding-top: 20px;
 }
 
-.chapter-item {
-    border-bottom: 1px solid #ebeef5;
-}
-
-.chapter-item:last-child {
-    border-bottom: none;
+.chapter-group {
+    margin-bottom: 40px;
 }
 
 .chapter-header {
-    padding: 16px;
-    font-weight: 600;
-    background-color: #fafafa;
+    background: #f8fafc;
+    padding: 20px 24px;
+    border-radius: 16px;
+    margin-bottom: 16px;
+    border: 1px solid #f1f5f9;
 }
 
-.sub-chapter-list {
-    padding: 0;
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.chapter-index {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 22px;
+    font-weight: 800;
+    color: #3b82f6;
+    opacity: 0.3;
+}
+
+.chapter-name {
+    font-size: 18px;
+    font-weight: 800;
+    color: #1e293b;
+    flex: 1;
+}
+
+.folder-icon {
+    font-size: 22px;
+    color: #f59e0b;
 }
 
 .sub-chapter-item {
     display: flex;
-    align-items: center;
     justify-content: space-between;
-    padding: 12px 24px;
+    align-items: center;
+    padding: 18px 24px;
+    border-radius: 14px;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: all 0.3s ease;
+    margin-left: 20px;
+    margin-bottom: 8px;
+    border: 1px solid transparent;
 }
 
 .sub-chapter-item:hover {
-    background-color: #f5f7fa;
+    background-color: #f0f9ff;
+    border-color: #e0f2fe;
+    transform: translateX(6px);
 }
 
 .sub-chapter-title {
     display: flex;
     align-items: center;
-    gap: 8px;
-    color: #606266;
+    gap: 16px;
 }
 
-/* 右侧侧边栏 */
+.type-icon {
+    font-size: 22px;
+    color: #3b82f6;
+}
+
+.title-text {
+    font-size: 16px;
+    color: #475569;
+    font-weight: 600;
+}
+
+.sub-chapter-action {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    color: #94a3b8;
+    font-size: 14px;
+}
+
+.sub-chapter-item:hover .sub-chapter-action {
+    color: #3b82f6;
+}
+
+/* 详情介绍 */
+.intro-section {
+    margin: 20px 0;
+}
+
+.intro-section h3 {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 20px;
+    font-weight: 800;
+    margin-bottom: 24px;
+    color: #1e293b;
+}
+
+.dot {
+    width: 10px;
+    height: 10px;
+    background: #3b82f6;
+    border-radius: 3px;
+}
+
+.rich-text-content {
+    line-height: 2;
+    color: #475569;
+    font-size: 16px;
+}
+
+/* 侧边栏卡片 */
 .sidebar {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 32px;
 }
 
-.enroll-card {
-    border-radius: 12px;
-    border: none;
-    text-align: center;
+.sidebar-card {
+    border-radius: 20px;
+    border: 1px solid #f1f5f9;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05) !important;
+    overflow: hidden;
+}
+
+.status-card {
+    background: linear-gradient(135deg, #eff6ff, #ffffff);
     padding: 24px;
 }
 
-.price-tag {
-    font-size: 32px;
+.progress-info .label {
+    font-size: 15px;
     font-weight: 700;
-    color: #f56c6c;
+    margin-bottom: 16px;
+    color: #1e293b;
+}
+
+.status-tip {
+    font-size: 13px;
+    color: #64748b;
+    margin-top: 12px;
+    font-weight: 500;
+}
+
+.sidebar-card .el-card__header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #f1f5f9;
+    background: #fafafa;
+}
+
+.header-title {
+    font-weight: 800;
+    font-size: 16px;
+    color: #1e293b;
+}
+
+.teacher-profile {
+    display: flex;
+    align-items: center;
+    gap: 20px;
     margin-bottom: 24px;
 }
 
-.price-tag.free {
-    color: #67c23a;
-}
-
-.enroll-btn {
-    width: 100%;
-    height: 48px;
+.teacher-meta .name {
+    font-weight: 800;
     font-size: 18px;
-    border-radius: 24px;
+    color: #1e293b;
 }
 
-.teacher-card {
-    border-radius: 12px;
-    border: none;
-}
-
-.teacher-info {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-bottom: 16px;
-}
-
-.teacher-desc {
+.teacher-meta .title {
     font-size: 14px;
-    color: #606266;
-    line-height: 1.6;
+    color: #64748b;
+    margin-top: 4px;
+    font-weight: 500;
 }
 
-/* 响应式 */
+.teacher-bio {
+    font-size: 15px;
+    line-height: 1.7;
+    color: #475569;
+    padding: 20px 0 0;
+    border-top: 1px solid #f1f5f9;
+}
+
+.info-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.info-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 16px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.info-list li:last-child {
+    border-bottom: none;
+}
+
+.info-list .label {
+    color: #64748b;
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.info-list .value {
+    color: #1e293b;
+    font-weight: 700;
+    font-size: 15px;
+}
+
+/* 班级成员 */
+.members-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 32px;
+    padding: 30px 0;
+}
+
+.member-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.3s ease;
+    padding: 16px;
+    border-radius: 16px;
+}
+
+.member-item:hover {
+    background: #f8fafc;
+    transform: translateY(-5px);
+}
+
+.member-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e293b;
+    text-align: center;
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 @media (max-width: 1024px) {
     .banner-content {
         flex-direction: column;
+        padding: 0 24px;
+        gap: 32px;
     }
 
     .banner-cover {
         width: 100%;
-        height: 300px;
+        height: auto;
+        aspect-ratio: 16/9;
     }
 
     .main-container {
         grid-template-columns: 1fr;
+        margin-top: 20px;
+        padding: 0 24px;
+    }
+
+    .banner-cover img {
+        object-fit: cover;
     }
 }

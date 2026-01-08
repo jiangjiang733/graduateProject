@@ -9,6 +9,7 @@ import com.example.project.exception.ResourceNotFoundException;
 import com.example.project.mapper.homework.LabReportMapper;
 import com.example.project.mapper.homework.StudentLabReportMapper;
 import com.example.project.service.homework.LabReportService;
+import com.example.project.service.notification.MessageService;
 import com.example.project.entity.course.Course;
 import com.example.project.mapper.course.CourseMapper;
 import org.springframework.beans.BeanUtils;
@@ -40,6 +41,9 @@ public class LabReportServiceImpl implements LabReportService {
 
     @Autowired
     private CourseMapper courseMapper;
+
+    @Autowired
+    private MessageService messageService;
 
     @Override
     @Transactional
@@ -209,6 +213,28 @@ public class LabReportServiceImpl implements LabReportService {
         studentReport.setStatus(2); // 2-已批改
 
         studentLabReportMapper.updateById(studentReport);
+
+        // 发送系统通知给学生
+        try {
+            LabReport report = labReportMapper.selectById(studentReport.getReportId());
+            String title = "作业/实验报告已批改";
+            String content = String.format("您的实验报告《%s》已被教师批改。得分：%s。",
+                    report != null ? report.getReportTitle() : "未知报告",
+                    studentReport.getScore());
+
+            messageService.sendMessage(
+                    gradingDTO.getTeacherId(),
+                    "TEACHER",
+                    studentReport.getStudentId(),
+                    "STUDENT",
+                    "SYSTEM",
+                    title,
+                    content,
+                    studentReportId.toString());
+        } catch (Exception e) {
+            // 通知发送失败不应影响批改流程
+            System.err.println("发送批改通知失败: " + e.getMessage());
+        }
     }
 
     @Override
@@ -400,7 +426,7 @@ public class LabReportServiceImpl implements LabReportService {
         // 查询这些课程的所有作业
         QueryWrapper<LabReport> reportWrapper = new QueryWrapper<>();
         reportWrapper.in("course_id", enrolledCourseIds);
-        reportWrapper.eq("status", 1); // 1-已发布
+        reportWrapper.ne("status", 0); // 只要不是草稿(0)，已发布(1)和归档/结束(2)的作业都显示
         reportWrapper.orderByDesc("create_time");
         List<LabReport> courseReports = labReportMapper.selectList(reportWrapper);
 
@@ -411,26 +437,10 @@ public class LabReportServiceImpl implements LabReportService {
         Map<Long, StudentLabReport> submissionMap = submittedReports.stream()
                 .collect(Collectors.toMap(StudentLabReport::getReportId, s -> s));
 
-        Date now = new Date();
-
         // 3. 合并结果
         for (LabReport report : courseReports) {
-            Date joinTime = courseJoinTimeMap.get(report.getCourseId());
-            Date createTime = report.getCreateTime();
-            Date deadline = report.getDeadline();
-
-            // 逻辑：
-            // 1. 加入后发布的作业 (createTime >= joinTime)
-            // 2. 加入前发布但未截止的作业 (createTime < joinTime && deadline > now)
-            // 3. 特殊情况：如果学生已经提交了，无论如何都应该显示（为了查看成绩）
-            boolean isJoinedAfterPublish = createTime != null && joinTime != null
-                    && (createTime.after(joinTime) || createTime.equals(joinTime));
-            boolean isNotExpired = deadline != null && deadline.after(now);
-            boolean hasSubmitted = submissionMap.containsKey(report.getReportId());
-
-            if (!isJoinedAfterPublish && !isNotExpired && !hasSubmitted) {
-                continue; // 过滤掉加入前已截止且未提交的作业
-            }
+            // 不再进行复杂的过滤（如入班时间判断），让学生能看到所选课程的所有历史作业
+            // 这样学生可以查看到入班前的未交作业（即使已截止）以及查看已批改的作业成绩
 
             Map<String, Object> map = new HashMap<>();
             map.put("reportId", report.getReportId());

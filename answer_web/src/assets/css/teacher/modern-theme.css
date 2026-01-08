@@ -25,56 +25,6 @@ body {
     pointer-events: none;
 }
 
-.bg-blob-1 {
-    position: absolute;
-    top: -10%;
-    left: -10%;
-    width: 45%;
-    height: 45%;
-    border-radius: 50%;
-    background-color: #a7f3d0;
-    /* emerald-200 */
-    filter: blur(120px);
-    opacity: 0.4;
-    animation: pulse 8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-.bg-blob-2 {
-    position: absolute;
-    bottom: -10%;
-    right: -10%;
-    width: 55%;
-    height: 55%;
-    border-radius: 50%;
-    background-color: #bfdbfe;
-    filter: blur(150px);
-    opacity: 0.4;
-}
-
-.bg-blob-3 {
-    position: absolute;
-    top: 20%;
-    right: 10%;
-    width: 35%;
-    height: 35%;
-    border-radius: 50%;
-    background-color: #f3e8ff;
-    filter: blur(100px);
-    opacity: 0.3;
-}
-
-@keyframes pulse {
-
-    0%,
-    100% {
-        opacity: 0.4;
-    }
-
-    50% {
-        opacity: 0.6;
-    }
-}
-
 /* Glass Utilities */
 .glass-panel {
     background-color: rgba(255, 255, 255, 0.2);

@@ -1,12 +1,5 @@
 <template>
   <div class="modern-layout">
-    <!-- 动态背景 -->
-    <div class="modern-bg">
-      <div class="bg-blob-1"></div>
-      <div class="bg-blob-2" style="background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);"></div>
-      <div class="bg-blob-3" style="background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);"></div>
-    </div>
-
     <el-container class="layout-container">
       <!-- 顶部 Header & Nav -->
       <el-header class="top-header glass-panel">
@@ -46,11 +39,11 @@
             <!-- 用户下拉 -->
             <el-dropdown trigger="click" @command="handleCommand">
               <div class="user-profile">
-                <el-avatar :size="36" :src="userInfo.avatar" class="user-avatar" style="background: #e0e7ff; color: #4f46e5;">
-                   {{ userInfo.username ? userInfo.username.charAt(0) : 'S' }}
+                <el-avatar :size="36" :src="userStore.avatarUrl" class="user-avatar" style="background: #e0e7ff; color: #4f46e5;">
+                   {{ userStore.userName ? userStore.userName.charAt(0) : 'S' }}
                 </el-avatar>
                 <div class="user-info">
-                  <span class="user-name">{{ userInfo.username || '同学' }}</span>
+                  <span class="user-name">{{ userStore.userName || '同学' }}</span>
                   <el-icon class="el-icon--right"><ArrowDown /></el-icon>
                 </div>
               </div>
@@ -100,10 +93,11 @@ import {
   Search, ArrowDown, User, Setting, SwitchButton, ArrowRight, Bell
 } from '@element-plus/icons-vue'
 
+import { useUserInfo } from '@/stores/user.js'
+
 const route = useRoute()
 const router = useRouter()
-
-const userInfo = ref(JSON.parse(localStorage.getItem('userInfo') || '{}'))
+const userStore = useUserInfo()
 
 const currentRouteName = computed(() => route.meta.title || '学生中心')
 
@@ -308,12 +302,10 @@ const handleCommand = (command) => {
 .user-info { display: flex; align-items: center; gap: 4px; }
 .user-name { font-size: 14px; font-weight: 600; color: #374151; }
 
-/* Main Content */
 .main-content {
   max-width: 1440px;
   margin: 0 auto;
   width: 100%;
-  padding: 32px 40px;
 }
 
 .page-header { margin-bottom: 32px; }

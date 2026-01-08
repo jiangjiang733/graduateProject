@@ -267,7 +267,9 @@ const {
   inviteFormRef,
   inviteSubmitting,
   submitInvite,
-  handleRemoveStudent
+  handleRemoveStudent,
+  getStudentAvatar,
+  getStudentInitial
 } = useEnrollmentManagement()
 </script>
 

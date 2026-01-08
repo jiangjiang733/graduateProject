@@ -4,12 +4,14 @@
     <header class="dashboard-header">
       <div class="header-inner">
         <div class="user-profile">
-          <div class="avatar-wrapper">
-            <el-avatar :size="56" src="https://api.dicebear.com/7.x/micah/svg?seed=Felix" />
+          <div class="avatar-wrapper" @click="$router.push('/student/profile')" style="cursor: pointer;">
+            <el-avatar :size="56" :src="userStore.avatarUrl">
+              {{ (userStore.userName || 'S').charAt(0) }}
+            </el-avatar>
             <div class="status-indicator"></div>
           </div>
           <div class="welcome-text">
-            <h2>{{ greetingTime }}，{{ userInfo.username || userInfo.studentName || '同学' }}</h2>
+            <h2>{{ greetingTime }}，{{ userStore.userName || '同学' }}</h2>
             <p>准备好开始今天的学习了吗？你还有 {{ todoList.length }} 项待办事项。</p>
           </div>
         </div>
@@ -33,7 +35,7 @@
     <main class="dashboard-content">
       <!-- 统计指标 -->
       <section class="stats-overview">
-        <div class="stat-glass-card">
+        <div class="stat-glass-card clickable" @click="$router.push('/student/courses')">
           <div class="stat-icon" style="color: #6366f1; background-color: #eef2ff">
             <el-icon><Monitor /></el-icon>
           </div>
@@ -43,7 +45,7 @@
           </div>
         </div>
 
-        <div class="stat-glass-card">
+        <div class="stat-glass-card clickable" @click="$router.push('/student/homework')">
           <div class="stat-icon" style="color: #f59e0b; background-color: #fffbeb">
             <el-icon><Timer /></el-icon>
           </div>
@@ -53,7 +55,7 @@
           </div>
         </div>
 
-        <div class="stat-glass-card">
+        <div class="stat-glass-card clickable" @click="$router.push('/student/messages')">
           <div class="stat-icon" style="color: #10b981; background-color: #ecfdf5">
             <el-icon><Opportunity /></el-icon>
           </div>
@@ -90,22 +92,33 @@
             </el-empty>
           </div>
 
-          <div v-else class="course-grid">
+          <div v-else class="course-list">
             <div
-                v-for="course in courses"
+                v-for="course in courses.slice(0, 3)"
                 :key="course.id"
-                class="premium-course-card"
+                class="premium-course-strip"
                 @click="continueLearning(course.id)"
             >
-              <div class="card-banner">
-                <img :src="course.image" alt="cover">
+              <div class="strip-banner">
+                <img :src="course.image" alt="cover" class="rect-img">
                 <div class="category-tag">{{ course.classification }}</div>
               </div>
-              <div class="card-content">
-                <h4 class="course-title">{{ course.courseName }}</h4>
-                <div class="teacher-info">
-                  <el-icon><User /></el-icon>
-                  <span>{{ course.teacherName }}</span>
+              <div class="strip-content">
+                <div class="content-main">
+                  <h4 class="course-title">{{ course.courseName }}</h4>
+                  <div class="course-info">
+                    <div class="info-item">
+                      <el-icon><User /></el-icon>
+                      <span>{{ course.teacherName }}</span>
+                    </div>
+                    <div class="info-item">
+                      <el-icon><Clock /></el-icon>
+                      <span>最近学习: 刚刚</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="content-status">
+                  <span class="status-btn">继续学习 <el-icon><ArrowRight /></el-icon></span>
                 </div>
               </div>
             </div>
@@ -158,6 +171,9 @@ import {
   ChatLineRound, TrendCharts, QuestionFilled
 } from '@element-plus/icons-vue'
 import { useStudentDashboard } from '@/assets/js/student/dashboard.js'
+import { useUserInfo } from '@/stores/user.js'
+
+const userStore = useUserInfo()
 
 const {
   userInfo,
@@ -189,10 +205,7 @@ const greetingTime = computed(() => {
   --text-main: #1e293b;
   --text-soft: #64748b;
   --border-color: #f1f5f9;
-  
   background-color: var(--bg-soft);
-  min-height: 100vh;
-  padding-bottom: 40px;
 }
 
 .dashboard-header {
@@ -228,7 +241,10 @@ const greetingTime = computed(() => {
 .stat-glass-card {
   background: #fff; padding: 20px; border-radius: 16px; display: flex; align-items: center; gap: 16px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid var(--border-color);
+  transition: all 0.3s ease;
 }
+.stat-glass-card.clickable { cursor: pointer; }
+.stat-glass-card.clickable:hover { transform: translateY(-4px); box-shadow: 0 12px 20px -10px rgba(0,0,0,0.1); }
 .stat-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
 .stat-info .value { display: block; font-size: 1.5rem; font-weight: 800; color: var(--text-main); }
 .stat-info .label { font-size: 0.8rem; color: var(--text-soft); }
@@ -238,18 +254,36 @@ const greetingTime = computed(() => {
 .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .section-header h3 { display: flex; align-items: center; gap: 8px; font-size: 1.1rem; margin: 0; }
 
-.course-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
-.premium-course-card {
+.course-list { display: flex; flex-direction: column; gap: 16px; }
+.premium-course-strip {
   background: #fff; border-radius: 16px; overflow: hidden; border: 1px solid var(--border-color); cursor: pointer;
-  transition: transform 0.3s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  height: 100px;
 }
-.premium-course-card:hover { transform: translateY(-5px); }
-.card-banner { height: 140px; position: relative; }
-.card-banner img { width: 100%; height: 100%; object-fit: cover; }
-.category-tag { position: absolute; top: 10px; left: 10px; background: rgba(255,255,255,0.9); padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: 600; }
-.card-content { padding: 16px; }
-.course-title { margin: 0 0 10px; font-size: 0.95rem; font-weight: 700; height: 2.6rem; overflow: hidden; }
-.teacher-info { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-soft); }
+.premium-course-strip:hover { 
+  transform: translateX(8px);
+  box-shadow: 0 10px 20px -5px rgba(0,0,0,0.05);
+  border-color: var(--primary);
+}
+.strip-banner { width: 140px; height: 100%; position: relative; flex-shrink: 0; }
+.strip-banner img { 
+  width: 100%; height: 100%; 
+  object-fit: cover; 
+  border-radius: 12px !important; /* 强制覆盖圆角 */
+}
+.rect-img {
+  border-radius: 12px !important;
+}
+.category-tag { position: absolute; top: 8px; left: 8px; background: rgba(99, 102, 241, 0.9); backdrop-filter: blur(4px); color: #fff; padding: 2px 8px; border-radius: 6px; font-size: 0.6rem; font-weight: 700; }
+.strip-content { flex: 1; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; }
+.content-main { flex: 1; }
+.course-title { margin: 0 0 6px; font-size: 1rem; font-weight: 800; color: var(--text-main); }
+.course-info { display: flex; gap: 20px; }
+.info-item { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--text-soft); }
+.content-status { color: var(--primary); font-size: 0.9rem; font-weight: 600; opacity: 0.8; transition: all 0.2s; }
+.premium-course-strip:hover .content-status { opacity: 1; transform: translateX(5px); }
+.status-btn { display: flex; align-items: center; gap: 4px; }
 
 .sidebar-card { background: #fff; border-radius: 16px; padding: 20px; border: 1px solid var(--border-color); margin-bottom: 24px; }
 .sidebar-card h4 { margin: 0 0 16px; font-size: 1rem; }

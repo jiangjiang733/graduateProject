@@ -111,14 +111,14 @@ export function useCourseForm() {
             console.log('课程ID为空，跳过加载时间表')
             return
         }
-        
+
         console.log('开始加载课程时间表，课程ID:', courseId.value)
         scheduleLoading.value = true
-        
+
         try {
             const response = await getCourseSchedules(courseId.value)
             console.log('课程时间表响应:', response)
-            
+
             if (response.success) {
                 schedules.value = response.data || []
                 console.log('课程时间表数据:', schedules.value)
@@ -129,7 +129,7 @@ export function useCourseForm() {
         } catch (error) {
             console.error('加载课程时间表失败:', error)
             console.error('错误详情:', error.response?.data || error.message)
-            
+
             // 显示更详细的错误信息
             const errorMsg = error.response?.data?.message || error.message || '加载课程时间表失败'
             ElMessage.error(errorMsg)
@@ -259,11 +259,11 @@ export function useCourseForm() {
             console.log('开始加载课程详情，课程ID:', route.params.id)
             const response = await getCourseDetail(route.params.id)
             console.log('课程详情响应:', response)
-            
+
             if (response.success && response.data) {
                 const course = response.data
                 console.log('课程数据:', course)
-                
+
                 formData.courseName = course.courseName || ''
                 formData.courseDescription = course.courseDescription || ''
                 formData.major = course.major || ''
@@ -582,14 +582,17 @@ export function useCourseForm() {
             }
 
             console.log('服务器响应:', response)
+            console.log('服务器响应数据:', response.data)
             console.log('=== 请求完成 ===\n')
 
-            if (response.success) {
+            // 修复：axios返回的数据在response.data中
+            const result = response.data
+            if (result.success || result.code === 200) {
                 ElMessage.success('章节创建成功')
                 addDialogVisible.value = false
                 fetchChapters()
             } else {
-                ElMessage.error(response.message || '创建失败')
+                ElMessage.error(result.message || '创建失败')
             }
         } catch (error) {
             console.error('创建失败:', error)
@@ -710,7 +713,7 @@ export function useCourseForm() {
         console.log('isEdit:', isEdit.value)
         console.log('courseId:', courseId.value)
         console.log('route.params:', route.params)
-        
+
         if (isEdit.value && courseId.value && courseId.value !== 'create') {
             try {
                 await loadCourseDetail()

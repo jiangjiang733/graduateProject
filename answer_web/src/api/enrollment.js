@@ -42,14 +42,17 @@ export const getTeacherEnrollments = (teacherId) => {
 /**
  * 教师审核报名申请
  * @param {number} enrollmentId - 报名ID
+ * @param {string} teacherId - 教师ID
  * @param {string} status - 状态 (approved/rejected)
  * @param {string} reason - 原因（拒绝时需要）
  * @returns {Promise}
  */
-export const reviewEnrollment = (enrollmentId, status, reason = '') => {
+export const reviewEnrollment = (enrollmentId, teacherId, status, reason = '') => {
   return request.put(`/enrollment/${enrollmentId}/review`, {
     status,
     reason
+  }, {
+    params: { teacherId }
   })
 }
 
@@ -78,10 +81,9 @@ export const checkEnrollmentStatus = (studentId, courseId) => {
  * 教师直接添加学生
  */
 export const directEnroll = (studentId, courseId) => {
-  const formData = new FormData()
-  formData.append('studentId', studentId)
-  formData.append('courseId', courseId)
-  return request.post('/enrollment/direct-enroll', formData)
+  return request.post('/enrollment/direct-enroll', null, {
+    params: { studentId, courseId }
+  })
 }
 
 export default {

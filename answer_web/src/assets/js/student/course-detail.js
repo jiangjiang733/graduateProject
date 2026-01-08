@@ -1,7 +1,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getCourseDetail, getCourseChapters } from '@/api/course.js'
+import { getCourseDetail, getCourseChapters, getCourseStudents } from '@/api/course.js'
 import { applyEnrollment, checkEnrollmentStatus } from '@/api/enrollment.js'
 
 export function useCourseDetail() {
@@ -12,10 +12,11 @@ export function useCourseDetail() {
     // 状态
     const course = ref({})
     const chapters = ref([])
+    const courseStudents = ref([])
     const activeTab = ref('intro')
     const loading = ref(false)
     const enrollmentStatus = ref('none') // none, pending, approved, rejected
-    const isEnrolled = ref(false) // 只有为 approved 时才算真正加入
+    const isEnrolled = ref(false)
 
     // 方法
     const loadData = async () => {
@@ -25,7 +26,11 @@ export function useCourseDetail() {
             // 1. 获取课程详情
             const courseRes = await getCourseDetail(courseId)
             if (courseRes.success && courseRes.data) {
-                course.value = courseRes.data
+                const data = courseRes.data
+                if (data.image && !data.image.startsWith('http')) {
+                    data.image = `http://localhost:8088${data.image}`
+                }
+                course.value = data
             }
 
             // 2. 获取章节列表
@@ -40,6 +45,14 @@ export function useCourseDetail() {
                 if (statusRes.success && statusRes.data) {
                     enrollmentStatus.value = statusRes.data.status || 'none'
                     isEnrolled.value = enrollmentStatus.value === 'approved'
+
+                    // 如果已加入，获取班级成员
+                    if (isEnrolled.value) {
+                        const studentsRes = await getCourseStudents(courseId)
+                        if (studentsRes.code === 200 || studentsRes.success) {
+                            courseStudents.value = studentsRes.data || []
+                        }
+                    }
                 }
             }
         } catch (error) {
@@ -53,19 +66,19 @@ export function useCourseDetail() {
     const buildChapterTree = (flatChapters) => {
         const roots = flatChapters.filter(c => c.parentId === 0 || !c.parentId)
         const map = {}
-        flatChapters.forEach(c => map[c.id] = { ...c, children: [] })
+        flatChapters.forEach(c => map[c.chapterId] = { ...c, children: [] })
 
         roots.forEach(root => {
-            if (map[root.id]) {
+            if (map[root.chapterId]) {
                 flatChapters.forEach(c => {
-                    if (c.parentId === root.id) {
-                        map[root.id].children.push(map[c.id])
+                    if (c.parentId === root.chapterId) {
+                        map[root.chapterId].children.push(map[c.chapterId])
                     }
                 })
             }
         })
 
-        return roots.map(r => map[r.id])
+        return roots.map(r => map[r.chapterId])
     }
 
     const handleEnroll = async () => {
@@ -116,6 +129,7 @@ export function useCourseDetail() {
     return {
         course,
         chapters,
+        courseStudents,
         activeTab,
         loading,
         isEnrolled,

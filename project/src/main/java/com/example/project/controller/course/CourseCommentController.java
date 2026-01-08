@@ -20,20 +20,20 @@ import java.util.Map;
 @RequestMapping("/api/course/comment")
 @CrossOrigin(origins = "*")
 public class CourseCommentController {
-    
+
     @Autowired
     private CourseCommentService courseCommentService;
-    
+
     /**
      * POST /api/course/comment
      * Request Body: {
-     *   "courseId": "string",
-     *   "chapterId": "long",
-     *   "userId": "string",
-     *   "userName": "string",
-     *   "userType": "TEACHER",
-     *   "content": "string",
-     *   "parentId": "long" (optional, for replies)
+     * "courseId": "string",
+     * "chapterId": "long",
+     * "userId": "string",
+     * "userName": "string",
+     * "userType": "TEACHER",
+     * "content": "string",
+     * "parentId": "long" (optional, for replies)
      * }
      */
     @PostMapping
@@ -41,14 +41,14 @@ public class CourseCommentController {
         Map<String, Object> response = new HashMap<>();
         try {
             CourseComment newComment;
-            
+
             // 如果有parentId，则是回复评论
             if (comment.getParentId() != null && comment.getParentId() > 0) {
                 newComment = courseCommentService.replyComment(comment);
             } else {
                 newComment = courseCommentService.addComment(comment);
             }
-            
+
             Map<String, Object> data = new HashMap<>();
             data.put("commentId", newComment.getCommentId());
             response.put("code", 200);
@@ -62,11 +62,11 @@ public class CourseCommentController {
             return ResponseEntity.internalServerError().body(response);
         }
     }
-    
+
     /**
      * 获取章节讨论列表（树形结构）
-     *  教师可以查看所有评论
-     *  学生在讨论中发表评论时，教师可以查看
+     * 教师可以查看所有评论
+     * 学生在讨论中发表评论时，教师可以查看
      * GET /api/course/comment/chapter/{chapterId}
      * Response: 树形结构的评论列表，包含回复
      */
@@ -85,7 +85,7 @@ public class CourseCommentController {
             return ResponseEntity.internalServerError().body(response);
         }
     }
-    
+
     /**
      * 获取课程评论
      * 
@@ -106,7 +106,7 @@ public class CourseCommentController {
             return ResponseEntity.internalServerError().body(response);
         }
     }
-    
+
     /**
      * 获取最新评论
      * 
@@ -116,7 +116,7 @@ public class CourseCommentController {
     public ResponseEntity<Map<String, Object>> getRecentComments(
             @PathVariable String courseId,
             @RequestParam(defaultValue = "10") int limit) {
-        
+
         Map<String, Object> response = new HashMap<>();
         try {
             List<CourseComment> comments = courseCommentService.getRecentComments(courseId, limit);
@@ -130,7 +130,7 @@ public class CourseCommentController {
             return ResponseEntity.internalServerError().body(response);
         }
     }
-    
+
     /**
      * 获取教师所有课程的评论（用于评论管理）
      * 
@@ -143,11 +143,11 @@ public class CourseCommentController {
             @RequestParam(defaultValue = "20") int pageSize,
             @RequestParam(required = false) String courseId,
             @RequestParam(required = false) String keyword) {
-        
+
         Map<String, Object> response = new HashMap<>();
         try {
             List<CourseComment> comments = courseCommentService.getTeacherComments(
-                teacherId, pageNumber, pageSize, courseId, keyword);
+                    teacherId, pageNumber, pageSize, courseId, keyword);
             response.put("code", 200);
             response.put("data", comments);
             return ResponseEntity.ok(response);
@@ -158,7 +158,7 @@ public class CourseCommentController {
             return ResponseEntity.internalServerError().body(response);
         }
     }
-    
+
     /**
      * 删除讨论
      * 需求 6.5: 教师可以删除讨论及其所有评论

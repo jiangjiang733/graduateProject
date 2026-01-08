@@ -105,11 +105,9 @@ export function useCourseManagement() {
         // 根据状态筛选
         if (currentFilter.value === 'draft') {
             filteredCourses = allCourses.value.filter(course => course.state === 0)
-        } else if (currentFilter.value === 'published') {
+        } else if (currentFilter.value === 'publish') {
             filteredCourses = allCourses.value.filter(course => course.state === 1)
         }
-        // 'all' 不需要筛选
-
         // 更新总数
         pagination.value.total = filteredCourses.length
 
@@ -219,13 +217,39 @@ export function useCourseManagement() {
     // 切换课程状态
     const handleToggleState = async (course) => {
         try {
-            const newState = course.state === 1 ? 0 : 1
             const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
 
+            // 验证teacherId是否存在
+            if (!teacherId) {
+                ElMessage.error('未找到教师ID，请重新登录')
+                return
+            }
+
+            const newState = course.state === 1 ? 0 : 1
             const response = await toggleCourseState(course.id, teacherId, newState)
 
             if (response.success) {
+                // 1. 更新课程对象的状态
                 course.state = newState
+
+                // 2. 同时更新allCourses中对应的课程对象
+                const courseInAll = allCourses.value.find(c => c.id === course.id)
+                if (courseInAll) {
+                    courseInAll.state = newState
+                }
+
+                // 3. 重新加载统计数据
+                await loadStats()
+
+                // 4. 重新应用筛选和分页
+                applyFilterAndPagination()
+
+                // 5. 如果当前页没有课程了（比如最后一条被移到其他标签），跳转到第一页
+                if (courses.value.length === 0 && pagination.value.currentPage > 1) {
+                    pagination.value.currentPage = 1
+                    applyFilterAndPagination()
+                }
+
                 ElMessage.success(newState === 1 ? '课程已发布' : '课程已设为草稿')
             } else {
                 ElMessage.error(response.message || '状态更新失败')

@@ -6,6 +6,8 @@ import com.example.project.entity.Student;
 import com.example.project.entity.enrollment.CourseEnrollment;
 import com.example.project.mapper.StudentUserMapper;
 import com.example.project.mapper.enrollment.CourseEnrollmentMapper;
+import com.example.project.mapper.course.StudentCourseMapper;
+import com.example.project.mapper.course.CourseMapper;
 import com.example.project.service.enrollment.CourseEnrollmentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,15 @@ public class CourseEnrollmentServiceImpl implements CourseEnrollmentService {
 
     @Autowired
     private StudentUserMapper studentUserMapper;
+
+    @Autowired
+    private StudentCourseMapper studentCourseMapper;
+
+    @Autowired
+    private CourseMapper courseMapper;
+
+    @Autowired
+    private com.example.project.service.notification.MessageService messageService;
 
     @Override
     @Transactional
@@ -170,15 +181,17 @@ public class CourseEnrollmentServiceImpl implements CourseEnrollmentService {
         return result;
     }
 
-    @Autowired
-    private com.example.project.mapper.course.StudentCourseMapper studentCourseMapper;
-
     @Override
     @Transactional
-    public void reviewEnrollment(Long enrollmentId, String status, String reason) {
+    public void reviewEnrollment(Long enrollmentId, String teacherId, String status, String reason) {
         CourseEnrollment enrollment = enrollmentMapper.selectById(enrollmentId);
         if (enrollment == null) {
             throw new RuntimeException("报名记录不存在");
+        }
+
+        // 校验审核人是否为课程教师
+        if (!enrollment.getTeacherId().equals(teacherId)) {
+            throw new com.example.project.exception.PermissionDeniedException("您无权审核该课程的报名申请");
         }
 
         if (!"pending".equals(enrollment.getStatus())) {
@@ -203,9 +216,13 @@ public class CourseEnrollmentServiceImpl implements CourseEnrollmentService {
             try {
                 sc.setStudentId(Integer.parseInt(enrollment.getStudentId()));
             } catch (NumberFormatException e) {
-                // 如果studentId不是数字，可能需要处理异常或记录日志
-                // 这里暂时假设都是数字ID
-                System.err.println("Student ID is not a number: " + enrollment.getStudentId());
+                // 如果studentId不是数字，则尝试从Student表获取（虽然通常它就是数字）
+                Student student = studentUserMapper.selectById(enrollment.getStudentId());
+                if (student != null) {
+                    sc.setStudentId(student.getStudentsId());
+                } else {
+                    throw new RuntimeException("无法获取有效的学生ID: " + enrollment.getStudentId());
+                }
             }
             sc.setCourseId(enrollment.getCourseId());
             sc.setStudentName(enrollment.getStudentName());
@@ -216,6 +233,7 @@ public class CourseEnrollmentServiceImpl implements CourseEnrollmentService {
             sc.setTotalStudyTime(0);
             sc.setJoinTime(new Date());
             sc.setCreateTime(new Date());
+            sc.setUpdateTime(new Date());
 
             // 检查是否已存在（避免重复插入）
             QueryWrapper<com.example.project.entity.course.StudentCourse> query = new QueryWrapper<>();
@@ -261,25 +279,27 @@ public class CourseEnrollmentServiceImpl implements CourseEnrollmentService {
             throw new RuntimeException("学生不存在");
         }
 
-        // 获取课程基本信息 (需要从Course表获取，这里为了简单先从已有的报名记录或其他地方拿teacherId)
-        // 通常应该从 CourseService 获取详情，这里暂用简单逻辑
-        com.example.project.mapper.course.CourseMapper courseMapper = (com.example.project.mapper.course.CourseMapper) org.springframework.web.context.ContextLoader
-                .getCurrentWebApplicationContext().getBean("courseMapper");
+        // 获取课程基本信息
         com.example.project.entity.course.Course course = courseMapper.selectById(courseId);
         if (course == null) {
             throw new RuntimeException("课程不存在");
         }
 
-        // 检查是否已经报名
+        // 检查是否已经报名或被邀请
         QueryWrapper<CourseEnrollment> wrapper = new QueryWrapper<>();
         wrapper.eq("student_id", studentId);
         wrapper.eq("course_id", courseId);
         CourseEnrollment existing = enrollmentMapper.selectOne(wrapper);
 
-        if (existing != null && "approved".equals(existing.getStatus())) {
-            return existing;
+        if (existing != null) {
+            if ("pending".equals(existing.getStatus())) {
+                throw new RuntimeException("已向该学生发送邀请，请等待学生处理");
+            } else if ("approved".equals(existing.getStatus())) {
+                throw new RuntimeException("该学生已加入课程");
+            }
         }
 
+        // 创建课程邀请记录（状态为pending）
         CourseEnrollment enrollment = existing != null ? existing : new CourseEnrollment();
         enrollment.setStudentId(studentId);
         enrollment.setStudentName(student.getStudentsUsername());
@@ -287,9 +307,8 @@ public class CourseEnrollmentServiceImpl implements CourseEnrollmentService {
         enrollment.setCourseId(courseId);
         enrollment.setCourseName(course.getCourseName());
         enrollment.setTeacherId(course.getTeacherId());
-        enrollment.setStatus("approved");
+        enrollment.setStatus("pending"); // 设置为待处理状态
         enrollment.setApplyTime(new Date());
-        enrollment.setReviewTime(new Date());
 
         if (existing != null) {
             enrollmentMapper.updateById(enrollment);
@@ -297,26 +316,26 @@ public class CourseEnrollmentServiceImpl implements CourseEnrollmentService {
             enrollmentMapper.insert(enrollment);
         }
 
-        // 同时加入到课程学习表
-        com.example.project.entity.course.StudentCourse sc = new com.example.project.entity.course.StudentCourse();
+        // 发送课程邀请通知给学生
         try {
-            sc.setStudentId(Integer.parseInt(studentId));
-        } catch (Exception e) {
-        }
-        sc.setCourseId(courseId);
-        sc.setStudentName(student.getStudentsUsername());
-        sc.setCourseName(course.getCourseName());
-        sc.setTeacherId(course.getTeacherId());
-        sc.setStatus(1);
-        sc.setProgress(0);
-        sc.setJoinTime(new Date());
-        sc.setCreateTime(new Date());
+            com.example.project.entity.notification.Message invitationMsg = new com.example.project.entity.notification.Message();
+            invitationMsg.setReceiverId(studentId);
+            invitationMsg.setReceiverType("STUDENT");
+            invitationMsg.setSenderId(course.getTeacherId());
+            invitationMsg.setSenderType("TEACHER");
+            invitationMsg.setSenderName(course.getTeacherName() != null ? course.getTeacherName() : "教师");
+            invitationMsg.setMessageType("COURSE_INVITATION"); // 课程邀请类型 (使用正确的字段名)
+            invitationMsg.setContent("邀请您加入课程：" + course.getCourseName());
+            invitationMsg.setRelatedId(String.valueOf(enrollment.getId())); // relatedId是String类型
+            invitationMsg.setIsRead(0);
+            invitationMsg.setCreateTime(new Date());
 
-        QueryWrapper<com.example.project.entity.course.StudentCourse> scQuery = new QueryWrapper<>();
-        scQuery.eq("student_id", sc.getStudentId());
-        scQuery.eq("course_id", courseId);
-        if (studentCourseMapper.selectCount(scQuery) == 0) {
-            studentCourseMapper.insert(sc);
+            // 使用MessageService发送消息
+            messageService.saveMessage(invitationMsg);
+            System.out.println("课程邀请通知已发送给学生: " + student.getStudentsUsername());
+        } catch (Exception e) {
+            System.err.println("发送课程邀请通知失败: " + e.getMessage());
+            e.printStackTrace();
         }
 
         return enrollment;

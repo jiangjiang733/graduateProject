@@ -3,7 +3,6 @@
     <el-avatar :size="isReply ? 32 : 40" :src="getUserAvatar(comment.userAvatar)" class="comment-avatar" />
     
     <div class="comment-body">
-      <!-- 1. Header Row -->
       <div class="comment-meta">
         <div class="meta-left">
           <span class="comment-author">{{ comment.userName }}</span>
@@ -36,7 +35,7 @@
              <el-icon><ChatLineSquare /></el-icon>
              {{ showReply ? '取消回复' : '回复' }}
            </span>
-           <span v-if="!isReply && String(comment.userId) === String(currentUserId)" class="action-item delete" @click="confirmDelete(comment.commentId)">
+           <span v-if="!isReply && canDelete" class="action-item delete" @click="confirmDelete(comment.commentId)">
              <el-icon><Delete /></el-icon> 删除
            </span>
         </div>
@@ -130,6 +129,21 @@ const {
   submitReply,
   confirmDelete
 } = useCommentItem(props, emit);
+
+// 判断是否可以删除评论
+const canDelete = computed(() => {
+  // 获取用户类型
+  const userType = localStorage.getItem('userType') || 
+                   (localStorage.getItem('teacherId') || localStorage.getItem('t_id') ? 'TEACHER' : 'STUDENT');
+  
+  // 教师可以删除所有评论
+  if (userType === 'TEACHER') {
+    return true;
+  }
+  
+  // 学生只能删除自己的评论
+  return String(props.comment.userId) === String(currentUserId.value);
+});
 
 // 楼层折叠逻辑
 const isExpanded = ref(false);
