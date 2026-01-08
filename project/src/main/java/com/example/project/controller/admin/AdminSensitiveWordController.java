@@ -22,15 +22,13 @@ public class AdminSensitiveWordController {
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String category,
-            @RequestParam(required = false) Integer level
-    ) {
-        // TODO: 实现实际的数据库查询
+            @RequestParam(required = false) Integer level) {
         Map<String, Object> data = new HashMap<>();
         data.put("list", new ArrayList<>());
         data.put("total", 0);
         data.put("pageNumber", pageNumber);
         data.put("pageSize", pageSize);
-        
+
         return Result.success(data);
     }
 
@@ -48,7 +46,7 @@ public class AdminSensitiveWordController {
         word.put("action", "REPLACE");
         word.put("replacement", "***");
         word.put("status", 1);
-        
+
         return Result.success(word);
     }
 
@@ -85,6 +83,7 @@ public class AdminSensitiveWordController {
     @PostMapping("/batch-delete")
     public Result<Void> batchDeleteSensitiveWords(@RequestBody Map<String, List<Long>> data) {
         List<Long> ids = data.get("ids");
+        System.out.println("Batch delete ids: " + ids);
         // TODO: 实现实际的批量删除
         return Result.success();
     }
@@ -98,7 +97,8 @@ public class AdminSensitiveWordController {
         List<String> words = (List<String>) data.get("words");
         String category = (String) data.get("category");
         Integer level = (Integer) data.get("level");
-        
+        System.out.println("Importing words: " + words + ", category: " + category + ", level: " + level);
+
         // TODO: 实现实际的批量导入
         return Result.success();
     }
@@ -109,6 +109,7 @@ public class AdminSensitiveWordController {
     @PutMapping("/{id}/status")
     public Result<Void> toggleSensitiveWordStatus(@PathVariable Long id, @RequestBody Map<String, Integer> data) {
         Integer status = data.get("status");
+        System.out.println("Toggle status to: " + status);
         // TODO: 实现实际的状态更新
         return Result.success();
     }
@@ -119,12 +120,13 @@ public class AdminSensitiveWordController {
     @PostMapping("/test")
     public Result<Map<String, Object>> testSensitiveWords(@RequestBody Map<String, String> data) {
         String text = data.get("text");
-        
+        System.out.println("Testing text: " + text);
+
         // TODO: 实现实际的敏感词检测
         Map<String, Object> result = new HashMap<>();
         result.put("hasSensitiveWords", false);
         result.put("words", new ArrayList<>());
-        
+
         return Result.success(result);
     }
 }

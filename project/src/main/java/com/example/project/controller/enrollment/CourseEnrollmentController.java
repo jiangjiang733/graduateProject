@@ -100,10 +100,12 @@ public class CourseEnrollmentController {
     @PutMapping("/{enrollmentId}/review")
     public Result<String> reviewEnrollment(
             @PathVariable Long enrollmentId,
+            @RequestParam String teacherId,
             @RequestBody EnrollmentReviewDTO reviewDTO) {
         try {
             enrollmentService.reviewEnrollment(
                     enrollmentId,
+                    teacherId,
                     reviewDTO.getStatus(),
                     reviewDTO.getReason());
 

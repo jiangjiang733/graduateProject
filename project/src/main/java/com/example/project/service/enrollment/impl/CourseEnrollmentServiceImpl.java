@@ -6,6 +6,8 @@ import com.example.project.entity.Student;
 import com.example.project.entity.enrollment.CourseEnrollment;
 import com.example.project.mapper.StudentUserMapper;
 import com.example.project.mapper.enrollment.CourseEnrollmentMapper;
+import com.example.project.mapper.course.StudentCourseMapper;
+import com.example.project.mapper.course.CourseMapper;
 import com.example.project.service.enrollment.CourseEnrollmentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,12 @@ public class CourseEnrollmentServiceImpl implements CourseEnrollmentService {
 
     @Autowired
     private StudentUserMapper studentUserMapper;
+
+    @Autowired
+    private StudentCourseMapper studentCourseMapper;
+
+    @Autowired
+    private CourseMapper courseMapper;
 
     @Override
     @Transactional
@@ -170,15 +178,17 @@ public class CourseEnrollmentServiceImpl implements CourseEnrollmentService {
         return result;
     }
 
-    @Autowired
-    private com.example.project.mapper.course.StudentCourseMapper studentCourseMapper;
-
     @Override
     @Transactional
-    public void reviewEnrollment(Long enrollmentId, String status, String reason) {
+    public void reviewEnrollment(Long enrollmentId, String teacherId, String status, String reason) {
         CourseEnrollment enrollment = enrollmentMapper.selectById(enrollmentId);
         if (enrollment == null) {
             throw new RuntimeException("报名记录不存在");
+        }
+
+        // 校验审核人是否为课程教师
+        if (!enrollment.getTeacherId().equals(teacherId)) {
+            throw new com.example.project.exception.PermissionDeniedException("您无权审核该课程的报名申请");
         }
 
         if (!"pending".equals(enrollment.getStatus())) {
@@ -203,9 +213,13 @@ public class CourseEnrollmentServiceImpl implements CourseEnrollmentService {
             try {
                 sc.setStudentId(Integer.parseInt(enrollment.getStudentId()));
             } catch (NumberFormatException e) {
-                // 如果studentId不是数字，可能需要处理异常或记录日志
-                // 这里暂时假设都是数字ID
-                System.err.println("Student ID is not a number: " + enrollment.getStudentId());
+                // 如果studentId不是数字，则尝试从Student表获取（虽然通常它就是数字）
+                Student student = studentUserMapper.selectById(enrollment.getStudentId());
+                if (student != null) {
+                    sc.setStudentId(student.getStudentsId());
+                } else {
+                    throw new RuntimeException("无法获取有效的学生ID: " + enrollment.getStudentId());
+                }
             }
             sc.setCourseId(enrollment.getCourseId());
             sc.setStudentName(enrollment.getStudentName());
@@ -216,6 +230,7 @@ public class CourseEnrollmentServiceImpl implements CourseEnrollmentService {
             sc.setTotalStudyTime(0);
             sc.setJoinTime(new Date());
             sc.setCreateTime(new Date());
+            sc.setUpdateTime(new Date());
 
             // 检查是否已存在（避免重复插入）
             QueryWrapper<com.example.project.entity.course.StudentCourse> query = new QueryWrapper<>();
@@ -261,10 +276,7 @@ public class CourseEnrollmentServiceImpl implements CourseEnrollmentService {
             throw new RuntimeException("学生不存在");
         }
 
-        // 获取课程基本信息 (需要从Course表获取，这里为了简单先从已有的报名记录或其他地方拿teacherId)
-        // 通常应该从 CourseService 获取详情，这里暂用简单逻辑
-        com.example.project.mapper.course.CourseMapper courseMapper = (com.example.project.mapper.course.CourseMapper) org.springframework.web.context.ContextLoader
-                .getCurrentWebApplicationContext().getBean("courseMapper");
+        // 获取课程基本信息
         com.example.project.entity.course.Course course = courseMapper.selectById(courseId);
         if (course == null) {
             throw new RuntimeException("课程不存在");

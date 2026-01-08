@@ -29,7 +29,53 @@ export const register = (studentData) => {
   })
 }
 
+/**
+ * 获取学生个人信息
+ */
+export const getProfile = (studentId) => {
+  return request.get(`/student/profile/${studentId}`)
+}
+
+/**
+ * 更新学生个人信息
+ */
+export const updateProfile = (studentId, profileData) => {
+  return request.put(`/student/profile/${studentId}`, profileData)
+}
+
+/**
+ * 修改学生密码
+ */
+export const updatePassword = (studentId, pwdData) => {
+  return request.put(`/student/password/${studentId}`, pwdData)
+}
+
+/**
+ * 上传学生头像
+ */
+export const uploadAvatar = (studentId, file) => {
+  const formData = new FormData()
+  formData.append('avatar', file)
+  return request.post(`/student/avatar/${studentId}`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}
+
+/**
+ * 获取学生统计信息
+ */
+export const getStatistics = (studentId) => {
+  return request.get(`/student/statistics/${studentId}`)
+}
+
 export default {
   login,
-  register
+  register,
+  getProfile,
+  updateProfile,
+  updatePassword,
+  uploadAvatar,
+  getStatistics
 }

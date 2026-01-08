@@ -9,6 +9,7 @@ import com.example.project.exception.ResourceNotFoundException;
 import com.example.project.mapper.homework.LabReportMapper;
 import com.example.project.mapper.homework.StudentLabReportMapper;
 import com.example.project.service.homework.LabReportService;
+import com.example.project.service.notification.MessageService;
 import com.example.project.entity.course.Course;
 import com.example.project.mapper.course.CourseMapper;
 import org.springframework.beans.BeanUtils;
@@ -40,6 +41,9 @@ public class LabReportServiceImpl implements LabReportService {
 
     @Autowired
     private CourseMapper courseMapper;
+
+    @Autowired
+    private MessageService messageService;
 
     @Override
     @Transactional
@@ -209,6 +213,28 @@ public class LabReportServiceImpl implements LabReportService {
         studentReport.setStatus(2); // 2-已批改
 
         studentLabReportMapper.updateById(studentReport);
+
+        // 发送系统通知给学生
+        try {
+            LabReport report = labReportMapper.selectById(studentReport.getReportId());
+            String title = "作业/实验报告已批改";
+            String content = String.format("您的实验报告《%s》已被教师批改。得分：%s。",
+                    report != null ? report.getReportTitle() : "未知报告",
+                    studentReport.getScore());
+
+            messageService.sendMessage(
+                    gradingDTO.getTeacherId(),
+                    "TEACHER",
+                    studentReport.getStudentId(),
+                    "STUDENT",
+                    "SYSTEM",
+                    title,
+                    content,
+                    studentReportId.toString());
+        } catch (Exception e) {
+            // 通知发送失败不应影响批改流程
+            System.err.println("发送批改通知失败: " + e.getMessage());
+        }
     }
 
     @Override

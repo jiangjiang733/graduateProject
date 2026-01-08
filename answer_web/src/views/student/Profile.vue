@@ -17,7 +17,7 @@
           <el-card class="profile-card" shadow="hover">
             <div class="avatar-section">
               <el-avatar :size="100" :src="avatarUrl">
-                {{ studentInfo.studentsUsername?.charAt(0) || 'S' }}
+                {{ (studentInfo.studentsUsername || studentInfo.studentName || 'S').charAt(0) }}
               </el-avatar>
               <el-upload
                 class="avatar-uploader"
@@ -35,22 +35,30 @@
             </div>
 
             <div class="user-info">
-              <h3 class="user-name">{{ studentInfo.studentsUsername }}</h3>
-              <div class="user-id">学号：{{ studentInfo.studentsId }}</div>
+              <h3 class="user-name">{{ studentInfo.studentsUsername || studentInfo.studentName }}</h3>
+              <div class="user-id">学号：{{ studentInfo.studentsId || studentInfo.studentId }}</div>
             </div>
 
             <div class="info-list">
               <div class="info-item">
                 <el-icon><Message /></el-icon>
-                <span>{{ studentInfo.studentsEmail || '未设置邮箱' }}</span>
+                <span>{{ studentInfo.studentsEmail || studentInfo.studentEmail || '未设置邮箱' }}</span>
               </div>
               <div class="info-item">
                 <el-icon><School /></el-icon>
-                <span>{{ studentInfo.studentsMajor || '未设置专业' }}</span>
+                <span>{{ studentInfo.studentsMajor || studentInfo.studentMajor || '未设置专业' }}</span>
               </div>
               <div class="info-item">
                 <el-icon><Calendar /></el-icon>
-                <span>{{ studentInfo.studentsGrade || '未设置年级' }}</span>
+                <span>{{ studentInfo.studentsGrade || studentInfo.studentGrade || '未设置年级' }}</span>
+              </div>
+              <div class="info-item">
+                <el-icon><User /></el-icon>
+                <span>{{ studentInfo.studentSex || '保密' }}</span>
+              </div>
+              <div class="info-item">
+                <el-icon><Calendar /></el-icon>
+                <span>{{ studentInfo.studentsBirthday || '未设置生日' }}</span>
               </div>
             </div>
 
@@ -175,6 +183,23 @@
             <el-option label="2024级" value="2024级" />
           </el-select>
         </el-form-item>
+        <el-form-item label="性别" prop="studentSex">
+          <el-radio-group v-model="editForm.studentSex">
+            <el-radio label="男">男</el-radio>
+            <el-radio label="女">女</el-radio>
+            <el-radio label="保密">保密</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="生日" prop="studentsBirthday">
+          <el-date-picker
+            v-model="editForm.studentsBirthday"
+            type="date"
+            placeholder="选择日期"
+            format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
+            style="width: 100%"
+          />
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="editDialogVisible = false">取消</el-button>
@@ -229,7 +254,7 @@
 
 <script setup>
 import { 
-  Back, Camera, Message, School, Calendar, Edit, Lock 
+  Back, Camera, Message, School, Calendar, Edit, Lock, User 
 } from '@element-plus/icons-vue'
 import { useStudentProfile } from '@/assets/js/student/profile.js'
 
