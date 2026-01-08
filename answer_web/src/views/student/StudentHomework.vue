@@ -112,6 +112,13 @@
 
               <div class="actions">
                 <el-button
+                    v-if="homework.studentReportId"
+                    class="btn-detail"
+                    @click="viewDetail(homework)"
+                >
+                  查看详情
+                </el-button>
+                <el-button
                     v-if="!homework.studentReportId"
                     type="primary"
                     class="btn-submit"
@@ -120,11 +127,13 @@
                   提交作业
                 </el-button>
                 <el-button
-                    v-else
-                    class="btn-detail"
-                    @click="viewDetail(homework)"
+                    v-else-if="homework.status === 1"
+                    type="primary"
+                    plain
+                    class="btn-submit"
+                    @click="goToSubmit(homework)"
                 >
-                  查看详情
+                  修改作业
                 </el-button>
               </div>
             </div>
@@ -157,8 +166,7 @@ onMounted(() => {
 const loadHomeworks = async () => {
   loading.value = true
   try {
-    const studentInfo = JSON.parse(localStorage.getItem('student') || '{}')
-    const studentId = studentInfo.studentsId || studentInfo.id || localStorage.getItem('s_id')
+    const studentId = localStorage.getItem('s_id') || localStorage.getItem('studentId')
 
     if (!studentId) {
       ElMessage.warning('未能获取学生信息，请重新登录')
@@ -213,7 +221,11 @@ const isOverdue = (deadline) => {
   return new Date(deadline) < new Date()
 }
 
-const goToSubmit = (hw) => router.push({ name: 'student_homework_submit', params: { id: hw.reportId } })
+const goToSubmit = (hw) => router.push({ 
+  name: 'student_homework_submit', 
+  params: { id: hw.reportId },
+  query: { studentReportId: hw.studentReportId }
+})
 const viewDetail = (hw) => router.push({ name: 'student_homework_detail', params: { id: hw.studentReportId } })
 const filterHomeworks = () => {}
 </script>

@@ -47,6 +47,6 @@ public class StudentLabReport implements Serializable {
 
     private Integer status;
 
-    @TableField(exist = false)
+    @TableField("structured_answers")
     private String structuredAnswers;
 }

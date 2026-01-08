@@ -165,6 +165,12 @@ const router = createRouter({
           meta: { title: '作业详情', requiresAuth: true, role: 'teacher' }
         },
         {
+          path: 'homework/:id/grade',
+          name: 'teacher_homework_grade',
+          component: () => import('../views/teacher/Homework/HomeworkGrade.vue'),
+          meta: { title: '作业批改', requiresAuth: true, role: 'teacher' }
+        },
+        {
           path: 'classes',
           name: 'teacher_classes',
           component: () => import('../views/teacher/class/ClassManagement.vue'),

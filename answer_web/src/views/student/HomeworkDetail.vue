@@ -28,9 +28,10 @@
           <span class="label">提交时间:</span>
           <span class="value">{{ formatDate(submission.submitTime) }}</span>
         </div>
-        <div v-if="submission.score" class="info-item">
+        <div class="info-item">
           <span class="label">得分:</span>
-          <span class="value score">{{ submission.score }}</span>
+          <span class="value score">{{ liveScore }}</span>
+          <el-tag v-if="submission.status !== 2" type="info" size="small" style="margin-left: 8px">自动预评分</el-tag>
         </div>
       </div>
 
@@ -70,7 +71,7 @@
             <div class="q-header">
               <span class="q-idx">{{ index + 1 }}.</span>
               <el-tag size="small">{{ getQuestionTypeText(q.questionType) }}</el-tag>
-              <div class="q-score-stat" v-if="submission.status === 2">
+              <div class="q-score-stat" v-if="submission.status === 2 || ['SINGLE', 'MULTIPLE', 'JUDGE'].includes(q.questionType)">
                 <el-tag :type="isStudentCorrect(index, q) ? 'success' : 'danger'" size="small" effect="plain" round>
                    {{ isStudentCorrect(index, q) ? '回答正确' : '回答错误' }}
                 </el-tag>
@@ -78,25 +79,53 @@
             </div>
             <div class="q-content">{{ q.questionContent }}</div>
             
-            <div class="student-ans-box">
-              <div class="ans-label">您的回答：</div>
-              <div class="ans-val" :class="{
-                correct: submission.status === 2 && isStudentCorrect(index, q),
-                wrong: submission.status === 2 && !isStudentCorrect(index, q)
-              }">
-                {{ formatStudentAnswer(index, q) || '未作答' }}
+            <!-- 选项列表 -->
+            <div v-if="['SINGLE', 'MULTIPLE', 'JUDGE'].includes(q.questionType)" class="options-display">
+              <div v-for="(opt, oIdx) in (q.options || [])" :key="oIdx" 
+                class="opt-item"
+                :class="{
+                  'is-student': isOptionSelectedByStudent(index, q, oIdx),
+                  'is-correct': isOptionCorrect(q, oIdx) && (submission.status === 2 || true)
+                }"
+              >
+                <div class="opt-col">
+                   <span class="opt-label">{{ String.fromCharCode(65 + oIdx) }}.</span>
+                   <span class="opt-text">{{ opt.text || opt }}</span>
+                </div>
+                <div class="opt-tags">
+                   <el-tag v-if="isOptionSelectedByStudent(index, q, oIdx)" size="small" :type="isOptionCorrect(q, oIdx) ? 'success' : 'danger'">
+                     您的选择
+                   </el-tag>
+                   <el-tag v-if="isOptionCorrect(q, oIdx)" size="small" type="success" effect="dark" style="margin-left: 4px">
+                     正确答案
+                   </el-tag>
+                </div>
+              </div>
+              <!-- 判断题特殊处理 -->
+              <div v-if="q.questionType === 'JUDGE'" class="judge-options">
+                 <div class="opt-item" :class="{'is-student': getRawStudentAnswer(index) === 'A', 'is-correct': q.correctAnswer === 'A'}">
+                   <span>A. 正确</span>
+                   <el-tag v-if="getRawStudentAnswer(index) === 'A'" size="small">您的选择</el-tag>
+                 </div>
+                 <div class="opt-item" :class="{'is-student': getRawStudentAnswer(index) === 'B', 'is-correct': q.correctAnswer === 'B'}">
+                   <span>B. 错误</span>
+                   <el-tag v-if="getRawStudentAnswer(index) === 'B'" size="small">您的选择</el-tag>
+                 </div>
               </div>
             </div>
 
-            <!-- 如果已批改，显示正确答案和解析 -->
-            <div v-if="submission.status === 2" class="standard-ans-section">
-              <div class="standard-ans">
-                 <span class="label">正确答案：</span>
-                 <span class="val">{{ formatCorrectAnswer(q) }}</span>
-              </div>
+            <div v-if="q.questionType === 'ESSAY'" class="student-ans-box">
+              <div class="ans-label">您的回答：</div>
+              <div class="ans-val">{{ formatStudentAnswer(index, q) || '未作答' }}</div>
+            </div>
+
+            <!-- 解析区 -->
+            <div v-if="submission.status === 2 || ['SINGLE', 'MULTIPLE', 'JUDGE'].includes(q.questionType)" class="standard-ans-section">
               <div v-if="q.analysis" class="ans-analysis">
-                 <span class="label">题目解析：</span>
-                 <span class="val">{{ q.analysis }}</span>
+                 <div class="analysis-header">
+                   <el-icon><InfoFilled /></el-icon> 答案解析
+                 </div>
+                 <div class="analysis-body">{{ q.analysis }}</div>
               </div>
             </div>
           </div>
@@ -143,7 +172,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
@@ -208,8 +237,11 @@ const getStatusText = (status) => {
 
 // 修改提交
 const editSubmission = () => {
-  ElMessage.info('修改功能开发中')
-  // TODO: 实现修改提交功能
+    router.push({
+        name: 'student_homework_submit',
+        params: { id: homework.value.reportId },
+        query: { studentReportId: submission.value.studentReportId }
+    })
 }
 
 // 返回
@@ -238,6 +270,26 @@ const structuredAnswers = computed(() => {
   } catch (e) { return [] }
 })
 
+// 实时出分逻辑
+const liveScore = computed(() => {
+  // 如果老师已经批改了，显示最终得分
+  if (submission.value.status === 2 && (submission.value.score !== null && submission.value.score !== undefined)) {
+    return submission.value.score
+  }
+  
+  // 否则，根据客观题对错立即计算预得分
+  let total = 0
+  questionList.value.forEach((q, index) => {
+    // 仅针对客观题进行自动计分
+    if (['SINGLE', 'MULTIPLE', 'JUDGE'].includes(q.questionType)) {
+      if (isStudentCorrect(index, q)) {
+        total += (q.score || 0)
+      }
+    }
+  })
+  return total
+})
+
 const getQuestionTypeText = (type) => {
   const types = { SINGLE: '单选题', MULTIPLE: '多选题', JUDGE: '判断题', ESSAY: '简答题' }
   return types[type] || type
@@ -264,9 +316,32 @@ const formatCorrectAnswer = (q) => {
 }
 
 const isStudentCorrect = (idx, q) => {
-  const sAns = formatStudentAnswer(idx, q)
-  const cAns = formatCorrectAnswer(q)
+  const sAns = (getRawStudentAnswer(idx) || '').trim().toUpperCase()
+  const cAns = (q.correctAnswer || q.answer || '').trim().toUpperCase()
   return sAns === cAns
+}
+
+const getRawStudentAnswer = (idx) => {
+  const ansObj = structuredAnswers.value[idx]
+  return ansObj ? ansObj.answer : ''
+}
+
+const isOptionSelectedByStudent = (qIdx, q, optIndex) => {
+  const sAns = getRawStudentAnswer(qIdx)
+  const char = String.fromCharCode(65 + optIndex)
+  if (q.questionType === 'MULTIPLE') {
+    return sAns.includes(char)
+  }
+  return sAns === char
+}
+
+const isOptionCorrect = (q, optIndex) => {
+  const cAns = (q.correctAnswer || q.answer || '')
+  const char = String.fromCharCode(65 + optIndex)
+  if (q.questionType === 'MULTIPLE') {
+    return cAns.includes(char)
+  }
+  return cAns === char
 }
 
 onMounted(() => {
@@ -503,29 +578,86 @@ onMounted(() => {
 .ans-val.correct { color: #10b981; }
 .ans-val.wrong { color: #ef4444; }
 
-.standard-ans-section {
-  border-top: 1px dashed #e2e8f0;
-  padding-top: 12px;
-  margin-top: 12px;
+.options-display {
+  margin: 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.standard-ans, .ans-analysis {
-  font-size: 14px;
-  line-height: 1.6;
-  margin-top: 4px;
+.opt-item {
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s;
+  background: #f8fafc;
 }
 
-.standard-ans .label, .ans-analysis .label {
-  color: #64748b;
-  font-weight: 600;
+.opt-item.is-student {
+  border-color: #ef4444;
+  background: #fef2f2;
 }
 
-.standard-ans .val {
-  color: #10b981;
+.opt-item.is-correct {
+  border-color: #10b981;
+  background: #ecfdf5;
+}
+
+.opt-item.is-student.is-correct {
+  border-color: #10b981;
+  background: #ecfdf5;
+  box-shadow: 0 0 0 1px #10b981;
+}
+
+.opt-col {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.opt-label {
+  font-weight: 800;
+  color: #475569;
+}
+
+.opt-text {
+  color: #1e293b;
+  line-height: 1.5;
+}
+
+.ans-analysis {
+  background: #fffbeb;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid #fef3c7;
+}
+
+.analysis-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-weight: 700;
+  color: #b45309;
+  margin-bottom: 8px;
+  font-size: 14px;
 }
 
-.ans-analysis .val {
-  color: #64748b;
+.analysis-body {
+  font-size: 14px;
+  color: #92400e;
+  line-height: 1.6;
+}
+
+.judge-options {
+  display: flex;
+  gap: 12px;
+}
+
+.judge-options .opt-item {
+  flex: 1;
+  justify-content: center;
 }
 </style>

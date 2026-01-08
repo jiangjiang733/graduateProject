@@ -9,26 +9,41 @@
     <el-card v-loading="loading" class="homework-card" shadow="never">
       <!-- 作业信息 -->
       <div class="homework-info-section">
-        <h2>{{ homework.reportTitle }}</h2>
+        <div class="title-row">
+          <h2 class="report-title">{{ homework.reportTitle }}</h2>
+          <el-tag :type="homework.questionList?.length > 0 ? 'primary' : 'success'" effect="dark">
+            {{ homework.questionList?.length > 0 ? '在线测评模式' : '常规作业模式' }}
+          </el-tag>
+        </div>
+        
         <div class="info-items">
           <div class="info-item">
             <el-icon><Calendar /></el-icon>
             <span>截止时间: {{ formatDate(homework.deadline) }}</span>
-            <el-tag v-if="isOverdue" type="danger" size="small">已逾期</el-tag>
+            <el-tag v-if="isOverdue" type="danger" size="small" style="margin-left: 8px">已逾期</el-tag>
           </div>
           <div class="info-item">
             <el-icon><Star /></el-icon>
             <span>总分: {{ homework.totalScore }}分</span>
           </div>
         </div>
-        <div class="homework-description">
-          <h3>作业要求</h3>
-          <p>{{ homework.reportDescription || '暂无详细说明' }}</p>
+
+        <div class="homework-description-compact">
+          <div class="desc-header">
+            <el-icon><InfoFilled /></el-icon>
+            <span>作业要求与说明</span>
+          </div>
+          <div class="desc-body">
+            {{ homework.reportDescription || '暂无详细要求' }}
+          </div>
         </div>
 
-        <!-- 结构化题目作答区 -->
-        <div v-if="homework.questionList?.length > 0" class="homework-questions-section">
-          <div class="section-badge">在线作答题目</div>
+        <!-- 结构化题目作答区：核心区 -->
+        <div v-if="homework.questionList?.length > 0" class="homework-questions-section animate-fade-in">
+          <div class="section-badge">
+             <el-icon><EditPen /></el-icon>
+             在线作答
+          </div>
           <div v-for="(q, index) in homework.questionList" :key="index" class="question-item">
             <div class="q-header">
               <span class="q-idx">{{ index + 1 }}.</span>
@@ -37,7 +52,6 @@
             </div>
             <div class="q-content">{{ q.questionContent }}</div>
             
-            <!-- 单选题 -->
             <div v-if="q.questionType === 'SINGLE'" class="q-options">
               <el-radio-group v-model="submitForm.answers[index]">
                 <el-radio v-for="(opt, oIdx) in q.options" :key="oIdx" :label="String.fromCharCode(65 + oIdx)" class="opt-radio">
@@ -46,8 +60,6 @@
                 </el-radio>
               </el-radio-group>
             </div>
-
-            <!-- 多选题 -->
             <div v-else-if="q.questionType === 'MULTIPLE'" class="q-options">
               <el-checkbox-group v-model="submitForm.multiAnswers[index]">
                 <el-checkbox v-for="(opt, oIdx) in q.options" :key="oIdx" :label="String.fromCharCode(65 + oIdx)" class="opt-checkbox">
@@ -56,75 +68,66 @@
                 </el-checkbox>
               </el-checkbox-group>
             </div>
-
-            <!-- 判断题 -->
             <div v-else-if="q.questionType === 'JUDGE'" class="q-options">
               <el-radio-group v-model="submitForm.answers[index]">
                 <el-radio label="A">A. 正确</el-radio>
                 <el-radio label="B">B. 错误</el-radio>
               </el-radio-group>
             </div>
-
-            <!-- 简答题 -->
             <div v-else-if="q.questionType === 'ESSAY'" class="q-options">
-              <el-input
-                v-model="submitForm.answers[index]"
-                type="textarea"
-                :rows="3"
-                placeholder="请输入您的回答..."
-              />
+              <el-input v-model="submitForm.answers[index]" type="textarea" :rows="3" placeholder="请输入您的回答..." />
             </div>
           </div>
         </div>
 
-        <div v-if="homework.attachmentUrl" class="homework-attachment">
-          <h3>作业附件</h3>
-          <el-link :href="`/api/${homework.attachmentUrl}`" target="_blank" type="primary">
+        <div v-if="homework.attachmentUrl && !(homework.questionList?.length > 0)" class="homework-attachment">
+          <div class="section-title">作业附件下载</div>
+          <el-link :href="`/api/${homework.attachmentUrl}`" target="_blank" type="primary" class="attachment-link">
             <el-icon><Download /></el-icon>
-            下载附件
+            {{ homework.attachmentUrl.split('/').pop() || '点击下载附件' }}
           </el-link>
         </div>
       </div>
 
-      <el-divider />
+      <el-divider v-if="!(homework.questionList?.length > 0)" />
 
-      <!-- 提交表单 -->
-      <el-form ref="formRef" :model="submitForm" :rules="rules" label-width="100px">
-        <el-form-item label="作业内容" prop="content">
+      <!-- 提交表单：仅在没有在线题目时显示内容和附件（学习通逻辑） -->
+      <el-form v-if="!(homework.questionList?.length > 0)" ref="formRef" :model="submitForm" :rules="rules" label-position="top">
+        <el-form-item label="作业正文" prop="content">
           <el-input
             v-model="submitForm.content"
             type="textarea"
             :rows="10"
-            placeholder="请输入作业内容"
+            placeholder="请输入作业完成情况或直接在此填写作业内容"
             maxlength="5000"
             show-word-limit
           />
         </el-form-item>
 
-        <el-form-item label="附件上传">
+        <el-form-item label="上传作业文档" class="upload-form-item">
           <el-upload
             ref="uploadRef"
-            class="upload-demo"
+            class="modern-uploader"
+            drag
+            action=""
             :auto-upload="false"
             :on-change="handleFileChange"
             :file-list="fileList"
             :limit="1"
           >
-            <el-button type="primary">
-              <el-icon><Upload /></el-icon>
-              选择文件
-            </el-button>
-            <template #tip>
-              <div class="el-upload__tip">支持上传1个文件,文件大小不超过10MB</div>
-            </template>
+            <el-icon class="el-icon--upload"><upload-filled /></el-icon>
+            <div class="el-upload__text">
+              将文件拖到此处，或<em>点击上传</em>
+            </div>
           </el-upload>
         </el-form-item>
       </el-form>
 
       <div class="form-actions">
-        <el-button @click="goBack">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="submitHomework">
-          提交作业
+        <el-button size="large" @click="goBack" class="btn-cancel">取消</el-button>
+        <el-button type="primary" size="large" :loading="submitting" @click="submitHomework" class="btn-submit-main">
+          <el-icon><CircleCheck /></el-icon>
+          {{ route.query.studentReportId ? '确认更新' : '立即提交' }}
         </el-button>
       </div>
     </el-card>
@@ -139,9 +142,13 @@ import {
   Calendar,
   Star,
   Download,
-  Upload
+  Upload,
+  UploadFilled,
+  InfoFilled,
+  EditPen,
+  CircleCheck
 } from '@element-plus/icons-vue'
-import { getLabReportDetail } from '@/api/homework'
+import { getLabReportDetail, getStudentSubmission } from '@/api/homework'
 import { submitLabReport as submitLabReportAPI } from '@/api/homework'
 
 const router = useRouter()
@@ -173,13 +180,13 @@ const getQuestionTypeTag = (type) => {
 
 const rules = {
   content: [
-    { required: true, message: '请输入作业内容', trigger: 'blur' },
-    { min: 10, message: '作业内容至少10个字符', trigger: 'blur' }
+    { required: false, trigger: 'blur' }
   ]
 }
 
 // 从localStorage获取学生信息
-const studentInfo = JSON.parse(localStorage.getItem('student') || '{}')
+const studentId = localStorage.getItem('s_id') || localStorage.getItem('studentId')
+const studentName = localStorage.getItem('studentName') || localStorage.getItem('username') || localStorage.getItem('s_name') || '学生'
 
 // 是否逾期
 const isOverdue = computed(() => {
@@ -199,11 +206,13 @@ const loadHomework = async () => {
     if (data.questionList) {
         try {
             data.questionList = typeof data.questionList === 'string' ? JSON.parse(data.questionList) : data.questionList
-            // 初始化多选题答案
+            // 强制初始化所有答案槽位，防止出现 null
             data.questionList.forEach((q, idx) => {
+                submitForm.answers[idx] = ''
                 if (q.questionType === 'MULTIPLE') {
                     submitForm.multiAnswers[idx] = []
                 }
+                // ... (解析选项逻辑保持)
                 
                 // 解析选项
                 if (q.questionOptions) {
@@ -219,6 +228,35 @@ const loadHomework = async () => {
     }
     
     homework.value = data
+
+    // 如果有已提交的记录，加载它
+    const studentReportId = route.query.studentReportId
+    if (studentReportId) {
+        const subRes = await getStudentSubmission(studentReportId)
+        if (subRes && subRes.data) {
+            const subData = subRes.data
+            submitForm.content = subData.content
+            
+            if (subData.structuredAnswers) {
+                try {
+                    const sAns = JSON.parse(subData.structuredAnswers)
+                    sAns.forEach((item, idx) => {
+                        if (item.type === 'MULTIPLE') {
+                            submitForm.multiAnswers[idx] = item.answer ? item.answer.split('') : []
+                        } else {
+                            submitForm.answers[idx] = item.answer
+                        }
+                    })
+                } catch (e) {
+                    console.error('解析已提交答案失败:', e)
+                }
+            }
+            
+            if (subData.attachmentUrl) {
+                fileList.value = [{ name: '已上传的附件 (修改将覆盖)', url: subData.attachmentUrl }]
+            }
+        }
+    }
   } catch (error) {
     console.error('加载作业失败:', error)
     ElMessage.error('加载作业失败')
@@ -245,54 +283,62 @@ const handleFileChange = (file, fileList) => {
 
 // 提交作业
 const submitHomework = async () => {
-  if (!formRef.value) return
-
-  await formRef.value.validate(async (valid) => {
+  // 学习通逻辑：如果有在线题目，表单被隐藏了，不需要校验 formRef
+  const hasQuestions = homework.value.questionList?.length > 0
+  
+  if (!hasQuestions && formRef.value) {
+    const valid = await formRef.value.validate().catch(() => false)
     if (!valid) return
+  }
 
-    try {
-      await ElMessageBox.confirm('确认提交作业吗?提交后将无法修改', '提示', {
-        confirmButtonText: '确认提交',
-        cancelButtonText: '取消',
-        type: 'warning'
-      })
+  try {
+    await ElMessageBox.confirm('确认提交作业吗?', '提示', {
+      confirmButtonText: '确认提交',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
 
-      submitting.value = true
+    submitting.value = true
 
-      // 合并结构化答案到内容中，或者单独存储
-      // 为了兼容现有逻辑，我们将结构化答案转为 JSON 存入辅助字段或 content 开头
-      const structuredAnswers = homework.value.questionList?.map((q, idx) => {
-          let ans = submitForm.answers[idx]
-          if (q.questionType === 'MULTIPLE') {
-              ans = submitForm.multiAnswers[idx]?.sort().join('')
-          }
-          return {
-              type: q.questionType,
-              content: q.questionContent,
-              answer: ans || ''
-          }
-      })
+    // 合并结构化答案
+    const structuredAnswers = homework.value.questionList?.map((q, idx) => {
+        let ans = submitForm.answers[idx]
+        if (q.questionType === 'MULTIPLE') {
+            ans = (submitForm.multiAnswers[idx] || []).sort().join('')
+        }
+        return {
+            type: q.questionType,
+            content: q.questionContent,
+            answer: ans || ''
+        }
+    }) || []
 
-      const submissionData = {
-        studentId: studentInfo.studentsId,
-        studentName: studentInfo.studentsUsername,
-        content: submitForm.content,
-        structuredAnswers: JSON.stringify(structuredAnswers) // 这里我们假设后端可以接收这个新字段，或者我们可以把它追加到内容里
-      }
+    const submissionData = {
+      studentId: studentId,
+      studentName: studentName,
+      content: submitForm.content || '',
+      structuredAnswers: JSON.stringify(structuredAnswers)
+    }
 
-      await submitLabReportAPI(route.params.id, submissionData, currentFile.value)
+      const response = await submitLabReportAPI(route.params.id, submissionData, currentFile.value)
+      const studentReportId = response.data?.studentReportId || response.studentReportId || route.query.studentReportId
 
       ElMessage.success('作业提交成功')
-      router.push({ name: 'student_homework' })
-    } catch (error) {
-      if (error !== 'cancel') {
-        console.error('提交失败:', error)
-        ElMessage.error(error.response?.data?.message || '提交失败')
+      
+      if (hasQuestions && studentReportId) {
+        // 如果是测评模式，提交后立即跳转到详情页查看答案
+        router.push({ name: 'student_homework_detail', params: { id: studentReportId } })
+      } else {
+        router.push({ name: 'student_homework' })
       }
-    } finally {
-      submitting.value = false
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('提交失败:', error)
+      ElMessage.error(error.response?.data?.message || '提交失败')
     }
-  })
+  } finally {
+    submitting.value = false
+  }
 }
 
 // 返回
@@ -307,135 +353,183 @@ onMounted(() => {
 
 <style scoped>
 .homework-submit {
-  padding: 20px;
+  padding: 24px;
+  background-color: #f8fafc;
+  min-height: 100vh;
 }
 
 .page-title {
-  font-size: 18px;
-  font-weight: 600;
+  font-weight: 800;
+  font-size: 20px;
+  color: #1e293b;
 }
 
 .homework-card {
-  margin-top: 20px;
+  margin-top: 24px;
+  border-radius: 24px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
-.homework-info-section {
-  margin-bottom: 24px;
+.title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
 }
 
-.homework-info-section h2 {
-  margin: 0 0 16px 0;
-  font-size: 24px;
-  color: #303133;
+.report-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.5px;
 }
 
 .info-items {
   display: flex;
   gap: 24px;
-  margin-bottom: 16px;
+  margin-bottom: 32px;
 }
 
 .info-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  color: #606266;
+  gap: 8px;
+  font-size: 14px;
+  color: #64748b;
+  background: white;
+  padding: 8px 16px;
+  border-radius: 12px;
+  border: 1px solid #f1f5f9;
+}
+
+.homework-description-compact {
+  background: #f1f5f9;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 32px;
+}
+
+.desc-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: 8px;
   font-size: 14px;
 }
 
-.homework-description,
-.homework-attachment {
-  margin-top: 16px;
-}
-
-.homework-description h3,
-.homework-attachment h3 {
-  margin: 0 0 8px 0;
-  font-size: 16px;
-  color: #303133;
-}
-
-.homework-description p {
-  margin: 0;
-  color: #606266;
+.desc-body {
+  font-size: 15px;
   line-height: 1.6;
-}
-
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 24px;
+  color: #1e293b;
+  white-space: pre-wrap;
 }
 
 .homework-questions-section {
-    margin-top: 30px;
-    padding: 20px;
-    background: #f8fafc;
-    border-radius: 12px;
-    border: 1px solid #e2e8f0;
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 32px;
 }
 
 .section-badge {
-    display: inline-block;
-    padding: 4px 12px;
-    background: #10b981;
-    color: white;
-    font-size: 12px;
-    font-weight: 700;
-    border-radius: 20px;
-    margin-bottom: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #eff6ff;
+  color: #3b82f6;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 24px;
 }
 
 .question-item {
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    margin-bottom: 16px;
-    border: 1px solid #edf2f7;
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px dashed #f1f5f9;
+}
+
+.question-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
 }
 
 .q-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 12px;
-}
-
-.q-idx {
-    font-weight: 800;
-    color: #1e293b;
-}
-
-.q-score {
-    font-size: 12px;
-    color: #94a3b8;
-}
-
-.q-content {
     font-size: 15px;
     color: #334155;
     line-height: 1.6;
     margin-bottom: 16px;
     font-weight: 500;
 }
+.q-idx { font-weight: 800; font-size: 18px; color: #1e293b; }
+.q-score { color: #94a3b8; font-size: 13px; }
+.q-content { font-size: 16px; color: #334155; line-height: 1.6; margin-bottom: 20px; font-weight: 500; }
 
 .q-options {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-left: 12px;
 }
 
 .opt-radio, .opt-checkbox {
-    margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-    white-space: normal;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  white-space: normal;
 }
 
-.opt-label {
-    margin-right: 8px;
-    font-weight: 600;
+.opt-label { font-weight: 700; margin-right: 8px; }
+
+.homework-attachment {
+  margin-top: 24px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.attachment-link { font-weight: 600; }
+
+.upload-form-item { margin-top: 24px; }
+
+.modern-uploader :deep(.el-upload-dragger) {
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 2px dashed #cbd5e1;
+  transition: all 0.3s;
+}
+
+.modern-uploader :deep(.el-upload-dragger:hover) {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.btn-cancel { border-radius: 12px; width: 120px; }
+.btn-submit-main { border-radius: 12px; padding: 0 32px; font-weight: 700; height: 48px; }
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 :deep(.el-radio), :deep(.el-checkbox) {

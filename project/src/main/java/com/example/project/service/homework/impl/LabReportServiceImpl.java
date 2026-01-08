@@ -313,6 +313,12 @@ public class LabReportServiceImpl implements LabReportService {
             throw new ResourceNotFoundException("实验报告不存在");
         }
 
+        // 检查截止时间
+        Date now = new Date();
+        if (labReport.getDeadline() != null && labReport.getDeadline().before(now)) {
+            throw new RuntimeException("已过截止日期，无法提交或修改作业");
+        }
+
         // 检查是否已经提交过
         QueryWrapper<StudentLabReport> wrapper = new QueryWrapper<>();
         wrapper.eq("report_id", studentReport.getReportId());
@@ -320,7 +326,29 @@ public class LabReportServiceImpl implements LabReportService {
         StudentLabReport existingReport = studentLabReportMapper.selectOne(wrapper);
 
         if (existingReport != null) {
-            throw new RuntimeException("您已经提交过该实验报告，请使用更新功能");
+            // 如果已批改，不允许修改
+            if (existingReport.getStatus() == 2) {
+                throw new RuntimeException("作业已被批改，无法修改");
+            }
+
+            // 更新现有提交
+            existingReport.setContent(studentReport.getContent());
+            existingReport.setStructuredAnswers(studentReport.getStructuredAnswers());
+            existingReport.setSubmitTime(now);
+
+            // 处理附件更新
+            if (attachment != null && !attachment.isEmpty()) {
+                // 删除旧附件
+                if (existingReport.getAttachmentUrl() != null && !existingReport.getAttachmentUrl().isEmpty()) {
+                    deleteFile(existingReport.getAttachmentUrl());
+                }
+                // 保存新附件
+                String attachmentUrl = saveAttachment(attachment);
+                existingReport.setAttachmentUrl(attachmentUrl);
+            }
+
+            studentLabReportMapper.updateById(existingReport);
+            return existingReport.getStudentReportId();
         }
 
         // 处理附件上传
@@ -343,6 +371,7 @@ public class LabReportServiceImpl implements LabReportService {
     public List<Map<String, Object>> getStudentLabReports(String studentId) {
         List<Map<String, Object>> result = new ArrayList<>();
 
+        // 1. 获取所有课程的所有实验报告 (学生选课 -> 课程 -> 实验报告)
         // 获取学生选修的通过的课程及其加入时间
         QueryWrapper<com.example.project.entity.course.StudentCourse> courseWrapper = new QueryWrapper<>();
         try {
@@ -361,6 +390,13 @@ public class LabReportServiceImpl implements LabReportService {
                 .map(sc -> sc.getCourseId())
                 .collect(Collectors.toList());
 
+        Map<String, Date> courseJoinTimeMap = enrolledCourses.stream()
+                .collect(Collectors.toMap(
+                        com.example.project.entity.course.StudentCourse::getCourseId,
+                        sc -> sc.getJoinTime() != null ? sc.getJoinTime()
+                                : (sc.getCreateTime() != null ? sc.getCreateTime() : new Date(0)),
+                        (existing, replacement) -> existing));
+
         // 查询这些课程的所有作业
         QueryWrapper<LabReport> reportWrapper = new QueryWrapper<>();
         reportWrapper.in("course_id", enrolledCourseIds);
@@ -375,8 +411,27 @@ public class LabReportServiceImpl implements LabReportService {
         Map<Long, StudentLabReport> submissionMap = submittedReports.stream()
                 .collect(Collectors.toMap(StudentLabReport::getReportId, s -> s));
 
+        Date now = new Date();
+
         // 3. 合并结果
         for (LabReport report : courseReports) {
+            Date joinTime = courseJoinTimeMap.get(report.getCourseId());
+            Date createTime = report.getCreateTime();
+            Date deadline = report.getDeadline();
+
+            // 逻辑：
+            // 1. 加入后发布的作业 (createTime >= joinTime)
+            // 2. 加入前发布但未截止的作业 (createTime < joinTime && deadline > now)
+            // 3. 特殊情况：如果学生已经提交了，无论如何都应该显示（为了查看成绩）
+            boolean isJoinedAfterPublish = createTime != null && joinTime != null
+                    && (createTime.after(joinTime) || createTime.equals(joinTime));
+            boolean isNotExpired = deadline != null && deadline.after(now);
+            boolean hasSubmitted = submissionMap.containsKey(report.getReportId());
+
+            if (!isJoinedAfterPublish && !isNotExpired && !hasSubmitted) {
+                continue; // 过滤掉加入前已截止且未提交的作业
+            }
+
             Map<String, Object> map = new HashMap<>();
             map.put("reportId", report.getReportId());
             map.put("reportTitle", report.getReportTitle());
@@ -454,6 +509,12 @@ public class LabReportServiceImpl implements LabReportService {
         // 检查是否已经批改
         if (studentReport.getStatus() == 2) {
             throw new RuntimeException("报告已批改，无法修改");
+        }
+
+        // 检查截止时间
+        LabReport labReport = labReportMapper.selectById(studentReport.getReportId());
+        if (labReport != null && labReport.getDeadline() != null && labReport.getDeadline().before(new Date())) {
+            throw new RuntimeException("已过截止日期，无法修改作业");
         }
 
         // 更新内容

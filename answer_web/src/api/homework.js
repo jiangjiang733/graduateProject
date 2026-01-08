@@ -106,6 +106,10 @@ export const submitLabReport = (reportId, submissionData, attachment) => {
   formData.append('studentName', submissionData.studentName)
   formData.append('content', submissionData.content)
 
+  if (submissionData.structuredAnswers) {
+    formData.append('structuredAnswers', submissionData.structuredAnswers)
+  }
+
   if (attachment) {
     formData.append('attachment', attachment)
   }
