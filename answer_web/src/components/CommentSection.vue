@@ -288,7 +288,8 @@ const postReply = async (comment) => {
       userAvatar: userInfo.userAvatar,
       userType: props.userType,
       content: replyContent.value.trim(),
-      parentId: comment.commentId
+      parentId: comment.commentId,
+      targetUserId: comment.userId
     }
 
     await addComment(replyData)
