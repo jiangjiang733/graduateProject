@@ -26,7 +26,12 @@
     <div v-loading="loading" class="comment-list">
       <el-empty v-if="comments.length === 0" description="暂无评论,快来发表第一条评论吧!" :image-size="120" />
       
-      <div v-for="comment in comments" :key="comment.commentId" class="comment-item">
+      <div 
+        v-for="comment in comments" 
+        :key="comment.commentId" 
+        :class="['comment-item', { 'highlight-target': String(comment.commentId) === String(route.query.commentId) }]"
+        :id="'comment-' + comment.commentId"
+      >
         <div class="comment-avatar">
           <el-avatar :size="40" :src="formatAvatarUrl(comment.userAvatar)">
             {{ comment.userName?.charAt(0) || 'U' }}
@@ -75,7 +80,12 @@
 
           <!-- 回复列表 -->
           <div v-if="comment.replies && comment.replies.length > 0" class="replies-list">
-            <div v-for="reply in comment.replies" :key="reply.commentId" class="reply-item">
+            <div 
+              v-for="reply in comment.replies" 
+              :key="reply.commentId" 
+              :class="['reply-item', { 'highlight-target': String(reply.commentId) === String(route.query.commentId) }]"
+              :id="'comment-' + reply.commentId"
+            >
               <div class="reply-avatar">
                 <el-avatar :size="32" :src="formatAvatarUrl(reply.userAvatar)">
                   {{ reply.userName?.charAt(0) || 'U' }}
@@ -108,13 +118,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   ChatDotRound,
   Delete
 } from '@element-plus/icons-vue'
 import { getChapterComments, getCourseComments, addComment, deleteComment } from '@/api/comment'
+
+const route = useRoute()
 
 const props = defineProps({
   chapterId: {
@@ -217,6 +230,19 @@ const loadComments = async () => {
       
       // 2. 构建层级结构
       comments.value = buildTree(courseLevelComments)
+    }
+
+    // 检查是否有 commentId 需要定位
+    const targetCommentId = route.query.commentId
+    if (targetCommentId) {
+      nextTick(() => {
+        setTimeout(() => {
+          const element = document.getElementById(`comment-${targetCommentId}`)
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          }
+        }, 500) // 等待 DOM 完全渲染和可能的展开动画
+      })
     }
   } catch (error) {
     console.error('加载评论失败:', error)
@@ -496,5 +522,14 @@ defineExpose({
   line-height: 1.6;
   margin-bottom: 6px;
   white-space: pre-wrap;
+}
+@keyframes highlight-fade {
+  0% { background-color: rgba(64, 158, 255, 0.2); }
+  100% { background-color: #f5f7fa; }
+}
+
+.highlight-target {
+  animation: highlight-fade 2s ease-in-out;
+  border: 1px solid #409eff;
 }
 </style>

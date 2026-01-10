@@ -1,5 +1,8 @@
 <template>
-  <div :class="['comment-item-container', { 'is-reply': isReply }]">
+  <div 
+    :class="['comment-item-container', { 'is-reply': isReply, 'highlight-target': String(comment.commentId) === String(route.query.commentId) }]" 
+    :id="'comment-' + comment.commentId"
+  >
     <el-avatar :size="isReply ? 32 : 40" :src="getUserAvatar(comment.userAvatar)" class="comment-avatar" />
     
     <div class="comment-body">
@@ -89,11 +92,14 @@ export default {
 
 <script setup>
 import { ref, computed, defineProps, defineEmits } from 'vue';
+import { useRoute } from 'vue-router';
 import { ElCollapseTransition } from 'element-plus';
 import { ChatLineSquare, Delete, ArrowDown, ArrowUp } from '@element-plus/icons-vue';
 import { formatRelativeTime } from '@/utils/date.js';
 import { getUserAvatar } from '@/utils/resource.js';
 import { useCommentItem } from '@/assets/js/teacher/comment-item.js';
+
+const route = useRoute();
 
 const props = defineProps({
   comment: {
@@ -337,5 +343,15 @@ const displayReplies = computed(() => {
 
 .view-more-btn:hover {
     color: #409eff;
+}
+@keyframes highlight-fade {
+  0% { background-color: rgba(64, 158, 255, 0.2); }
+  100% { background-color: transparent; }
+}
+
+.highlight-target {
+  animation: highlight-fade 2s ease-in-out;
+  border-left: 4px solid #409eff !important;
+  padding-left: 12px !important;
 }
 </style>

@@ -1,18 +1,14 @@
 <template>
   <div class="modern-layout">
     <el-container class="layout-container">
-      <!-- 顶部 Header & Nav -->
       <el-header class="top-header glass-panel">
         <div class="header-inner">
-          <!-- Logo -->
           <div class="brand" @click="$router.push('/teacher/dashboard')">
             <div class="logo-box">
               <el-icon :size="20"><Reading /></el-icon>
             </div>
             <h1 class="brand-text">智慧课堂</h1>
           </div>
-
-          <!-- 顶部水平菜单 -->
           <nav class="top-nav">
             <div 
               v-for="item in menuItems" 

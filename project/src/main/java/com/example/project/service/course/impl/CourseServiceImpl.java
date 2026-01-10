@@ -189,6 +189,9 @@ public class CourseServiceImpl implements CourseService {
         if (course != null && course.getTeacherId() != null) {
             Teacher teacher = teacherUserMapper.selectById(course.getTeacherId());
             if (teacher != null) {
+                // 设置真实的教师用户名
+                course.setTeacherName(teacher.getTeacherUsername());
+                // 设置真实的教师头像
                 course.setTeacherAvatar(teacher.getTeacherHead());
             }
         }

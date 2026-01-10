@@ -1,6 +1,4 @@
-/**
- * 课程报名相关API接口
- */
+
 import request from './request'
 
 /**
