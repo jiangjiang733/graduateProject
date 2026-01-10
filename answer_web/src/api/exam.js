@@ -3,12 +3,6 @@
  */
 import request from './request'
 
-
-/**
- * 创建考试
- * @param {Object} examData - 考试数据
- * @returns {Promise}
- */
 export const createExam = (examData) => {
   return request.post('/exam', examData)
 }

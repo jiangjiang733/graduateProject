@@ -1,6 +1,4 @@
-/**
- * 仪表盘相关API接口
- */
+
 import request from './request'
 
 /**

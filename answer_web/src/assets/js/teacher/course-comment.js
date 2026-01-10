@@ -1,9 +1,11 @@
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, nextTick } from 'vue';
+import { useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { addComment, getCourseComments, getChapterComments } from '@/api/comment.js';
 import { useUserInfo } from '@/stores/user.js';
 
 export function useCourseComment(props) {
+    const route = useRoute();
     // 状态
     const comments = ref([]);
     const commentContent = ref('');
@@ -27,18 +29,23 @@ export function useCourseComment(props) {
         const map = {};
         const tree = [];
 
-        // 初始化 map，并处理数据
+        // 初始化 map，并处理数据,使用 String key 避免类型不匹配
         list.forEach(item => {
-            map[item.commentId || item.id] = item;
-            item.replies = item.replies || [];
+            const key = String(item.commentId || item.id);
+            map[key] = item;
+            item.replies = item.replies || []; // 确保 replies 数组存在
         });
 
         // 构建树形结构
         list.forEach(item => {
-            const id = item.commentId || item.id;
-            if (item.parentId && map[item.parentId] && item.parentId !== id) {
-                map[item.parentId].replies.push(item);
+            const id = String(item.commentId || item.id);
+            const parentKey = String(item.parentId);
+
+            // 如果有 parentId 且父节点存在，且不是自己指向自己
+            if (item.parentId && map[parentKey] && parentKey !== id) {
+                map[parentKey].replies.push(item);
             } else {
+                // 没有 parentId 或父节点不存在，作为根节点
                 tree.push(item);
             }
         });
@@ -85,8 +92,20 @@ export function useCourseComment(props) {
 
             if (res.code === 200 && res.data) {
                 comments.value = buildCommentTree(res.data);
+
+                // 检查是否有 commentId 需要定位
+                const targetCommentId = route.query.commentId;
+                if (targetCommentId) {
+                    nextTick(() => {
+                        setTimeout(() => {
+                            const element = document.getElementById(`comment-${targetCommentId}`);
+                            if (element) {
+                                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                        }, 500);
+                    });
+                }
             } else {
-                // ElMessage.error(res.message || '加载评论失败');
                 comments.value = [];
             }
         } catch (error) {

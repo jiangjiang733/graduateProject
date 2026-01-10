@@ -1,7 +1,4 @@
-/**
- * Axios配置文件
- * 统一管理HTTP请求
- */
+
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import router from '@/router'
@@ -18,10 +15,6 @@ const request = axios.create({
   }
 })
 
-/**
- * 请求拦截器
- * 在发送请求之前做些什么
- */
 request.interceptors.request.use(
   config => {
     // 从localStorage获取token（按优先级查找）
@@ -43,10 +36,6 @@ request.interceptors.request.use(
   }
 )
 
-/**
- * 响应拦截器
- * 对响应数据做点什么
- */
 request.interceptors.response.use(
   response => {
     // 直接返回响应数据

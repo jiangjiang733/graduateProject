@@ -5,11 +5,6 @@ import request from './request'
 import axios from 'axios'
 import { API_BASE_URL } from './request'
 
-// ==================== 课程管理 API ====================
-
-/**
- * 创建课程
- */
 export const createCourse = async (courseData) => {
   const formData = new FormData()
   formData.append('courseName', courseData.courseName)
@@ -40,19 +35,10 @@ export const createCourse = async (courseData) => {
   }
 }
 
-/**
- * 获取课程列表
- */
 export const getCourseList = (params = {}) => request.get('/course', { params })
 
-/**
- * 获取课程详情
- */
 export const getCourseDetail = (courseId) => request.get(`/course/${courseId}`)
 
-/**
- * 更新课程信息
- */
 export const updateCourse = async (courseId, courseData) => {
   const formData = new FormData()
   formData.append('teacherId', courseData.teacherId)

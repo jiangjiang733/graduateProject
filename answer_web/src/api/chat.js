@@ -1,22 +1,11 @@
 import request from './request'
-
-/**
- * 发送私信
- */
 export const sendChatMessage = (data) => {
     return request.post('/chat/send', data)
 }
-
-/**
- * 获取聊天历史
- */
 export const getChatHistory = (params) => {
     return request.get('/chat/history', { params })
 }
 
-/**
- * 获取联系人列表
- */
 export const getChatContacts = (userType, userId) => {
     return request.get(`/chat/contacts/${userType}/${userId}`)
 }

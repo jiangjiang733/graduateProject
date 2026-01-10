@@ -38,6 +38,10 @@ public class CourseCommentDTO implements Serializable {
 
     private String targetUserName;
 
+    private String targetUserType;
+
+    private String targetUserAvatar;
+
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date createTime;
 

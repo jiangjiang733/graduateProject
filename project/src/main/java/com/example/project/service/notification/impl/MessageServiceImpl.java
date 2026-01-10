@@ -51,18 +51,30 @@ public class MessageServiceImpl implements MessageService {
     @Override
     public Page<Message> getMessageList(String receiverId, String receiverType, Integer isRead, Integer pageNumber,
             Integer pageSize) {
-        Page<Message> page = new Page<>(pageNumber, pageSize);
-        QueryWrapper<Message> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("receiver_id", receiverId);
-        queryWrapper.eq("receiver_type", receiverType);
+        // 使用关联查询获取所有消息（包含发送者信息）
+        java.util.List<Message> allMessages = messageMapper.selectMessagesWithSenderInfo(receiverId, receiverType);
 
+        // 根据isRead过滤
+        java.util.List<Message> filteredMessages = allMessages;
         if (isRead != null) {
-            queryWrapper.eq("is_read", isRead);
+            filteredMessages = allMessages.stream()
+                    .filter(m -> m.getIsRead() != null && m.getIsRead().equals(isRead))
+                    .collect(java.util.stream.Collectors.toList());
         }
 
-        queryWrapper.orderByDesc("create_time");
+        // 手动分页
+        int total = filteredMessages.size();
+        int start = (pageNumber - 1) * pageSize;
+        int end = Math.min(start + pageSize, total);
 
-        return messageMapper.selectPage(page, queryWrapper);
+        java.util.List<Message> pageRecords = start < total ? filteredMessages.subList(start, end)
+                : new java.util.ArrayList<>();
+
+        // 创建分页对象
+        Page<Message> page = new Page<>(pageNumber, pageSize, total);
+        page.setRecords(pageRecords);
+
+        return page;
     }
 
     @Override
