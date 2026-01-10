@@ -79,35 +79,73 @@
           </div>
 
           <!-- 回复列表 -->
-          <div v-if="comment.replies && comment.replies.length > 0" class="replies-list">
-            <div 
-              v-for="reply in comment.replies" 
-              :key="reply.commentId" 
-              :class="['reply-item', { 'highlight-target': String(reply.commentId) === String(route.query.commentId) }]"
-              :id="'comment-' + reply.commentId"
-            >
-              <div class="reply-avatar">
-                <el-avatar :size="32" :src="formatAvatarUrl(reply.userAvatar)">
-                  {{ reply.userName?.charAt(0) || 'U' }}
-                </el-avatar>
-              </div>
-              <div class="reply-content">
-                <div class="reply-header">
-                  <span class="user-name">{{ reply.userName }}</span>
-                  <el-tag v-if="reply.userType === 'TEACHER'" type="warning" size="small">教师</el-tag>
-                  <span class="reply-time">{{ formatTime(reply.createTime) }}</span>
+          <div v-if="comment.replies && comment.replies.length > 0" class="replies-section">
+            <!-- 展开/收起按钮 -->
+            <div class="replies-toggle" @click="toggleReplies(comment.commentId)">
+              <span v-if="!expandedReplies[comment.commentId]">
+                共 {{ comment.replies.length }} 条回复，点击展开 ∨
+              </span>
+              <span v-else>
+                共 {{ comment.replies.length }} 条回复，点击收起 ∧
+              </span>
+            </div>
+            
+            <!-- 回复列表内容 -->
+            <div v-show="expandedReplies[comment.commentId]" class="replies-list">
+              <div 
+                v-for="reply in comment.replies" 
+                :key="reply.commentId" 
+                :class="['reply-item', { 'highlight-target': String(reply.commentId) === String(route.query.commentId) }]"
+                :id="'comment-' + reply.commentId"
+              >
+                <div class="reply-avatar">
+                  <el-avatar :size="32" :src="formatAvatarUrl(reply.userAvatar)">
+                    {{ reply.userName?.charAt(0) || 'U' }}
+                  </el-avatar>
                 </div>
-                <div class="reply-text">{{ reply.content }}</div>
-                <el-button
-                  v-if="canDelete(reply)"
-                  text
-                  size="small"
-                  type="danger"
-                  @click="deleteCommentItem(reply)"
-                >
-                  <el-icon><Delete /></el-icon>
-                  删除
-                </el-button>
+                <div class="reply-content">
+                  <div class="reply-header">
+                    <span class="user-name">{{ reply.userName }}</span>
+                    <el-tag v-if="reply.userType === 'TEACHER'" type="warning" size="small">教师</el-tag>
+                    <span v-if="reply.targetUserName && reply.targetUserName !== comment.userName" class="reply-to">
+                      回复 <span class="target-user">@{{ reply.targetUserName }}</span>
+                    </span>
+                    <span class="reply-time">{{ formatTime(reply.createTime) }}</span>
+                  </div>
+                  <div class="reply-text">{{ reply.content }}</div>
+                  <div class="reply-actions">
+                    <el-button text size="small" @click="showReplyInput(comment, reply)">
+                      <el-icon><ChatDotRound /></el-icon>
+                      回复
+                    </el-button>
+                    <el-button
+                      v-if="canDelete(reply)"
+                      text
+                      size="small"
+                      type="danger"
+                      @click="deleteCommentItem(reply)"
+                    >
+                      <el-icon><Delete /></el-icon>
+                      删除
+                    </el-button>
+                  </div>
+                  <!-- 回复的回复输入框 -->
+                  <div v-if="replyingTo === reply.commentId" class="reply-input">
+                    <el-input
+                      v-model="replyContent"
+                      type="textarea"
+                      :rows="2"
+                      :placeholder="'回复 ' + reply.userName + '...'"
+                      maxlength="500"
+                    />
+                    <div class="reply-actions-btn">
+                      <el-button size="small" @click="cancelReply">取消</el-button>
+                      <el-button size="small" type="primary" :loading="replying" @click="postReply(comment, reply)">
+                        发布
+                      </el-button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -118,7 +156,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
@@ -151,7 +189,15 @@ const replying = ref(false)
 const comments = ref([])
 const newComment = ref('')
 const replyingTo = ref(null)
+const replyTargetComment = ref(null)  // 顶级评论引用
+const replyTargetUser = ref(null)     // 被回复用户
 const replyContent = ref('')
+const expandedReplies = ref({})       // 记录每个评论的回复展开状态
+
+// 切换回复的展开/收起
+const toggleReplies = (commentId) => {
+  expandedReplies.value[commentId] = !expandedReplies.value[commentId]
+}
 
 // 头像处理辅助函数
 const formatAvatarUrl = (url) => {
@@ -221,15 +267,17 @@ const loadComments = async () => {
       const data = response.data || []
       comments.value = Array.isArray(data[0]?.replies) ? data : buildTree(data)
     } else {
-      // 课程全局接口返回的是扁平列表，需要前端过滤并构建树
+      // 课程全局接口返回的是扁平列表，需要前端构建树
       response = await getCourseComments(props.courseId)
       const allComments = response.data || []
       
-      // 1. 严格过滤：在课程详情页，只展示针对课程本身的评论（chapterId 为空或 0）
-      const courseLevelComments = allComments.filter(c => !c.chapterId || c.chapterId === 0)
+      console.log('后端返回的原始评论数据:', allComments.length, '条')
       
-      // 2. 构建层级结构
-      comments.value = buildTree(courseLevelComments)
+      // 直接使用 buildTree 构建树形结构
+      // buildTree 会自动识别顶级评论（parentId 为空）和回复（有 parentId）
+      comments.value = buildTree(allComments)
+      
+      console.log('最终评论列表:', comments.value.length, '条顶级评论')
     }
 
     // 检查是否有 commentId 需要定位
@@ -241,7 +289,7 @@ const loadComments = async () => {
           if (element) {
             element.scrollIntoView({ behavior: 'smooth', block: 'center' })
           }
-        }, 500) // 等待 DOM 完全渲染和可能的展开动画
+        }, 500)
       })
     }
   } catch (error) {
@@ -285,19 +333,33 @@ const postComment = async () => {
 }
 
 // 显示回复输入框
-const showReplyInput = (comment) => {
-  replyingTo.value = comment.commentId
+// comment: 顶级评论, reply: 可选的二级回复（如果是回复二级回复的话）
+const showReplyInput = (comment, reply = null) => {
+  if (reply) {
+    // 回复一个二级回复
+    replyingTo.value = reply.commentId
+    replyTargetComment.value = comment  // 保存顶级评论引用
+    replyTargetUser.value = reply       // 保存被回复用户
+  } else {
+    // 回复顶级评论
+    replyingTo.value = comment.commentId
+    replyTargetComment.value = comment
+    replyTargetUser.value = comment
+  }
   replyContent.value = ''
 }
 
 // 取消回复
 const cancelReply = () => {
   replyingTo.value = null
+  replyTargetComment.value = null
+  replyTargetUser.value = null
   replyContent.value = ''
 }
 
 // 发布回复
-const postReply = async (comment) => {
+// comment: 顶级评论, targetReply: 可选的被回复的二级回复
+const postReply = async (comment, targetReply = null) => {
   if (!replyContent.value.trim()) {
     ElMessage.warning('请输入回复内容')
     return
@@ -306,6 +368,10 @@ const postReply = async (comment) => {
   replying.value = true
   try {
     const userInfo = getUserInfo()
+    
+    // 确定回复的目标用户
+    const targetUser = targetReply || comment
+    
     const replyData = {
       courseId: props.courseId,
       chapterId: props.chapterId || null,
@@ -314,8 +380,12 @@ const postReply = async (comment) => {
       userAvatar: userInfo.userAvatar,
       userType: props.userType,
       content: replyContent.value.trim(),
+      // 回复始终挂载到顶级评论下（保持二级结构）
       parentId: comment.commentId,
-      targetUserId: comment.userId
+      // 被回复用户信息（用于显示"回复 @用户名"）
+      targetUserId: targetUser.userId,
+      targetUserType: targetUser.userType,
+      targetUserName: targetUser.userName
     }
 
     await addComment(replyData)
@@ -372,8 +442,23 @@ const formatTime = (time) => {
   return date.toLocaleDateString('zh-CN')
 }
 
+// 实时刷新定时器
+let refreshTimer = null
+
 onMounted(() => {
   loadComments()
+  
+  // 每 10 秒静默刷新一次评论列表
+  refreshTimer = setInterval(() => {
+    loadComments()
+  }, 10000)
+})
+
+onUnmounted(() => {
+  if (refreshTimer) {
+    clearInterval(refreshTimer)
+    refreshTimer = null
+  }
 })
 
 // 暴露刷新方法
@@ -477,13 +562,35 @@ defineExpose({
 
 .reply-actions {
   display: flex;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.reply-actions-btn {
+  display: flex;
   justify-content: flex-end;
   gap: 8px;
   margin-top: 8px;
 }
 
-.replies-list {
+.replies-section {
   margin-top: 12px;
+}
+
+.replies-toggle {
+  display: inline-block;
+  font-size: 13px;
+  color: #909399;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.replies-toggle:hover {
+  color: #606266;
+}
+
+.replies-list {
+  margin-top: 8px;
   padding-left: 12px;
   border-left: 2px solid #dcdfe6;
 }
@@ -522,6 +629,17 @@ defineExpose({
   line-height: 1.6;
   margin-bottom: 6px;
   white-space: pre-wrap;
+}
+
+.reply-to {
+  color: #909399;
+  font-size: 12px;
+  margin-left: 4px;
+}
+
+.target-user {
+  color: #409eff;
+  font-weight: 500;
 }
 @keyframes highlight-fade {
   0% { background-color: rgba(64, 158, 255, 0.2); }
