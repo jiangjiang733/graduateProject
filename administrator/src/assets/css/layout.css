@@ -1,0 +1,148 @@
+.layout-container {
+    height: 100vh;
+    background-color: var(--admin-bg);
+}
+
+.sidebar {
+    background: var(--admin-sidebar-bg);
+    border-right: 1px solid var(--admin-border-light);
+    transition: all 0.3s;
+    z-index: 100;
+}
+
+.logo {
+    height: 64px;
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--admin-border-light);
+}
+
+.logo-icon {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, var(--admin-primary) 0%, var(--admin-primary-dark) 100%);
+    border-radius: 8px;
+    margin-right: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 18px;
+}
+
+.logo h3 {
+    margin: 0;
+    color: var(--admin-text-main);
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+}
+
+.sidebar-menu {
+    border: none;
+    background: transparent;
+    padding: 16px 12px;
+}
+
+.sidebar-menu :deep(.el-menu-item) {
+    height: 50px;
+    line-height: 50px;
+    margin-bottom: 4px;
+    border-radius: 10px;
+    color: var(--admin-sidebar-text);
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.sidebar-menu :deep(.el-menu-item .el-icon) {
+    font-size: 20px;
+    margin-right: 12px;
+    color: #94a3b8;
+}
+
+.sidebar-menu :deep(.el-menu-item:hover) {
+    background: #f1f5f9;
+    color: var(--admin-text-main);
+}
+
+.sidebar-menu :deep(.el-menu-item.is-active) {
+    background: var(--admin-sidebar-active-bg);
+    color: var(--admin-sidebar-active-text);
+}
+
+.sidebar-menu :deep(.el-menu-item.is-active .el-icon) {
+    color: var(--admin-sidebar-active-text);
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--admin-border-light);
+    padding: 0 32px;
+    height: 64px;
+    position: sticky;
+    top: 0;
+    z-index: 90;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.page-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--admin-text-main);
+    letter-spacing: -0.5px;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: 12px;
+    transition: all 0.2s;
+    background: #f1f5f9;
+}
+
+.user-info:hover {
+    background: #e2e8f0;
+}
+
+.user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    background: var(--admin-primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+
+.user-name {
+    font-weight: 600;
+    color: var(--admin-text-main);
+    font-size: 14px;
+}
+
+.main-content {
+    padding: 0;
+    overflow-y: auto;
+}

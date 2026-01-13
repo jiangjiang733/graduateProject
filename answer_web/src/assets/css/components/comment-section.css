@@ -1,0 +1,291 @@
+.comment-section {
+    padding: 20px;
+    background: #fff;
+    border-radius: 8px;
+}
+
+.comment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.comment-header h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #303133;
+}
+
+.comment-count {
+    color: #909399;
+    font-size: 14px;
+}
+
+.comment-input-section {
+    margin-bottom: 24px;
+}
+
+.input-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 12px;
+}
+
+.comment-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.comment-item {
+    display: flex;
+    gap: 16px;
+    padding: 16px 0;
+    border-bottom: 1px solid #f2f3f5;
+}
+
+.comment-item:last-child {
+    border-bottom: none;
+}
+
+.comment-avatar {
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.comment-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.comment-header-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.user-name {
+    font-weight: 600;
+    color: #61666d;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.user-name:hover {
+    color: #409eff;
+}
+
+.comment-time {
+    color: #9499a0;
+    font-size: 12px;
+}
+
+.comment-text {
+    font-size: 14px;
+    color: #18191c;
+    line-height: 1.6;
+    margin: 4px 0;
+    word-break: break-word;
+}
+
+.comment-actions {
+    display: flex;
+    gap: 16px;
+    margin-top: 4px;
+    color: #9499a0;
+    font-size: 12px;
+}
+
+.reply-input {
+    margin-top: 12px;
+    padding: 12px;
+    background: #fff;
+    border-radius: 6px;
+}
+
+.reply-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 6px;
+}
+
+.reply-actions-btn {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.replies-section {
+    margin-top: 12px;
+}
+
+.replies-toggle {
+    display: inline-block;
+    font-size: 13px;
+    color: #909399;
+    cursor: pointer;
+    padding: 4px 0;
+}
+
+.replies-toggle:hover {
+    color: #606266;
+}
+
+/* 查看更多/收起回复按钮行 */
+.view-more-row {
+    padding: 4px 0 8px;
+    font-size: 13px;
+    color: #9499a0;
+}
+
+.view-more-btn {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: color 0.2s;
+}
+
+.view-more-btn:hover {
+    color: #409eff;
+}
+
+.replies-list {
+    margin-top: 8px;
+    margin-left: 56px;
+    padding-left: 16px;
+    border-left: 2px solid #f2f3f5;
+}
+
+.reply-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px 0 8px 0;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.reply-item:last-child {
+    border-bottom: none;
+}
+
+.reply-avatar {
+    flex-shrink: 0;
+}
+
+.reply-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.reply-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.reply-time {
+    color: #9499a0;
+    font-size: 12px;
+}
+
+.reply-text {
+    font-size: 14px;
+    color: #18191c;
+    line-height: 1.6;
+    margin: 4px 0;
+    word-break: break-word;
+}
+
+.reply-to {
+    color: #909399;
+    font-size: 12px;
+    margin-left: 4px;
+}
+
+.target-user {
+    color: #409eff;
+    font-weight: 500;
+}
+
+/* 教师端风格的@提及样式 */
+.reply-target-text {
+    color: #61666d;
+    margin-right: 2px;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+}
+
+.target-name {
+    color: #409eff;
+    cursor: pointer;
+    font-weight: 500;
+    background: linear-gradient(135deg, rgba(64, 158, 255, 0.1) 0%, rgba(64, 158, 255, 0.05) 100%);
+    padding: 1px 6px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.target-name:hover {
+    background: linear-gradient(135deg, rgba(64, 158, 255, 0.2) 0%, rgba(64, 158, 255, 0.1) 100%);
+    color: #1890ff;
+}
+
+/* 教师端风格的教师标签 */
+.tag-teacher {
+    padding: 0 4px;
+    height: 18px;
+    line-height: 16px;
+}
+
+/* 教师端风格的操作按钮 */
+.action-item {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #9499a0;
+    font-size: 12px;
+    transition: color 0.2s;
+}
+
+.action-item:hover {
+    color: #409eff;
+}
+
+.action-item.delete:hover {
+    color: #f56c6c;
+}
+
+/* 迷你删除按钮 */
+.delete-mini {
+    cursor: pointer;
+    color: #9499a0;
+    font-size: 14px;
+    transition: color 0.2s;
+    margin-left: auto;
+}
+
+.delete-mini:hover {
+    color: #f56c6c;
+}
+
+/* Highlight Animation */
+@keyframes highlight-fade {
+    0% {
+        background-color: rgba(64, 158, 255, 0.2);
+    }
+
+    100% {
+        background-color: transparent;
+    }
+}
+
+.highlight-target {
+    animation: highlight-fade 2s ease-in-out;
+    border-left: 4px solid #409eff !important;
+    padding-left: 12px !important;
+}

@@ -1,0 +1,236 @@
+/* ================================
+   学生端 HomeworkSubmit 作业提交样式
+================================ */
+
+.homework-submit {
+    padding: 24px;
+    background-color: #f8fafc;
+    min-height: 100vh;
+}
+
+.page-title {
+    font-weight: 800;
+    font-size: 20px;
+    color: #1e293b;
+}
+
+.homework-card {
+    margin-top: 24px;
+    border-radius: 24px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.report-title {
+    font-size: 28px;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0;
+    letter-spacing: -0.5px;
+}
+
+.info-items {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #64748b;
+    background: white;
+    padding: 8px 16px;
+    border-radius: 12px;
+    border: 1px solid #f1f5f9;
+}
+
+.homework-description-compact {
+    background: #f1f5f9;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 32px;
+}
+
+.desc-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.desc-body {
+    font-size: 15px;
+    line-height: 1.6;
+    color: #1e293b;
+    white-space: pre-wrap;
+}
+
+.homework-questions-section {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    padding: 24px;
+    margin-bottom: 32px;
+}
+
+.section-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #eff6ff;
+    color: #3b82f6;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 13px;
+    margin-bottom: 24px;
+}
+
+.question-item {
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px dashed #f1f5f9;
+}
+
+.question-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.q-header {
+    font-size: 15px;
+    color: #334155;
+    line-height: 1.6;
+    margin-bottom: 16px;
+    font-weight: 500;
+}
+
+.q-idx {
+    font-weight: 800;
+    font-size: 18px;
+    color: #1e293b;
+}
+
+.q-score {
+    color: #94a3b8;
+    font-size: 13px;
+}
+
+.q-content {
+    font-size: 16px;
+    color: #334155;
+    line-height: 1.6;
+    margin-bottom: 20px;
+    font-weight: 500;
+}
+
+.q-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-left: 12px;
+}
+
+.opt-radio,
+.opt-checkbox {
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    white-space: normal;
+}
+
+.opt-label {
+    font-weight: 700;
+    margin-right: 8px;
+}
+
+.homework-attachment {
+    margin-top: 24px;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+.attachment-link {
+    font-weight: 600;
+}
+
+.upload-form-item {
+    margin-top: 24px;
+}
+
+.modern-uploader :deep(.el-upload-dragger) {
+    border-radius: 16px;
+    background: #f8fafc;
+    border: 2px dashed #cbd5e1;
+    transition: all 0.3s;
+}
+
+.modern-uploader :deep(.el-upload-dragger:hover) {
+    border-color: #3b82f6;
+    background: #eff6ff;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 16px;
+    margin-top: 40px;
+    padding-top: 24px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.btn-cancel {
+    border-radius: 12px;
+    width: 120px;
+}
+
+.btn-submit-main {
+    border-radius: 12px;
+    padding: 0 32px;
+    font-weight: 700;
+    height: 48px;
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+:deep(.el-radio),
+:deep(.el-checkbox) {
+    height: auto;
+    padding: 8px 0;
+}
+
+.section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 12px;
+}
