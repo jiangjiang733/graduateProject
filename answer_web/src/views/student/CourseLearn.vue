@@ -278,41 +278,5 @@ const downloadFile = async (url, title) => {
 
 <style scoped>
 @import '@/assets/css/student/course-learn.css';
-
-.comment-input-area {
-  display: flex !important;
-  gap: 16px;
-  margin-bottom: 30px;
-}
-
-.user-avatar-preview {
-  flex-shrink: 0;
-}
-
-.input-wrapper-rich {
-  flex: 1;
-}
-
-.delete-btn:hover {
-  color: #ff4d4f !important;
-}
-
-.reply-user-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-}
-
-.reply-delete-btn {
-  margin-left: auto !important;
-  font-size: 12px !important;
-  color: #94a3b8 !important;
-  padding: 0 !important;
-  height: auto !important;
-}
-
-.reply-delete-btn:hover {
-  color: #ef4444 !important;
-}
 </style>
+

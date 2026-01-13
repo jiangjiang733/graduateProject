@@ -31,10 +31,19 @@ export const getChatUnreadCount = (userType, userId) => {
     return request.get(`/chat/unread-count/${userType}/${userId}`)
 }
 
+/**
+ * 获取管理员对话信息
+ */
+export const getAdminChatInfo = (userType, userId) => {
+    return request.get(`/chat/admin-info/${userType}/${userId}`)
+}
+
 export default {
     sendChatMessage,
     getChatHistory,
     getChatContacts,
+    getActiveContacts,
     markChatRead,
-    getChatUnreadCount
+    getChatUnreadCount,
+    getAdminChatInfo
 }

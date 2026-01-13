@@ -23,16 +23,23 @@ public class NotificationServiceImpl implements NotificationService {
         Page<SystemNotification> page = new Page<>(pageNumber, pageSize);
         QueryWrapper<SystemNotification> queryWrapper = new QueryWrapper<>();
 
+        // 基础过滤：未过期
         queryWrapper.and(wrapper -> wrapper
                 .isNull("expire_time")
                 .or()
                 .gt("expire_time", new Date()));
 
+        // 关键词过滤
         if (StringUtils.hasText(keyword)) {
             queryWrapper.like("title", keyword);
         }
+
+        // 角色匹配逻辑：指定角色消息 + 全体系统消息 (ALL)
         if (StringUtils.hasText(type)) {
-            queryWrapper.eq("target_type", type);
+            queryWrapper.and(wrapper -> wrapper
+                    .eq("target_type", type.toUpperCase())
+                    .or()
+                    .eq("target_type", "ALL"));
         }
 
         queryWrapper.orderByDesc("priority", "create_time");

@@ -15,6 +15,7 @@ import com.example.project.mapper.course.CourseChapterMapper;
 import com.example.project.entity.course.CourseChapter;
 import com.example.project.service.course.CourseCommentService;
 import com.example.project.service.notification.MessageService;
+import com.example.project.service.SensitiveWordService;
 import com.example.project.mapper.notification.MessageMapper;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,9 +52,17 @@ public class CourseCommentServiceImpl implements CourseCommentService {
     @Autowired
     private MessageMapper messageMapper;
 
+    @Autowired
+    private SensitiveWordService sensitiveWordService;
+
     @Override
     @Transactional
     public CourseComment addComment(CourseComment comment) {
+        // 敏感词拦截检查
+        if (sensitiveWordService != null && sensitiveWordService.hasSensitiveWords(comment.getContent())) {
+            throw new RuntimeException("建议内容经过合规性检查：检测到不当言论，请修改后发布");
+        }
+
         comment.setCreateTime(new Date());
         courseCommentMapper.insert(comment);
 
@@ -99,6 +108,11 @@ public class CourseCommentServiceImpl implements CourseCommentService {
     @Override
     @Transactional
     public CourseComment replyComment(CourseComment comment) {
+        // 敏感词拦截检查
+        if (sensitiveWordService != null && sensitiveWordService.hasSensitiveWords(comment.getContent())) {
+            throw new RuntimeException("回复内容包含受限词汇，请文明用语");
+        }
+
         // 逻辑：parent_id 的 course_id 就是新回复消息的 course_id
         if (comment.getParentId() != null && comment.getParentId() != 0) {
             CourseComment parentComment = courseCommentMapper.selectById(comment.getParentId());

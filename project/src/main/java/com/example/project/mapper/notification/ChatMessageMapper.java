@@ -35,10 +35,16 @@ public interface ChatMessageMapper extends BaseMapper<ChatMessage> {
                         ") u " +
                         "LEFT JOIN chat_message m ON m.id = (" +
                         "    SELECT id FROM chat_message " +
-                        "    WHERE (sender_id = #{userId} AND receiver_id = u.other_id) OR (sender_id = u.other_id AND receiver_id = #{userId}) "
+                        "    WHERE (sender_id = #{userId} AND sender_role = #{userType} AND receiver_id = u.other_id AND receiver_role = u.other_type) "
+                        +
+                        "       OR (sender_id = u.other_id AND sender_role = u.other_type AND receiver_id = #{userId} AND receiver_role = #{userType}) "
                         +
                         "    ORDER BY create_time DESC LIMIT 1" +
                         ") " +
+                        "WHERE 1=1 " +
+                        "<if test=\"userType != 'ADMIN'\">" +
+                        "    AND u.other_type != 'ADMIN' " +
+                        "</if>" +
                         "</script>")
         List<Map<String, Object>> getContactList(@Param("userId") String userId, @Param("userType") String userType);
 
@@ -65,4 +71,13 @@ public interface ChatMessageMapper extends BaseMapper<ChatMessage> {
                         "WHERE sc.student_id = #{studentId} AND sc.status = 1 " +
                         "GROUP BY t.teacher_id")
         List<Map<String, Object>> getStudentActiveContacts(@Param("studentId") String studentId);
+
+        /**
+         * 管理员获取所有活跃用户作为可选联系人
+         */
+        @Select("SELECT students_id as contactId, 'STUDENT' as contactType, students_username as contactName, students_head as contactAvatar, '学生' as courseName FROM student_user "
+                        +
+                        "UNION " +
+                        "SELECT teacher_id as contactId, 'TEACHER' as contactType, teacher_username as contactName, teacher_head as contactAvatar, '教师' as courseName FROM teacher_user")
+        List<Map<String, Object>> getAdminActiveContacts();
 }

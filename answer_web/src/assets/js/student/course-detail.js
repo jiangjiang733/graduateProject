@@ -15,7 +15,7 @@ export function useCourseDetail() {
     const courseStudents = ref([])
     const activeTab = ref('intro')
     const loading = ref(false)
-    const enrollmentStatus = ref('none') // none, pending, approved, rejected
+    const enrollmentStatus = ref('none')
     const isEnrolled = ref(false)
 
     // 方法

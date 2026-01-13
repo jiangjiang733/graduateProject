@@ -19,15 +19,15 @@ request.interceptors.request.use(
   config => {
     // 从localStorage获取token（按优先级查找）
     const token = localStorage.getItem('token') ||
-                  localStorage.getItem('teacherToken') || 
-                  localStorage.getItem('t_token') || 
-                  localStorage.getItem('s_token')
-    
+      localStorage.getItem('teacherToken') ||
+      localStorage.getItem('t_token') ||
+      localStorage.getItem('s_token')
+
     // 如果token存在，添加到请求头
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`
     }
-    
+
     return config
   },
   error => {
@@ -45,7 +45,7 @@ request.interceptors.response.use(
     // 处理错误响应
     if (error.response) {
       const { status, data } = error.response
-      
+
       switch (status) {
         case 401:
           // 未认证，清除token并跳转到登录页
@@ -60,22 +60,22 @@ request.interceptors.response.use(
           ElMessage.error('登录已过期，请重新登录')
           router.push('/login')
           break
-          
+
         case 403:
           // 无权限
           ElMessage.error('无权限访问该资源')
           break
-          
+
         case 404:
           // 资源不存在
           ElMessage.error('请求的资源不存在')
           break
-          
+
         case 500:
-          // 服务器错误
-          ElMessage.error('服务器错误，请稍后重试')
+          // 服务器错误，优先显示后端返回的具体提示（如敏感词拦截信息）
+          ElMessage.error(data?.message || '服务器内部错误，请稍后重试')
           break
-          
+
         default:
           // 其他错误
           ElMessage.error(data?.message || '请求失败，请重试')
@@ -87,7 +87,7 @@ request.interceptors.response.use(
       // 发送请求时出了点问题
       ElMessage.error('请求配置错误')
     }
-    
+
     return Promise.reject(error)
   }
 )

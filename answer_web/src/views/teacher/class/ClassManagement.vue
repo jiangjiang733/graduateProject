@@ -320,28 +320,12 @@ const {
   handlePageChange,
   handleSizeChange,
   handleStudentPageChange,
-  handleStudentSizeChange
+  handleStudentSizeChange,
+  getProgressColor,
+  getScoreColor
 } = useClassManagement()
-
-// 进度颜色
-const getProgressColor = (percentage) => {
-  const value = parseFloat(percentage || 0)
-  if (value < 30) return '#f56c6c'
-  if (value < 60) return '#e6a23c'
-  if (value < 80) return '#409eff'
-  return '#67c23a'
-}
-
-// 分数颜色
-const getScoreColor = (score) => {
-  const value = parseFloat(score || 0)
-  if (value < 60) return '#f56c6c'
-  if (value < 75) return '#e6a23c'
-  if (value < 85) return '#409eff'
-  return '#67c23a'
-}
 </script>
 
 <style scoped>
-/* @import '@/assets/css/teacher/class-management.css'; */
+@import '@/assets/css/teacher/class-management.css';
 </style>

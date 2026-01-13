@@ -183,12 +183,6 @@ const router = createRouter({
           meta: { title: '消息中心', requiresAuth: true, role: 'teacher' }
         },
         {
-          path: 'comments',
-          name: 'teacher_comments',
-          component: () => import('../views/teacher/course/CommentManagement.vue'),
-          meta: { title: '评论管理', requiresAuth: true, role: 'teacher' }
-        },
-        {
           path: 'analytics',
           name: 'teacher_analytics',
           component: () => import('../views/teacher/course/CourseAnalytics.vue'),

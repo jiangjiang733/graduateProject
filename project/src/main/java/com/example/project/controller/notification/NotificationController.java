@@ -15,18 +15,36 @@ public class NotificationController {
     private NotificationService notificationService;
 
     /**
-     * 获取系统通知列表
+     * 获取教师端系统通知列表
      */
     @GetMapping("/teacher")
-    public Result<Page<SystemNotification>> getNotificationList(
+    public Result<Page<SystemNotification>> getTeacherNotificationList(
             @RequestParam(defaultValue = "1") Integer pageNumber,
             @RequestParam(defaultValue = "10") Integer pageSize) {
         try {
             Page<SystemNotification> notificationPage = notificationService.getNotificationList(pageNumber, pageSize,
-                    null, null);
+                    null, "TEACHER");
             return Result.success(notificationPage);
         } catch (Exception e) {
-            return Result.error(e.getMessage());
+            e.printStackTrace();
+            return Result.error("获取教师通知失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取学生端系统通知列表
+     */
+    @GetMapping("/student")
+    public Result<Page<SystemNotification>> getStudentNotificationList(
+            @RequestParam(defaultValue = "1") Integer pageNumber,
+            @RequestParam(defaultValue = "10") Integer pageSize) {
+        try {
+            Page<SystemNotification> notificationPage = notificationService.getNotificationList(pageNumber, pageSize,
+                    null, "STUDENT");
+            return Result.success(notificationPage);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error("获取学生通知失败: " + e.getMessage());
         }
     }
 }

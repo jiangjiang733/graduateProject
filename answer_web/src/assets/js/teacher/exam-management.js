@@ -1,13 +1,8 @@
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, onMounted, reactive, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getCourseList } from '@/api/course.js'
-import {
-    createExam,
-    getExamsByCourse,
-    publishExam as publishExamApi,
-    deleteExam as deleteExamApi
-} from '@/api/exam.js'
+import request from '@/api/request'
+import { getCourseList } from '@/api/course'
 
 export function useExamManagement() {
     const router = useRouter()
@@ -15,7 +10,7 @@ export function useExamManagement() {
     const dialogVisible = ref(false)
     const isEdit = ref(false)
     const submitting = ref(false)
-    const formRef = ref()
+    const formRef = ref(null)
 
     const courses = ref([])
     const exams = ref([])
@@ -28,65 +23,90 @@ export function useExamManagement() {
     })
 
     const examForm = reactive({
+        examId: null,
         examTitle: '',
         courseId: '',
-        duration: 60,
+        startTime: '',
+        endTime: '',
+        duration: 120,
         totalScore: 100,
-        passScore: 60
+        passScore: 60,
+        status: 'DRAFT'
     })
 
     const rules = {
-        examTitle: [
-            { required: true, message: '请输入考试标题', trigger: 'blur' }
-        ],
-        courseId: [
-            { required: true, message: '请选择课程', trigger: 'change' }
-        ]
+        examTitle: [{ required: true, message: '请输入考试标题', trigger: 'blur' }],
+        courseId: [{ required: true, message: '请选择所属课程', trigger: 'change' }],
+        timeRange: [{ required: true, message: '请选择考试时间', trigger: 'change' }]
     }
 
-    watch(() => examForm.totalScore, (newTotal) => {
-        examForm.passScore = Math.floor(newTotal * 0.6)
-    }, { immediate: true })
+    // 监听总分变化，自动计算及格分
+    watch(() => examForm.totalScore, (val) => {
+        examForm.passScore = Math.floor(val * 0.6)
+    })
+
+    // 监听时间范围变化
+    watch(timeRange, (val) => {
+        if (val && val.length === 2) {
+            examForm.startTime = val[0]
+            examForm.endTime = val[1]
+        } else {
+            examForm.startTime = ''
+            examForm.endTime = ''
+        }
+    })
 
     const loadCourses = async () => {
         try {
             const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
-            const response = await getCourseList({
+            if (!teacherId) return
+            const res = await getCourseList({
                 pageNumber: 1,
                 pageSize: 100,
                 teacherId: teacherId
             })
-
-            if (response.success && response.data) {
-                courses.value = response.data.list || []
+            if (res.success && res.data) {
+                courses.value = res.data.list || []
             }
-        } catch (error) {
-            console.error('加载课程列表失败:', error)
+        } catch (e) {
+            console.error('加载课程失败', e)
         }
     }
 
     const loadExams = async () => {
         loading.value = true
         try {
-            const { searchExams } = await import('@/api/exam.js')
             const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
-
-            const params = {
-                teacherId: teacherId,
-                courseId: filterForm.courseId,
-                status: filterForm.status,
-                keyword: filterForm.keyword
+            if (!teacherId) {
+                console.error('无法获取教师ID')
+                return
             }
 
-            const response = await searchExams(params)
-
-            if (response && response.success) {
-                exams.value = response.data || []
+            // 如果有筛选条件，使用搜索接口
+            if (filterForm.courseId || filterForm.status || filterForm.keyword) {
+                const searchParams = {
+                    teacherId,
+                    courseId: filterForm.courseId || undefined,
+                    status: filterForm.status || undefined,
+                    keyword: filterForm.keyword || undefined
+                }
+                const res = await request.get('/exam/search', { params: searchParams })
+                if (res.success && res.data) {
+                    exams.value = res.data
+                } else if (res.data) {
+                    exams.value = res.data
+                }
             } else {
-                exams.value = []
+                // 没有筛选条件，获取教师所有考试
+                const res = await request.get(`/exam/teacher/${teacherId}`)
+                if (res.success && res.data) {
+                    exams.value = res.data
+                } else if (res.data) {
+                    exams.value = res.data
+                }
             }
-        } catch (error) {
-            console.error('加载考试列表失败:', error)
+        } catch (e) {
+            console.error('加载考试列表失败', e)
             ElMessage.error('加载考试列表失败')
         } finally {
             loading.value = false
@@ -94,179 +114,132 @@ export function useExamManagement() {
     }
 
     const showCreateDialog = () => {
-        createExamPage()
+        isEdit.value = false
+        Object.assign(examForm, {
+            examId: null,
+            examTitle: '',
+            courseId: '',
+            startTime: '',
+            endTime: '',
+            duration: 120,
+            totalScore: 100,
+            passScore: 60,
+            status: 'DRAFT'
+        })
+        timeRange.value = []
+        dialogVisible.value = true
     }
 
     const saveAsDraft = async () => {
-        try {
-            await formRef.value.validate()
-            if (!timeRange.value || timeRange.value.length !== 2) {
-                ElMessage.warning('请选择考试时间')
-                return
-            }
-
-            submitting.value = true
-
-            const data = {
-                ...examForm,
-                startTime: timeRange.value[0],
-                endTime: timeRange.value[1],
-                teacherId: localStorage.getItem('teacherId') || localStorage.getItem('t_id'),
-                status: 'DRAFT'
-            }
-
-            const response = await createExam(data)
-            if (response.success) {
-                ElMessage.success('草稿保存成功')
-                dialogVisible.value = false
-                loadExams()
-            }
-        } catch (error) {
-            if (error.errors) return
-            console.error('保存草稿失败:', error)
-            ElMessage.error('保存草稿失败')
-        } finally {
-            submitting.value = false
-        }
+        examForm.status = 'DRAFT'
+        await handleFormSubmit()
     }
 
     const submitExam = async () => {
-        try {
-            await formRef.value.validate()
-            if (!timeRange.value || timeRange.value.length !== 2) {
-                ElMessage.warning('请选择考试时间')
-                return
-            }
+        examForm.status = 'PUBLISHED'
+        await handleFormSubmit()
+    }
 
-            submitting.value = true
-
-            const data = {
-                ...examForm,
-                startTime: timeRange.value[0],
-                endTime: timeRange.value[1],
-                teacherId: localStorage.getItem('teacherId') || localStorage.getItem('t_id'),
-                status: 'PUBLISHED'
+    const handleFormSubmit = async () => {
+        if (!formRef.value) return
+        await formRef.value.validate(async (valid) => {
+            if (valid) {
+                submitting.value = true
+                try {
+                    const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
+                    const data = { ...examForm, teacherId }
+                    let res
+                    if (isEdit.value) {
+                        res = await request.put(`/exam/${examForm.examId}`, data)
+                    } else {
+                        res = await request.post('/exam/create', data)
+                    }
+                    if (res.data) {
+                        ElMessage.success(isEdit.value ? '修改成功' : '创建成功')
+                        dialogVisible.value = false
+                        loadExams()
+                    }
+                } catch (e) {
+                    ElMessage.error('保存失败')
+                } finally {
+                    submitting.value = false
+                }
             }
-
-            const response = await createExam(data)
-            if (response.success) {
-                ElMessage.success('考试创建成功')
-                dialogVisible.value = false
-                loadExams()
-            }
-        } catch (error) {
-            if (error.errors) return
-            console.error('创建考试失败:', error)
-            ElMessage.error('创建考试失败')
-        } finally {
-            submitting.value = false
-        }
+        })
     }
 
     const viewExam = (exam) => {
-        router.push(`/teacher/exam/${exam.examId}`)
+        router.push(`/teacher/exam-detail/${exam.examId}`)
+    }
+
+    const manageQuestions = (exam) => {
+        router.push(`/teacher/exam-questions/${exam.examId}`)
     }
 
     const viewScores = (exam) => {
-        router.push(`/teacher/exam/${exam.examId}/scores`)
+        router.push(`/teacher/exam-scores/${exam.examId}`)
     }
 
     const editExam = (exam) => {
-        router.push(`/teacher/exam/edit/${exam.examId}`)
-    }
-
-    const createExamPage = () => {
-        router.push('/teacher/exam/create')
+        isEdit.value = true
+        Object.assign(examForm, exam)
+        if (exam.startTime && exam.endTime) {
+            timeRange.value = [exam.startTime, exam.endTime]
+        }
+        dialogVisible.value = true
     }
 
     const publishExam = async (exam) => {
         try {
-            await ElMessageBox.confirm(
-                `确定要发布考试"${exam.examTitle}"吗？发布后学生即可参加考试。`,
-                '发布确认',
-                {
-                    confirmButtonText: '确定',
-                    cancelButtonText: '取消',
-                    type: 'warning'
-                }
-            )
-
-            const response = await publishExamApi(exam.examId)
-            if (response.success) {
-                ElMessage.success('考试发布成功')
+            await ElMessageBox.confirm('确定要发布该考试吗？发布后部分信息将无法修改', '提示')
+            const res = await request.post(`/exam/${exam.examId}/publish`)
+            if (res.data) {
+                ElMessage.success('发布成功')
                 loadExams()
             }
-        } catch (error) {
-            if (error !== 'cancel') {
-                console.error('发布考试失败:', error)
-                ElMessage.error('发布考试失败')
-            }
-        }
+        } catch (e) { }
     }
 
     const deleteExam = async (exam) => {
         try {
-            await ElMessageBox.confirm(
-                `确定要删除考试"${exam.examTitle}"吗？此操作不可恢复。`,
-                '删除确认',
-                {
-                    confirmButtonText: '确定',
-                    cancelButtonText: '取消',
-                    type: 'warning'
-                }
-            )
-
-            const response = await deleteExamApi(exam.examId)
-            if (response.success) {
-                ElMessage.success('考试删除成功')
+            await ElMessageBox.confirm('确定要删除该考试吗？此操作不可逆', '警告', { type: 'error' })
+            const res = await request.delete(`/exam/${exam.examId}`)
+            if (res.data) {
+                ElMessage.success('删除成功')
                 loadExams()
             }
-        } catch (error) {
-            if (error !== 'cancel') {
-                console.error('删除考试失败:', error)
-                ElMessage.error('删除考试失败')
-            }
-        }
+        } catch (e) { }
     }
 
     const getStatusType = (status) => {
-        // status 可能是数字或字符串
-        const statusStr = typeof status === 'number' ? getStatusTextFromNumber(status) : status
-        const types = {
-            DRAFT: 'info',
-            PUBLISHED: 'success',
-            ONGOING: 'warning',
-            ENDED: 'info'
+        const map = {
+            'DRAFT': 'info',
+            'PUBLISHED': 'primary',
+            'ONGOING': 'success',
+            'ENDED': 'danger'
         }
-        return types[statusStr] || 'info'
+        return map[status] || 'info'
     }
 
     const getStatusText = (status) => {
-        // status 可能是数字或字符串
-        const statusStr = typeof status === 'number' ? getStatusTextFromNumber(status) : status
-        const texts = {
-            DRAFT: '草稿',
-            PUBLISHED: '已发布',
-            ONGOING: '进行中',
-            ENDED: '已结束'
+        const map = {
+            'DRAFT': '草稿',
+            'PUBLISHED': '已发布',
+            'ONGOING': '进行中',
+            'ENDED': '已结束'
         }
-        return texts[statusStr] || '未知'
+        return map[status] || status
     }
 
-    const getStatusTextFromNumber = (status) => {
-        if (status === 0) return 'DRAFT'
-        if (status === 1) return 'PUBLISHED'
-        return 'PUBLISHED'
-    }
-
-    const formatDate = (dateStr) => {
-        if (!dateStr) return '未设置'
-        const date = new Date(dateStr)
-        return date.toLocaleString('zh-CN')
-    }
-
-    const manageQuestions = (exam) => {
-        router.push(`/teacher/exam/${exam.examId}/questions`)
+    const formatDate = (date) => {
+        if (!date) return '-'
+        const d = new Date(date)
+        return d.toLocaleString('zh-CN', {
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        })
     }
 
     onMounted(() => {
@@ -286,7 +259,6 @@ export function useExamManagement() {
         filterForm,
         examForm,
         rules,
-        loadCourses,
         loadExams,
         showCreateDialog,
         saveAsDraft,
@@ -299,7 +271,6 @@ export function useExamManagement() {
         deleteExam,
         getStatusType,
         getStatusText,
-        formatDate,
-        createExamPage
+        formatDate
     }
 }

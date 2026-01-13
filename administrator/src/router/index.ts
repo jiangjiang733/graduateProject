@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import Layout from '@/views/Layout.vue'
+import Dashboard from '@/views/Dashboard.vue'
 
 const routes: RouteRecordRaw[] = [
   {
@@ -10,14 +12,14 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/',
-    component: () => import('@/views/Layout.vue'),
+    component: Layout,
     redirect: '/dashboard',
     children: [
       {
         path: 'dashboard',
         name: 'Dashboard',
-        component: () => import('@/views/Dashboard.vue'),
-        meta: { title: '仪表盘' }
+        component: Dashboard,
+        meta: { title: '首页' }
       },
       {
         path: 'students',
@@ -42,6 +44,12 @@ const routes: RouteRecordRaw[] = [
         name: 'SensitiveWordManagement',
         component: () => import('@/views/SensitiveWordManagement.vue'),
         meta: { title: '敏感词管理' }
+      },
+      {
+        path: 'chats',
+        name: 'ChatManagement',
+        component: () => import('@/views/ChatManagement.vue'),
+        meta: { title: '咨询反馈' }
       }
     ]
   }
@@ -55,11 +63,9 @@ const router = createRouter({
 // 路由守卫
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('adminToken')
-  
+
   if (to.path !== '/login' && !token) {
     next('/login')
-  } else if (to.path === '/login' && token) {
-    next('/dashboard')
   } else {
     next()
   }

@@ -7,7 +7,7 @@
     </div>
     <div class="page-header glass-panel animate-slide-up">
       <div class="header-left">
-        <el-button link @click="router.back()">
+        <el-button link @click="$router.back()">
           <el-icon><ArrowLeft /></el-icon> 返回
         </el-button>
         <h1 class="page-title">作业批改：{{ homework.reportTitle || '加载中...' }}</h1>
@@ -20,7 +20,7 @@
       </div>
     </div>
 
-    <div class="grade-container">
+    <div v-loading="loading" class="grade-container">
       <!-- 左侧学生列表 -->
       <div class="student-list-section glass-panel animate-slide-up" style="animation-delay: 0.1s">
         <div class="list-header">
@@ -167,358 +167,35 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, reactive } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
 import { 
   ArrowLeft, Search, Document, View, Download, CircleCheck 
 } from '@element-plus/icons-vue'
-import { getLabReportDetail, getSubmissions, gradeLabReport } from '@/api/homework.js'
-import '@/assets/css/teacher/modern-theme.css'
-import '@/assets/css/teacher/homework-grade.css'
+import { useHomeworkGrade } from '@/assets/js/teacher/homework-grade'
 
-const route = useRoute()
-const router = useRouter()
-
-const homework = ref({})
-const submissions = ref([])
-const loading = ref(false)
-const searchKeyword = ref('')
-const currentSubmission = ref(null)
-const activeTab = ref('content')
-const submitting = ref(false)
-
-const gradeForm = reactive({
-  score: 0,
-  teacherComment: ''
-})
-
-const loadData = async () => {
-  loading.value = true
-  try {
-    const id = route.params.id
-    const hwRes = await getLabReportDetail(id)
-    if (hwRes.success) homework.value = hwRes.data
-
-    const subRes = await getSubmissions(id)
-    if (subRes.success) {
-      submissions.value = subRes.data || []
-      // 如果没有选择当前项且有列表，默认选第一个
-      if (!currentSubmission.value && submissions.value.length > 0) {
-        selectSubmission(submissions.value[0])
-      }
-    }
-  } catch (error) {
-    ElMessage.error('加载数据失败')
-  } finally {
-    loading.value = false
-  }
-}
-
-const filteredSubmissions = computed(() => {
-  if (!searchKeyword.value) return submissions.value
-  const kw = searchKeyword.value.toLowerCase()
-  return submissions.value.filter(s => 
-    s.studentName.toLowerCase().includes(kw) || 
-    (s.studentId && s.studentId.toLowerCase().includes(kw))
-  )
-})
-
-const gradedCount = computed(() => {
-  return submissions.value.filter(s => s.status === 2).length
-})
-
-const selectSubmission = (sub) => {
-  currentSubmission.value = sub
-  gradeForm.score = sub.score || 0
-  gradeForm.teacherComment = sub.teacherComment || ''
-  
-  // 根据作业内容自动调整界面
-  if (questionList.value.length > 0) {
-      activeTab.value = 'questions'
-      // 如果未评分，自动预览得分
-      if (sub.status !== 2 && (!sub.score || sub.score === 0)) {
-          applyAutoScore(false) 
-      }
-  } else if (sub.attachmentUrl) {
-      activeTab.value = 'attachment'
-  } else {
-      activeTab.value = 'content'
-  }
-}
-
-const formatDate = (date) => {
-  if (!date) return '-'
-  return new Date(date).toLocaleString('zh-CN')
-}
-
-const downloadFile = (url) => {
-  const link = document.createElement('a')
-  link.href = `/api/${url}`
-  link.download = ''
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-}
-
-const submitGrade = async () => {
-    if (!currentSubmission.value) return
-    
-    submitting.value = true
-    try {
-        const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
-        const response = await gradeLabReport(currentSubmission.value.studentReportId, {
-            score: gradeForm.score,
-            teacherComment: gradeForm.teacherComment,
-            teacherId: teacherId
-        })
-        
-        if (response.success) {
-            ElMessage.success('批改成功')
-            // 更新本地列表状态
-            currentSubmission.value.status = 2
-            currentSubmission.value.score = gradeForm.score
-            currentSubmission.value.teacherComment = gradeForm.teacherComment
-            
-            // 尝试自动跳到下一个待批改的
-            const pendingIndex = submissions.value.findIndex(s => s.status !== 2)
-            if (pendingIndex !== -1) {
-               selectSubmission(submissions.value[pendingIndex])
-            }
-        }
-    } catch (e) {
-        ElMessage.error('批改保存失败')
-    } finally {
-        submitting.value = false
-    }
-}
-
-// 题目相关逻辑
-const questionList = computed(() => {
-    const qList = homework.value.questionList || homework.value.questions
-    if (!qList) return []
-    try {
-        return typeof qList === 'string' ? JSON.parse(qList) : qList
-    } catch (e) { return [] }
-})
-
-const getStudentAnswer = (idx, q) => {
-   if (!currentSubmission.value?.structuredAnswers) return ''
-   try {
-       const ansList = JSON.parse(currentSubmission.value.structuredAnswers)
-       return ansList[idx]?.answer || ''
-   } catch (e) { return '' }
-}
-
-const getCorrectAnswer = (q) => {
-   return q.correctAnswer || q.answer || ''
-}
-
-const isCorrect = (idx, q) => {
-   const sAns = getStudentAnswer(idx, q)
-   const cAns = getCorrectAnswer(q)
-   if (!sAns || !cAns) return false
-   return String(sAns).trim() === String(cAns).trim()
-}
-
-const getQuestionTypeText = (type) => {
-    const types = { SINGLE: '单选题', MULTIPLE: '多选题', JUDGE: '判断题', ESSAY: '简答题' }
-    return types[type] || type
-}
-
-const applyAutoScore = (showMessage = true) => {
-   let total = 0
-   questionList.value.forEach((q, idx) => {
-      if (['SINGLE', 'MULTIPLE', 'JUDGE'].includes(q.questionType)) {
-         if (isCorrect(idx, q)) {
-            total += (q.score || 0)
-         }
-      }
-   })
-   gradeForm.score = total
-   if (showMessage) {
-      ElMessage.success(`客观题自动评分为: ${total} 分`)
-   }
-}
-
-onMounted(loadData)
+const {
+  homework,
+  submissions,
+  loading,
+  searchKeyword,
+  currentSubmission,
+  activeTab,
+  submitting,
+  gradeForm,
+  questionList,
+  filteredSubmissions,
+  gradedCount,
+  selectSubmission,
+  formatDate,
+  downloadFile,
+  submitGrade,
+  getStudentAnswer,
+  getCorrectAnswer,
+  isCorrect,
+  applyAutoScore,
+  getQuestionTypeText
+} = useHomeworkGrade()
 </script>
 
 <style scoped>
-.homework-grade {
-  background-color: #f8fafc;
-  min-height: 100vh;
-}
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 30px;
-  padding: 16px 24px;
-}
-
-.header-left { display: flex; align-items: center; gap: 16px; }
-.page-title { font-size: 20px; font-weight: 800; color: #1f2937; margin: 0; }
-
-.stats-mini {
-  display: flex;
-  gap: 20px;
-  background: rgba(255, 255, 255, 0.5);
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 14px;
-}
-
-.stat-item strong { color: #3b82f6; }
-
-.grade-container {
-  display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: 24px;
-  height: calc(100vh - 120px);
-}
-
-.student-list-section {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.list-header {
-  padding: 16px;
-  border-bottom: 1px solid #f1f5f9;
-}
-
-.list-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 8px;
-}
-
-.student-item {
-  display: flex;
-  align-items: center;
-  padding: 12px;
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-  margin-bottom: 8px;
-}
-
-.student-item:hover {
-  background: #f1f5f9;
-}
-
-.student-item.active {
-  background: #eff6ff;
-  border: 1px solid #3b82f6;
-}
-
-.student-avatar {
-  width: 40px;
-  height: 40px;
-  background: #3b82f6;
-  color: white;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  margin-right: 12px;
-}
-
-.student-info { flex: 1; min-width: 0; }
-.name-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
-.name { font-weight: 600; font-size: 14px; color: #1e293b; }
-.time-info { font-size: 12px; color: #64748b; }
-
-.score-badge {
-  background: #10b981;
-  color: white;
-  padding: 2px 8px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-/* Detail Section */
-.grade-detail-section {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding: 32px;
-}
-
-.detail-content {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.detail-header { margin-bottom: 24px; }
-.detail-header h3 { font-size: 20px; font-weight: 800; color: #1e293b; margin: 0 0 8px 0; }
-.submission-meta { font-size: 13px; color: #64748b; }
-
-.grade-tabs { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
-:deep(.el-tabs__content) { flex: 1; overflow-y: auto; padding-top: 16px; }
-
-.text-content {
-  background: #f8fafc;
-  padding: 24px;
-  border-radius: 12px;
-  line-height: 1.8;
-  color: #334155;
-  white-space: pre-wrap;
-}
-
-.attachment-viewer {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 24px;
-  padding: 40px;
-  background: #f8fafc;
-  border-radius: 16px;
-  border: 2px dashed #e2e8f0;
-}
-
-.file-info { display: flex; align-items: center; gap: 16px; }
-.file-text { display: flex; flex-direction: column; }
-.file-text .name { font-weight: 700; font-size: 18px; color: #1e293b; }
-.file-text .tip { font-size: 12px; color: #64748b; }
-
-.viewer-actions { display: flex; gap: 16px; align-items: center; }
-
-/* Grading Form */
-.grading-form-section {
-  margin-top: 24px;
-  padding-top: 24px;
-  border-top: 1px solid #f1f5f9;
-}
-
-.section-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; color: #1e293b; }
-
-.grading-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-.total-score { font-size: 18px; color: #94a3b8; font-weight: 600; }
-
-.submit-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
-
-/* Structured Ans */
-.q-ans-item {
-    margin-bottom: 24px;
-    padding: 16px;
-    background: white;
-    border-radius: 12px;
-    border: 1px solid #edf2f7;
-}
-.q-title { font-weight: 700; margin-bottom: 12px; font-size: 15px; }
-.ans-comparison { display: flex; gap: 32px; font-size: 14px; }
-.ans-unit { display: flex; gap: 8px; }
-.ans-unit .label { color: #64748b; }
-.ans-unit .val { font-weight: 700; }
-.ans-unit .val.correct { color: #10b981; }
-.ans-unit .val.wrong { color: #ef4444; }
-.ans-unit.standard .val { color: #3b82f6; }
+@import '@/assets/css/teacher/homework-grade.css';
 </style>

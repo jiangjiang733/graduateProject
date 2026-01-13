@@ -35,4 +35,9 @@ public interface ChatService {
      * 获取总未读私信数
      */
     Integer getTotalUnreadCount(String userId, String userType);
+
+    /**
+     * 获取与管理员对话的摘要信息（未读数、最后消息）
+     */
+    Map<String, Object> getAdminChatInfo(String userId, String userType);
 }

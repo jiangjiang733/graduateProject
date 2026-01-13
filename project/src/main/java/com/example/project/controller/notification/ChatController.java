@@ -108,4 +108,19 @@ public class ChatController {
             return Result.error(e.getMessage());
         }
     }
+
+    /**
+     * 获取与管理员对话的摘要信息
+     */
+    @GetMapping("/admin-info/{type}/{userId}")
+    public Result<Map<String, Object>> getAdminInfo(
+            @PathVariable String userId,
+            @PathVariable String type) {
+        try {
+            Map<String, Object> info = chatService.getAdminChatInfo(userId, type.toUpperCase());
+            return Result.success(info);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
 }

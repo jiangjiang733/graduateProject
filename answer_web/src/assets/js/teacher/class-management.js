@@ -1,14 +1,14 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getCourseList } from '@/api/course.js'
-import { 
-  createClass, 
-  getClassesByCourseId, 
-  getClassStudents, 
-  removeStudent,
-  updateClass,
-  deleteClass,
-  getStudentProgress
+import {
+    createClass,
+    getClassesByCourseId,
+    getClassStudents,
+    removeStudent,
+    updateClass,
+    deleteClass,
+    getStudentProgress
 } from '@/api/class.js'
 
 export function useClassManagement() {
@@ -96,7 +96,7 @@ export function useClassManagement() {
             if (response.success) {
                 const allClasses = response.data || []
                 pagination.total = allClasses.length
-                
+
                 // 前端分页处理
                 const start = (pagination.currentPage - 1) * pagination.pageSize
                 const end = start + pagination.pageSize
@@ -242,12 +242,12 @@ export function useClassManagement() {
             if (response.success) {
                 const allStudents = response.data || []
                 studentPagination.total = allStudents.length
-                
+
                 // 前端分页处理
                 const start = (studentPagination.currentPage - 1) * studentPagination.pageSize
                 const end = start + studentPagination.pageSize
                 students.value = allStudents.slice(start, end)
-                
+
                 // 保存完整学生列表用于分页
                 currentClass.value.allStudents = allStudents
             }
@@ -262,7 +262,7 @@ export function useClassManagement() {
     // 处理学生列表分页变化
     const handleStudentPageChange = (page) => {
         studentPagination.currentPage = page
-        
+
         if (currentClass.value && currentClass.value.allStudents) {
             const start = (page - 1) * studentPagination.pageSize
             const end = start + studentPagination.pageSize
@@ -274,7 +274,7 @@ export function useClassManagement() {
     const handleStudentSizeChange = (size) => {
         studentPagination.pageSize = size
         studentPagination.currentPage = 1
-        
+
         if (currentClass.value && currentClass.value.allStudents) {
             const start = 0
             const end = size
@@ -317,7 +317,7 @@ export function useClassManagement() {
     // 查看学生进度
     const viewStudentProgress = async (student) => {
         if (!currentClass.value) return
-        
+
         progressDialogVisible.value = true
         progressLoading.value = true
         studentProgress.value = null
@@ -338,6 +338,24 @@ export function useClassManagement() {
     onMounted(() => {
         loadCourses()
     })
+
+    // 进度颜色
+    const getProgressColor = (percentage) => {
+        const value = parseFloat(percentage || 0)
+        if (value < 30) return '#f56c6c'
+        if (value < 60) return '#e6a23c'
+        if (value < 80) return '#409eff'
+        return '#67c23a'
+    }
+
+    // 分数颜色
+    const getScoreColor = (score) => {
+        const value = parseFloat(score || 0)
+        if (value < 60) return '#f56c6c'
+        if (value < 75) return '#e6a23c'
+        if (value < 85) return '#409eff'
+        return '#67c23a'
+    }
 
     return {
         loading,
@@ -373,6 +391,8 @@ export function useClassManagement() {
         handlePageChange,
         handleSizeChange,
         handleStudentPageChange,
-        handleStudentSizeChange
+        handleStudentSizeChange,
+        getProgressColor,
+        getScoreColor
     }
 }

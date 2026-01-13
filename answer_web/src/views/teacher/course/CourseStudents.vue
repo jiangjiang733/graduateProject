@@ -8,7 +8,7 @@
         <el-input
           v-model="searchQuery"
           placeholder="搜索姓名或ID..."
-          :prefix-icon="Search"
+          prefix-icon="Search"
           class="search-input glass-input"
           clearable
         />
@@ -85,10 +85,8 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
 import { Plus, Delete, User, Calendar, Search } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { getCourseEnrollments, cancelEnrollment, directEnroll } from '@/api/enrollment.js'
+import { useCourseStudents } from '@/assets/js/teacher/course-students'
 
 const props = defineProps({
   courseId: {
@@ -97,299 +95,29 @@ const props = defineProps({
   }
 })
 
-const loading = ref(false)
-const students = ref([])
-const inviteDialogVisible = ref(false)
-const inviteSubmitting = ref(false)
-const inviteFormRef = ref()
-
-// 搜索和分页状态
-const searchQuery = ref('')
-const currentPage = ref(1)
-const pageSize = ref(12)
-
-const inviteForm = reactive({
-  studentId: ''
-})
-
-const inviteRules = {
-  studentId: [
-    { required: true, message: '请输入学生ID', trigger: 'blur' }
-  ]
-}
-
-// 过滤后的学生列表
-const filteredStudents = computed(() => {
-  if (!searchQuery.value) return students.value
-  const query = searchQuery.value.toLowerCase()
-  return students.value.filter(s => 
-    (s.studentName && s.studentName.toLowerCase().includes(query)) ||
-    (s.studentId && s.studentId.toString().includes(query))
-  )
-})
-
-// 分页后的学生列表
-const pagedStudents = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return filteredStudents.value.slice(start, end)
-})
-
-const handleSizeChange = (val) => {
-  pageSize.value = val
-  currentPage.value = 1
-}
-
-const handleCurrentChange = (val) => {
-  currentPage.value = val
-}
-
-// 获取学生列表
-const fetchStudents = async () => {
-  if (!props.courseId) return
-  loading.value = true
-  try {
-    const response = await getCourseEnrollments(props.courseId)
-    if (response.success) {
-      // 只显示已通过(approved)的学生
-      students.value = (response.data || []).filter(item => item.status === 'approved')
-    } else {
-      students.value = []
-    }
-  } catch (error) {
-    console.error('获取学生列表失败', error)
-    ElMessage.error('无法加载学生列表')
-  } finally {
-    loading.value = false
-  }
-}
-
-// 移除学生
-const handleRemove = async (student) => {
-  try {
-    await ElMessageBox.confirm(
-      `确定要将学生 "${student.studentName}" 从本课程中移除吗？`,
-      '确认移除',
-      {
-        confirmButtonText: '移除',
-        cancelButtonText: '取消',
-        type: 'warning',
-        icon: 'Warning'
-      }
-    )
-
-    const response = await cancelEnrollment(student.id) // 这里的ID是enrollment的ID
-    if (response.success) {
-      ElMessage.success('移除成功')
-      fetchStudents() // 刷新列表
-    } else {
-      ElMessage.error(response.message || '移除失败')
-    }
-  } catch (e) {
-    if (e !== 'cancel') {
-      ElMessage.error('操作失败')
-    }
-  }
-}
-
-// 邀请学生
-const submitInvite = async () => {
-  if (!inviteFormRef.value) return
-  await inviteFormRef.value.validate(async (valid) => {
-    if (valid) {
-      inviteSubmitting.value = true
-      try {
-        const response = await directEnroll(inviteForm.studentId, props.courseId)
-        if (response.success) {
-          ElMessage.success('邀请成功')
-          inviteDialogVisible.value = false
-          inviteForm.studentId = ''
-          fetchStudents() // 刷新列表
-        } else {
-          ElMessage.error(response.message || '邀请失败')
-        }
-      } catch (error) {
-        ElMessage.error('操作异常')
-      } finally {
-        inviteSubmitting.value = false
-      }
-    }
-  })
-}
-
-const formatDate = (dateStr) => {
-  if (!dateStr) return '-'
-  return new Date(dateStr).toLocaleDateString()
-}
-
-// 获取学生头像URL
-const getStudentAvatar = (student) => {
-  if (!student.studentAvatar) return ''
-  if (student.studentAvatar.startsWith('http')) return student.studentAvatar
-  return `http://localhost:8088${student.studentAvatar}`
-}
-
-// 获取学生名字首字母
-const getStudentInitial = (student) => {
-  if (student.studentName && student.studentName.length > 0) {
-    return student.studentName.charAt(0)
-  }
-  return 'S'
-}
-
-onMounted(() => {
-  fetchStudents()
-})
+const {
+  loading,
+  students,
+  inviteDialogVisible,
+  inviteSubmitting,
+  inviteFormRef,
+  searchQuery,
+  currentPage,
+  pageSize,
+  inviteForm,
+  inviteRules,
+  filteredStudents,
+  pagedStudents,
+  handleSizeChange,
+  handleCurrentChange,
+  handleRemove,
+  submitInvite,
+  formatDate,
+  getStudentAvatar,
+  getStudentInitial
+} = useCourseStudents(props)
 </script>
 
 <style scoped>
-.course-students {
-  padding: 20px;
-}
-
-.actions-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.right-actions {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-}
-
-.search-input {
-  width: 240px;
-}
-
-.stat-info {
-  font-size: 16px;
-  color: #606266;
-  font-weight: 500;
-}
-
-.stat-info .count {
-  font-size: 20px;
-  color: #409eff;
-  font-weight: bold;
-  margin: 0 4px;
-}
-
-.students-content {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.students-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
-}
-
-.pagination-wrapper {
-  display: flex;
-  justify-content: center;
-  padding-top: 20px;
-}
-
-/* Card Styles */
-.student-card {
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 20px;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  transition: all 0.3s ease;
-  border: 1px solid #ebeef5;
-}
-
-.student-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-  border-color: #dcdfe6;
-}
-
-.student-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 12px;
-}
-
-.student-avatar {
-  border: 2px solid #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  font-size: 18px;
-  background-color: #409eff;
-  color: white;
-}
-
-.student-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.student-name {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #303133;
-  line-height: 1.4;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.student-meta {
-  font-size: 13px;
-  color: #909399;
-}
-
-.enroll-time {
-  font-size: 12px;
-  color: #c0c4cc;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: auto;
-  padding-top: 12px;
-}
-
-.enroll-time .el-icon {
-  font-size: 14px;
-}
-
-.student-footer {
-  margin-top: 16px;
-  padding-top: 12px;
-  border-top: 1px dashed #ebeef5;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.remove-btn {
-  width: 100%;
-}
-
-@media (max-width: 768px) {
-  .actions-bar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 16px;
-  }
-  
-  .right-actions {
-    flex-direction: column;
-  }
-  
-  .search-input {
-    width: 100%;
-  }
-}
+@import '@/assets/css/teacher/course-students.css';
 </style>

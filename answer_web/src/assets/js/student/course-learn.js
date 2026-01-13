@@ -52,27 +52,56 @@ export function useCourseLearn() {
         label: 'chapterTitle'
     }
 
-    // 工具函数：将平铺回复列表转换为树形结构（带章节过滤）
+    // 工具函数：将平铺回复列表转换为树形结构（带章节过滤）- 打平所有回复
     const buildCommentTree = (list, filterChapterId = null) => {
         if (!list || list.length === 0) return [];
 
         const map = new Map();
         const tree = [];
 
-        // 1. 初始化项
-        list.forEach(item => {
-            const id = String(item.commentId || item.id);
-            map.set(id, { ...item, replies: [] });
-        });
-
-        // 2. 建立全量层级
+        // 1. 初始化项（注意：回复项不需要replies数组）
         list.forEach(item => {
             const id = String(item.commentId || item.id);
             const parentId = item.parentId ? String(item.parentId) : null;
-            const currentItem = map.get(id);
+            const isTopLevel = !parentId || parentId === '0';
+
+            // 只有顶级评论才有replies数组，回复项不需要
+            map.set(id, {
+                ...item,
+                replies: isTopLevel ? [] : undefined
+            });
+        });
+
+        // 2. 将所有回复（无论几层）都打平到其根评论的replies数组中
+        list.forEach(item => {
+            const id = String(item.commentId || item.id);
+            const parentId = item.parentId ? String(item.parentId) : null;
 
             if (parentId && parentId !== '0' && map.has(parentId)) {
-                map.get(parentId).replies.push(currentItem);
+                const currentItem = map.get(id);
+                const directParent = map.get(parentId);
+                let rootParent = directParent;
+
+                // 向上查找根评论
+                while (rootParent.parentId && rootParent.parentId !== '0') {
+                    const grandParentId = String(rootParent.parentId);
+                    if (map.has(grandParentId)) {
+                        rootParent = map.get(grandParentId);
+                    } else {
+                        break;
+                    }
+                }
+
+                // 设置targetUserName - 使用直接父级的用户名（被@的用户）
+                if (!currentItem.targetUserName && directParent) {
+                    currentItem.targetUserName = directParent.userName;
+                    currentItem.targetUserId = directParent.userId;
+                }
+
+                // 将当前回复添加到根评论的replies中
+                if (rootParent.replies) {
+                    rootParent.replies.push(currentItem);
+                }
             }
         });
 
@@ -90,19 +119,22 @@ export function useCourseLearn() {
         });
 
         // 4. 排序
-        const sortRecursive = (items, isRoot = true) => {
-            items.sort((a, b) => {
-                const dateA = new Date(a.createTime);
-                const dateB = new Date(b.createTime);
-                return isRoot ? dateB - dateA : dateA - dateB;
-            });
-            items.forEach(item => {
-                if (item.replies && item.replies.length > 0) {
-                    sortRecursive(item.replies, false);
-                }
-            });
-        };
-        sortRecursive(tree);
+        tree.sort((a, b) => {
+            const dateA = new Date(a.createTime);
+            const dateB = new Date(b.createTime);
+            return dateB - dateA; // 根评论倒序
+        });
+
+        // 对每个根评论的replies按时间正序排序
+        tree.forEach(item => {
+            if (item.replies && item.replies.length > 0) {
+                item.replies.sort((a, b) => {
+                    const dateA = new Date(a.createTime);
+                    const dateB = new Date(b.createTime);
+                    return dateA - dateB; // 回复正序
+                });
+            }
+        });
 
         return tree;
     };

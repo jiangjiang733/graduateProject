@@ -1,7 +1,8 @@
 <template>
   <el-container class="layout-container">
-    <el-aside width="200px" class="sidebar">
+    <el-aside width="240px" class="sidebar">
       <div class="logo">
+        <div class="logo-icon">A</div>
         <h3>管理系统</h3>
       </div>
       
@@ -12,7 +13,7 @@
       >
         <el-menu-item index="/dashboard">
           <el-icon><HomeFilled /></el-icon>
-          <span>仪表盘</span>
+          <span>首页</span>
         </el-menu-item>
         
         <el-menu-item index="/students">
@@ -34,6 +35,11 @@
           <el-icon><Warning /></el-icon>
           <span>敏感词管理</span>
         </el-menu-item>
+        
+        <el-menu-item index="/chats">
+          <el-icon><ChatDotRound /></el-icon>
+          <span>咨询反馈</span>
+        </el-menu-item>
       </el-menu>
     </el-aside>
     
@@ -45,13 +51,18 @@
         
         <div class="header-right">
           <el-dropdown @command="handleCommand">
-            <span class="user-info">
-              <el-icon><Avatar /></el-icon>
-              <span>{{ adminInfo?.username || '管理员' }}</span>
-            </span>
+            <div class="user-info">
+              <div class="user-avatar">
+                 <el-icon><Avatar /></el-icon>
+              </div>
+              <span class="user-name">{{ adminInfo?.username || '管理员' }}</span>
+              <el-icon><CaretBottom /></el-icon>
+            </div>
             <template #dropdown>
               <el-dropdown-menu>
-                <el-dropdown-item command="logout">退出登录</el-dropdown-item>
+                <el-dropdown-item command="logout">
+                  <el-icon><SwitchButton /></el-icon> 退出登录
+                </el-dropdown-item>
               </el-dropdown-menu>
             </template>
           </el-dropdown>
@@ -69,7 +80,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { HomeFilled, User, UserFilled, Bell, Warning, Avatar } from '@element-plus/icons-vue'
+import { HomeFilled, User, UserFilled, Bell, Warning, Avatar, CaretBottom, SwitchButton, ChatDotRound } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -80,11 +91,12 @@ const activeMenu = computed(() => route.path)
 
 const pageTitle = computed(() => {
   const titles: Record<string, string> = {
-    '/dashboard': '仪表盘',
-    '/students': '学生管理',
-    '/teachers': '教师管理',
-    '/announcements': '公告管理',
-    '/sensitive-words': '敏感词管理'
+    '/dashboard': '首页概览',
+    '/students': '学生用户管理',
+    '/teachers': '教师用户管理',
+    '/announcements': '公告信息管理',
+    '/sensitive-words': '系统敏感词库',
+    '/chats': '咨询反馈中心'
   }
   return titles[route.path] || '管理系统'
 })
@@ -92,15 +104,16 @@ const pageTitle = computed(() => {
 const handleCommand = async (command: string) => {
   if (command === 'logout') {
     try {
-      await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
-        confirmButtonText: '确定',
+      await ElMessageBox.confirm('确定要退出登录吗？', '系统提示', {
+        confirmButtonText: '确定退出',
         cancelButtonText: '取消',
-        type: 'warning'
+        type: 'warning',
+        roundButton: true
       })
       
       localStorage.removeItem('adminToken')
       localStorage.removeItem('adminInfo')
-      ElMessage.success('已退出登录')
+      ElMessage.success('已安全退出登录')
       router.push('/login')
     } catch {
       // 用户取消
@@ -117,88 +130,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.layout-container {
-  height: 100vh;
-}
-
-.sidebar {
-  background: #304156;
-  color: white;
-}
-
-.logo {
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #263445;
-}
-
-.logo h3 {
-  margin: 0;
-  color: white;
-  font-size: 18px;
-}
-
-.sidebar-menu {
-  border: none;
-  background: #304156;
-}
-
-.sidebar-menu :deep(.el-menu-item) {
-  color: #bfcbd9;
-}
-
-.sidebar-menu :deep(.el-menu-item:hover) {
-  background: #263445;
-  color: white;
-}
-
-.sidebar-menu :deep(.el-menu-item.is-active) {
-  background: #409eff;
-  color: white;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: white;
-  border-bottom: 1px solid #e4e7ed;
-  padding: 0 20px;
-}
-
-.header-left {
-  flex: 1;
-}
-
-.page-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #303133;
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 4px;
-  transition: background 0.3s;
-}
-
-.user-info:hover {
-  background: #f5f7fa;
-}
-
-.main-content {
-  background: #f0f2f5;
-  padding: 20px;
-}
+@import '@/assets/css/variables.css';
+@import '@/assets/css/layout.css';
 </style>
