@@ -1,0 +1,88 @@
+/* 现代管理端设计系统变量 */
+:root {
+    /* 品牌色 */
+    --admin-primary: #3b82f6;
+    --admin-primary-light: rgba(59, 130, 246, 0.1);
+    --admin-primary-dark: #2563eb;
+
+    /* 辅助色 */
+    --admin-success: #10b981;
+    --admin-warning: #f59e0b;
+    --admin-danger: #ef4444;
+    --admin-info: #64748b;
+
+    /* 中性色 */
+    --admin-bg: #f8fafc;
+    --admin-card-bg: #ffffff;
+    --admin-text-main: #1e293b;
+    --admin-text-regular: #475569;
+    --admin-text-secondary: #64748b;
+    --admin-text-placeholder: #94a3b8;
+    --admin-border-light: #e2e8f0;
+    --admin-border-base: #cbd5e1;
+
+    /* 侧边栏 */
+    --admin-sidebar-bg: #ffffff;
+    --admin-sidebar-text: #64748b;
+    --admin-sidebar-active-bg: #eff6ff;
+    --admin-sidebar-active-text: #3b82f6;
+
+    /* 阴影 */
+    --admin-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --admin-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --admin-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+
+    /* 圆角 */
+    --admin-radius-sm: 4px;
+    --admin-radius-md: 8px;
+    --admin-radius-lg: 12px;
+    --admin-radius-xl: 16px;
+}
+
+/* 全局基础样式 */
+.modern-page {
+    padding: 24px;
+    min-height: calc(100vh - 60px);
+}
+
+.welcome-section {
+    margin-bottom: 32px;
+}
+
+.welcome-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--admin-text-main);
+    margin-bottom: 8px;
+}
+
+.welcome-desc {
+    color: var(--admin-text-secondary);
+    font-size: 16px;
+}
+
+/* 现代卡片 */
+.modern-card {
+    border-radius: var(--admin-radius-lg);
+    border: 1px solid var(--admin-border-light);
+    box-shadow: var(--admin-shadow-sm);
+    transition: all 0.3s ease;
+}
+
+.modern-card:hover {
+    box-shadow: var(--admin-shadow);
+}
+
+/* 玻璃拟态输入框 */
+.glass-input :deep(.el-input__wrapper) {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(4px);
+    border-radius: var(--admin-radius-md);
+    box-shadow: none !important;
+    border: 1px solid var(--admin-border-light);
+}
+
+.glass-input :deep(.el-input__wrapper.is-focus) {
+    border-color: var(--admin-primary);
+    background: #fff;
+}

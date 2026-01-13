@@ -1,0 +1,319 @@
+.homework-detail {
+    padding: 20px;
+}
+
+.page-title {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.detail-card {
+    margin-top: 20px;
+}
+
+.homework-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.homework-header h2 {
+    margin: 0;
+    font-size: 24px;
+    color: #303133;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.info-item {
+    display: flex;
+    gap: 8px;
+}
+
+.info-item .label {
+    color: #909399;
+    font-size: 14px;
+}
+
+.info-item .value {
+    color: #303133;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.info-item .score {
+    color: #67c23a;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.section {
+    margin: 24px 0;
+}
+
+.section h3 {
+    margin: 0 0 12px 0;
+    font-size: 18px;
+    color: #303133;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.description,
+.submission-content p {
+    margin: 0;
+    color: #606266;
+    line-height: 1.8;
+    white-space: pre-wrap;
+}
+
+.submission-content {
+    background: #f5f7fa;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+}
+
+.attachment {
+    margin-top: 12px;
+}
+
+.teacher-feedback {
+    background: linear-gradient(135deg, #f5f7fa 0%, #e8f4f8 100%);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.teacher-feedback h3 {
+    color: #409eff;
+    margin-bottom: 16px;
+}
+
+.feedback-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.score-display {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.score-display .label {
+    color: #606266;
+    font-size: 14px;
+}
+
+.score-value {
+    color: #67c23a;
+    font-size: 32px;
+    font-weight: 700;
+}
+
+.score-display .total {
+    color: #909399;
+    font-size: 18px;
+}
+
+.comment {
+    background: white;
+    border-radius: 8px;
+    padding: 16px;
+}
+
+.comment p {
+    margin: 0;
+    color: #303133;
+    line-height: 1.8;
+}
+
+.graded-info {
+    color: #909399;
+    font-size: 13px;
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid #f0f0f0;
+}
+
+/* 结构化题目区域 */
+.structured-results-section {
+    margin-top: 32px;
+    padding: 24px;
+    background: #f8fafc;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+}
+
+.results-badge {
+    display: inline-block;
+    padding: 4px 16px;
+    background: #3b82f6;
+    color: white;
+    font-size: 13px;
+    font-weight: 700;
+    border-radius: 20px;
+    margin-bottom: 20px;
+}
+
+.result-item {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+    border: 1px solid #edf2f7;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.q-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.q-idx {
+    font-weight: 800;
+    color: #1e293b;
+    font-size: 16px;
+}
+
+.q-score-stat {
+    margin-left: auto;
+}
+
+.q-content {
+    font-size: 15px;
+    color: #334155;
+    line-height: 1.6;
+    margin-bottom: 16px;
+    font-weight: 500;
+}
+
+.student-ans-box {
+    background: #f1f5f9;
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+}
+
+.ans-label {
+    font-size: 14px;
+    color: #64748b;
+    white-space: nowrap;
+}
+
+.ans-val {
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.ans-val.correct {
+    color: #10b981;
+}
+
+.ans-val.wrong {
+    color: #ef4444;
+}
+
+/* 选项样式 */
+.options-display {
+    margin: 16px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.opt-item {
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s;
+    background: #f8fafc;
+}
+
+.opt-item.is-student {
+    border-color: #ef4444;
+    background: #fef2f2;
+}
+
+.opt-item.is-correct {
+    border-color: #10b981;
+    background: #ecfdf5;
+}
+
+.opt-item.is-student.is-correct {
+    border-color: #10b981;
+    background: #ecfdf5;
+    box-shadow: 0 0 0 1px #10b981;
+}
+
+.opt-col {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.opt-label {
+    font-weight: 800;
+    color: #475569;
+}
+
+.opt-text {
+    color: #1e293b;
+    line-height: 1.5;
+}
+
+/* 解析区 */
+.ans-analysis {
+    background: #fffbeb;
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid #fef3c7;
+}
+
+.analysis-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+    color: #b45309;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.analysis-body {
+    font-size: 14px;
+    color: #92400e;
+    line-height: 1.6;
+}
+
+/* 判断题样式 */
+.judge-options {
+    display: flex;
+    gap: 12px;
+}
+
+.judge-options .opt-item {
+    flex: 1;
+    justify-content: center;
+}
