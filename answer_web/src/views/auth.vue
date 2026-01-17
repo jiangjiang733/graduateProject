@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import LoginComponent from './login.vue'
 import RegisterComponent from './register.vue'
-import '../assets/css/index/auth.css'
+import '@/assets/css/index/auth.css'
 
 const route = useRoute()
 const isLogin = ref(true) // 控制显示登录还是注册

@@ -189,7 +189,23 @@ export function useTeacherDashboard() {
         }
     }
 
-    const viewCourse = (course) => router.push({ path: '/teacher/course/' + course.id })
+    const viewCourse = (course) => {
+        try {
+            console.log('点击查看课程:', course)
+            const courseId = course.courseId || course.id
+            if (!courseId) {
+                console.error('课程ID不存在')
+                return
+            }
+            console.log('跳转到课程详情页，ID:', courseId)
+            router.push({
+                path: `/teacher/course/${courseId}`,
+                replace: false
+            })
+        } catch (error) {
+            console.error('跳转失败:', error)
+        }
+    }
 
     const isSameDay = (date1, date2) => {
         return date1.getFullYear() === date2.getFullYear() &&

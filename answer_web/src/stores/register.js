@@ -10,6 +10,7 @@ export function useRegisterStore() {
     email: '',
     password: '',
     confirm_code: '',
+    imageCaptcha: '',
     department: '',
     level: ''
   })
@@ -39,9 +40,9 @@ export function useRegisterStore() {
       console.log('发送验证码到:', forms.email)
       // 异步验证码邮箱
       // await sendVerificationCode(forms.email)
-      
+
       ElMessage.success('验证码已发送到您的邮箱')
-      
+
       // 开始倒计时
       const timer = setInterval(() => {
         countdown.value--
@@ -50,83 +51,125 @@ export function useRegisterStore() {
           isSending.value = false
         }
       }, 1000)
-      
+
     } catch (error) {
       ElMessage.error('验证码发送失败，请重试')
       isSending.value = false
       countdown.value = 0
     }
   }
+  // 添加loading状态
+  const loading = ref(false)
+
   // 自动校验, 注册函数
   async function register() {
-    // 这里是验证注册信息的
-    if (!forms.password||!forms.username||!forms.email||!forms.email) {
-      ElMessage.error("请完善注册信息")
+    // 基础字段验证
+    if (!forms.username?.trim()) {
+      ElMessage.warning("请输入工号/学号")
       return
     }
-    else if(activeTab.value === 'student') {
-      // 发送注册请求
-      try {
+    if (!forms.password?.trim()) {
+      ElMessage.warning("请输入密码")
+      return
+    }
+    if (forms.password.length < 6) {
+      ElMessage.warning("密码长度至少为6位")
+      return
+    }
+    if (!forms.email?.trim()) {
+      ElMessage.warning("请输入邮箱地址")
+      return
+    }
+
+    // 验证邮箱格式
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(forms.email)) {
+      ElMessage.warning('请输入正确的邮箱格式')
+      return
+    }
+
+    // 教师特殊字段验证
+    if (activeTab.value === 'teacher') {
+      if (!forms.department?.trim()) {
+        ElMessage.warning("请输入院系")
+        return
+      }
+      if (!forms.level) {
+        ElMessage.warning("请选择职级")
+        return
+      }
+    }
+
+    // 防止重复提交
+    if (loading.value) {
+      return
+    }
+
+    loading.value = true
+
+    try {
+      if (activeTab.value === 'student') {
+        // 发送学生注册请求
         const studentData = {
-          studentsUsername: forms.username,
+          studentsUsername: forms.username.trim(),
           studentsPassword: forms.password,
-          studentsEmail: forms.email,
-        };
-        const response=await axios.post(
-            `http://localhost:8088/api/addStudent`,
-            studentData
+          studentsEmail: forms.email.trim(),
+        }
+
+        const response = await axios.post(
+          `http://localhost:8088/api/addStudent`,
+          studentData
         )
-        const res=response.data
-        console.log(res.en)
-        if(res.success) {
-          ElMessage.success(res.message)
+        const res = response.data
+
+        if (res.success) {
+          ElMessage.success(res.message || '注册成功！')
           resetForm()
-        }else {
-          if(res.en) {
+        } else {
+          // 处理具体的错误信息
+          if (res.en) {
             ElMessage.error(res.en)
             forms.username = ''
             forms.email = ''
-          }else if(res.names) {
+          } else if (res.names) {
             ElMessage.error(res.names)
             forms.username = ''
-          }else if(res.emails) {
+          } else if (res.emails) {
             ElMessage.error(res.emails)
             forms.email = ''
+          } else {
+            ElMessage.error(res.message || '注册失败，请重试')
           }
         }
-      }
-      catch (error) {
-        ElMessage.error("学生注册失败，请重试")
-        console.log("学生注册错误"+error)
-      }
-    }
-    else if(activeTab.value === 'teacher') {
-      try {
-        const teacherData={
-          teacherUsername: forms.username,
+      } else if (activeTab.value === 'teacher') {
+        // 发送教师注册请求
+        const teacherData = {
+          teacherUsername: forms.username.trim(),
           teacherPassword: forms.password,
-          teacherEmail: forms.email,
-          teacherDepartment: forms.department || '',
-          teacherLevel: forms.level || ''
+          teacherEmail: forms.email.trim(),
+          teacherDepartment: forms.department.trim(),
+          teacherLevel: forms.level
         }
-         const  response=await axios.post(
-            "http://localhost:8088/api/teacher/register",
-            teacherData
+
+        const response = await axios.post(
+          "http://localhost:8088/api/teacher/register",
+          teacherData
         )
-        const res=response.data
-        // 表单信息校验
-        if(res.code === 200){
-          ElMessage.success(res.message || "注册成功")
+        const res = response.data
+
+        if (res.code === 200 || res.success) {
+          ElMessage.success(res.message || "注册成功！")
           resetForm()
         } else {
-          ElMessage.error(res.message || "注册失败")
-          console.log(res)
+          ElMessage.error(res.message || "注册失败，请重试")
         }
       }
-      catch(error) {
-        ElMessage.error("教师注册失败")
-        console.log("教师注册失败"+error)
-      }
+    } catch (error) {
+      console.error('注册失败:', error)
+      const errorMsg = error.response?.data?.message || error.message || '网络连接失败，请稍后重试'
+      ElMessage.error(errorMsg)
+    } finally {
+      loading.value = false
     }
   }
   // 重置表单
@@ -135,6 +178,7 @@ export function useRegisterStore() {
     forms.email = ''
     forms.password = ''
     forms.confirm_code = ''
+    forms.imageCaptcha = ''
     forms.department = ''
     forms.level = ''
   }
@@ -149,6 +193,7 @@ export function useRegisterStore() {
     forms,
     countdown,
     isSending,
+    loading,
     registerFormRef,
     resetForm,
     // 规则

@@ -1,24 +1,47 @@
 <script setup>
+import { ref } from 'vue'
 import { useRegisterStore } from '../stores/register.js'
 import "../assets/css/index/register.css"
+import ImageCaptcha from '../components/ImageCaptcha.vue'
+import { ElMessage } from 'element-plus'
+
 // 使用注册store
 const {
   activeTab,
   forms,
   countdown,
   isSending,
+  loading,
   registerFormRef,
   resetForm,
   getVerificationCode,
-  register,
+  register: storeRegister,
   setActiveTab
 } = useRegisterStore()
+
+const captchaRef = ref(null)
+
+// 包装注册函数以验证图形验证码
+const register = () => {
+  if (!forms.imageCaptcha) {
+    ElMessage.warning('请输入图形验证码')
+    return
+  }
+  
+  if (!captchaRef.value.validate(forms.imageCaptcha)) {
+    ElMessage.error('图形验证码错误')
+    captchaRef.value.refreshCaptcha()
+    forms.imageCaptcha = ''
+    return
+  }
+  
+  storeRegister()
+}
 </script>
 
 <template>
   <div class="register-component">
     <div class="register-form-section">
-      <h2 class="register-title">创建账号</h2>
       <div class="tab-buttons">
         <el-button 
           :class="{ active: activeTab === 'teacher' }" 
@@ -70,12 +93,26 @@ const {
         </el-form-item>
         <el-form-item label="" prop="confirm_code">
           <el-input 
-            placeholder="请输入验证码" 
+            placeholder="请输入邮箱验证码" 
             v-model="forms.confirm_code" 
             maxlength="6"
             class="centered-input"
           ></el-input>
         </el-form-item>
+        
+        <!-- 图形验证码 -->
+        <el-form-item label="" prop="imageCaptcha">
+          <div class="captcha-row">
+            <el-input 
+              placeholder="请输入图形验证码" 
+              v-model="forms.imageCaptcha" 
+              maxlength="4"
+              class="captcha-input"
+            ></el-input>
+            <ImageCaptcha ref="captchaRef" :width="110" :height="40" />
+          </div>
+        </el-form-item>
+        
         <!-- 教师特有字段 -->
         <el-form-item v-if="activeTab === 'teacher'" label="" prop="department">
           <el-input 
@@ -98,8 +135,20 @@ const {
           </el-select>
         </el-form-item>
         <el-form-item class="button-group">
-          <el-button type="success" class="register-btn" @click="register">注册</el-button>
-          <el-button class="reset-btn" @click="resetForm">重置</el-button>
+          <el-button 
+            type="success" 
+            class="register-btn" 
+            @click="register"
+            :loading="loading"
+            :disabled="loading"
+          >
+            {{ loading ? '注册中...' : '注册' }}
+          </el-button>
+          <el-button 
+            class="reset-btn" 
+            @click="resetForm"
+            :disabled="loading"
+          >重置</el-button>
         </el-form-item>
         <el-form-item class="forgot-password">
           <RouterLink to="/forgotPassword" class="forgot">忘记密码?</RouterLink>

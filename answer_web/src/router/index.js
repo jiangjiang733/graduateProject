@@ -26,8 +26,9 @@ const isAuthenticated = (role) => {
 }
 
 // 其他页面使用懒加载优化性能
-const auth = () => import('../views/auth.vue')
-const admin = () => import('../components/Admin.vue')
+const Auth = () => import('../views/auth.vue')
+const Admin = () => import('../components/Admin.vue')
+const ForgotPassword = () => import('../views/ForgotPassword.vue')
 
 // 教师模块 - 使用懒加载
 const TeacherLayout = () => import('../views/teacher/Personal/Layout.vue')
@@ -42,11 +43,20 @@ const TeacherMessageCenter = () => import('../views/teacher/Personal/MessageCent
 
 // 学生模块 - 使用懒加载
 const sIndex = () => import('../components/s_index.vue')
+const StudentLayout = () => import('../views/student/Layout.vue')
 const StudentDashboard = () => import('../views/student/Dashboard.vue')
 const StudentHomework = () => import('../views/student/StudentHomework.vue')
 const HomeworkSubmit = () => import('../views/student/HomeworkSubmit.vue')
 const HomeworkDetail = () => import('../views/student/HomeworkDetail.vue')
 const StudentMessageCenter = () => import('../views/student/MessageCenter.vue')
+const StudentCourseList = () => import('../views/student/CourseList.vue')
+const StudentCourseDetail = () => import('../views/student/CourseDetail.vue')
+const StudentCourseLearn = () => import('../views/student/CourseLearn.vue')
+const StudentProfile = () => import('../views/student/Profile.vue')
+const StudentSchedule = () => import('../views/student/Schedule.vue')
+const StudentExamList = () => import('../views/student/StudentExamList.vue')
+const StudentExamDetail = () => import('../views/student/StudentExamDetail.vue')
+const StudentExamResult = () => import('../views/student/StudentExamResult.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -59,18 +69,23 @@ const router = createRouter({
     {
       path: '/login',
       name: 'login',
-      component: auth,
+      component: Auth,
       meta: { role: 'teacher' } // 默认教师角色，可通过编程方式修改
     },
     {
       path: '/register',
       name: 'register',
-      component: auth,
+      component: Auth,
+    },
+    {
+      path: '/forgotPassword',
+      name: 'forgotPassword',
+      component: ForgotPassword,
     },
     {
       path: '/admin',
       name: 'admin',
-      component: admin,
+      component: Admin,
     },
     // 教师端路由 - 新的清晰结构
     {
@@ -119,7 +134,7 @@ const router = createRouter({
         {
           path: 'course/:id/learn',
           name: 'teacher_course_learn',
-          component: () => import('../views/student/CourseLearn.vue'),
+          component: StudentCourseLearn,
           meta: { title: '课程预览', requiresAuth: true, role: 'teacher' }
         },
         {
@@ -210,7 +225,7 @@ const router = createRouter({
     // 学生端路由 - 新的清晰结构
     {
       path: '/student',
-      component: () => import('../views/student/Layout.vue'),
+      component: StudentLayout,
       redirect: '/student/dashboard',
       meta: { requiresAuth: true, role: 'student' },
       children: [
@@ -223,13 +238,13 @@ const router = createRouter({
         {
           path: 'courses',
           name: 'student_courses',
-          component: () => import('../views/student/CourseList.vue'),
+          component: StudentCourseList,
           meta: { title: '课程中心', requiresAuth: true, role: 'student' }
         },
         {
           path: 'course/:id',
           name: 'student_course_detail',
-          component: () => import('../views/student/CourseDetail.vue'),
+          component: StudentCourseDetail,
           meta: { title: '课程详情', requiresAuth: true, role: 'student' }
         },
         {
@@ -253,13 +268,13 @@ const router = createRouter({
         {
           path: 'schedule',
           name: 'student_schedule',
-          component: () => import('../views/student/Schedule.vue'),
+          component: StudentSchedule,
           meta: { title: '我的课程表', requiresAuth: true, role: 'student' }
         },
         {
           path: 'profile',
           name: 'student_profile',
-          component: () => import('../views/student/Profile.vue'),
+          component: StudentProfile,
           meta: { title: '个人中心', requiresAuth: true, role: 'student' }
         },
         {
@@ -271,19 +286,19 @@ const router = createRouter({
         {
           path: 'exams',
           name: 'student_exams',
-          component: () => import('../views/student/StudentExamList.vue'),
+          component: StudentExamList,
           meta: { title: '在线考试', requiresAuth: true, role: 'student' }
         },
         {
           path: 'exam/:id/take',
           name: 'student_exam_take',
-          component: () => import('../views/student/StudentExamDetail.vue'),
+          component: StudentExamDetail,
           meta: { title: '正在考试', requiresAuth: true, role: 'student' }
         },
         {
           path: 'exam/:id/result',
           name: 'student_exam_result',
-          component: () => import('../views/student/StudentExamResult.vue'),
+          component: StudentExamResult,
           meta: { title: '考试成绩', requiresAuth: true, role: 'student' }
         }
       ]
@@ -292,7 +307,7 @@ const router = createRouter({
     {
       path: '/student/learn/:id',
       name: 'student_course_learn',
-      component: () => import('../views/student/CourseLearn.vue'),
+      component: StudentCourseLearn,
       meta: { title: '课程学习', requiresAuth: true, role: 'student' }
     },
     // 保留旧路由以兼容现有代码 (可选，如果确定不再使用可以删除)

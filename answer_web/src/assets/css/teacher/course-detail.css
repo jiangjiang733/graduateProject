@@ -1,4 +1,5 @@
-课程详情页样式 .course-detail-page {
+/* 课程详情页样式 */
+.course-detail-page {
     width: 100%;
     min-height: 100%;
 }
@@ -27,15 +28,19 @@
 
 .course-cover {
     width: 320px;
+    height: 180px;
     flex-shrink: 0;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    background-color: #f5f7fa;
 }
 
 .course-cover img {
     width: 100%;
-    height: 180px;
-    border-radius: 8px;
+    height: 100%;
     object-fit: cover;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    display: block;
 }
 
 .course-info {

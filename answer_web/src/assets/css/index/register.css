@@ -5,38 +5,36 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+  padding: 0;
 }
 
 .register-form-section {
   width: 100%;
-  max-width: 450px;
-  padding: 30px;
+  max-width: 100%;
+  padding: 8px 18px 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
 .register-title {
-  font-size: 28px;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 30px;
-  text-align: center;
+  display: none;
 }
 
 /* 验证码按钮样式 */
 .code-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
   color: white;
   border: none;
-  border-radius: 8px;
-  padding: 10px 15px;
-  font-size: 14px;
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 12px;
   transition: all 0.3s ease;
 }
 
 .code-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #768eec, #876bb4);
+  background: linear-gradient(135deg, #3a62a8, #2e4c82);
   transform: translateY(-1px);
 }
 
@@ -46,52 +44,165 @@
   cursor: not-allowed;
 }
 
+/* Tab按钮样式优化 */
+.tab-buttons {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  width: 100%;
+}
+
+.tab-buttons .el-button {
+  flex: 1;
+  height: 30px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 6px;
+  background: #f5f7fa;
+  border: 1px solid #dcdfe6;
+  color: #606266;
+  transition: all 0.3s ease;
+}
+
+.tab-buttons .el-button.active {
+  background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
+  border-color: #2a5298;
+  color: white;
+  box-shadow: 0 2px 6px rgba(42, 82, 152, 0.3);
+}
+
+.tab-buttons .el-button:hover:not(.active) {
+  background: #ebeef5;
+  border-color: #c0c4cc;
+}
+
 /* 按钮组样式 */
 .button-group {
   display: flex;
-  gap: 15px;
+  gap: 10px;
   justify-content: center;
-  margin-top: 5px;
+  margin-top: 0px;
 }
 
 .register-btn {
   flex: 1;
-  height: 44px;
-  font-size: 16px;
+  height: 36px;
+  font-size: 14px;
   font-weight: 600;
-  border-radius: 10px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
+  border: none;
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.register-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(42, 82, 152, 0.3);
+}
+
+.register-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .reset-btn {
   flex: 1;
-  height: 44px;
-  font-size: 16px;
+  height: 36px;
+  font-size: 14px;
   font-weight: 500;
-  border-radius: 10px;
-  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 6px;
+  background-color: #f5f7fa;
   border: 1px solid #dcdfe6;
   color: #606266;
+  transition: all 0.3s ease;
 }
 
-.reset-btn:hover {
-  background-color: rgba(255, 255, 255, 0.9);
+.reset-btn:hover:not(:disabled) {
+  background-color: #ebeef5;
   border-color: #c0c4cc;
+  transform: translateY(-1px);
+}
+
+.reset-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .forgot-password {
-  text-align: center;
-  margin-top: 15px;
+  text-align: center !important;
+  margin-top: 10px !important;
+  margin-bottom: 4px !important;
+  padding-bottom: 2px !important;
+  display: block !important;
+  visibility: visible !important;
 }
 
-.forgot-password a {
-  color: #667eea;
+.forgot-password a,
+.forgot-password .forgot {
+  color: #2a5298 !important;
   text-decoration: none;
-  font-size: 14px;
+  font-size: 12px !important;
   transition: color 0.3s ease;
+  display: inline-block !important;
+  visibility: visible !important;
 }
 
-.forgot-password a:hover {
-  color: #764ba2;
+.forgot-password a:hover,
+.forgot-password .forgot:hover {
+  color: #1e3c72 !important;
   text-decoration: underline;
 }
 
+/* 覆盖Element Plus表单项样式 */
+.register-form-section :deep(.el-form-item.forgot-password) {
+  margin-bottom: 0 !important;
+}
+
+.register-form-section :deep(.el-form-item.forgot-password .el-form-item__content) {
+  line-height: normal !important;
+}
+
+
+/* 表单项间距 */
+.register-form-section :deep(.el-form-item) {
+  margin-bottom: 8px;
+}
+
+.register-form-section :deep(.el-input__wrapper) {
+  border-radius: 6px;
+  padding: 0 10px;
+  min-height: 34px;
+}
+
+.register-form-section :deep(.el-input__inner) {
+  height: 34px;
+  font-size: 13px;
+}
+
+.register-form-section :deep(.el-select) {
+  width: 100%;
+}
+
+.register-form-section :deep(.el-select .el-input__wrapper) {
+  min-height: 34px;
+}
+
+.register-form-section :deep(.centered-form) {
+  width: 100%;
+}
+
+/* 验证码行样式 */
+.captcha-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.captcha-row .captcha-input {
+  flex: 1;
+}
+
+.captcha-row :deep(.el-input__wrapper) {
+  min-height: 34px;
+}

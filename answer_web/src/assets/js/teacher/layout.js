@@ -1,7 +1,7 @@
 import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useTeacherStore } from '@/stores/teacher.js'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { getUnreadCount } from '@/api/message.js'
 
 export function useTeacherLayout() {
@@ -31,9 +31,15 @@ export function useTeacherLayout() {
 
     const handleUserCommand = (command) => {
         if (command === 'logout') {
-            teacherStore.clearTeacherInfo()
-            ElMessage.success('已退出登录')
-            router.push('/login')
+            ElMessageBox.confirm('确定要退出登录吗？', '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(() => {
+                teacherStore.clearTeacherInfo()
+                ElMessage.success('已退出登录')
+                router.push('/')
+            })
         } else if (command === 'profile') {
             router.push('/teacher/profile')
         }

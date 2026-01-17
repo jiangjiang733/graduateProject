@@ -128,7 +128,7 @@ const handleCommand = (command) => {
       type: 'warning'
     }).then(() => {
       localStorage.clear()
-      router.push('/login')
+      router.push('/')
       ElMessage.success('已退出登录')
     })
   } else if (command === 'profile') {

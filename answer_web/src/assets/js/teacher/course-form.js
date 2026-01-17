@@ -457,6 +457,24 @@ export function useCourseForm() {
         addDialogVisible.value = true
     }
 
+    // 编辑章节
+    const editChapter = (chapter) => {
+        currentParent.value = null // 清空父节点，表示是编辑模式
+        chapterForm.value = {
+            chapterId: chapter.chapterId, // 添加章节ID
+            type: chapter.chapterType,
+            title: chapter.chapterTitle,
+            order: chapter.chapterOrder || chapter.order || 1,
+            video: null,
+            pdf: null,
+            content: chapter.textContent || ''
+        }
+        if (videoUploadRef.value) {
+            videoUploadRef.value.clearFiles()
+        }
+        addDialogVisible.value = true
+    }
+
     // 文件选择
     const handleVideoChange = (file) => {
         console.log('视频文件选择事件触发')
@@ -764,6 +782,7 @@ export function useCourseForm() {
         submitForm,
         goBack,
         openAddDialog,
+        editChapter,
         handleVideoChange,
         handlePdfChange,
         submitChapter,

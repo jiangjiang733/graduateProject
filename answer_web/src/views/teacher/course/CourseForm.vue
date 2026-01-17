@@ -210,6 +210,10 @@
                       <el-icon><Plus /></el-icon>
                       添加子章节
                     </el-button>
+                    <el-button size="small" type="warning" link @click.stop="editChapter(data)">
+                      <el-icon><Edit /></el-icon>
+                      编辑
+                    </el-button>
                     <el-button size="small" link @click.stop="viewChapter(data)">
                       <el-icon><View /></el-icon>
                       查看
@@ -515,6 +519,7 @@ const {
   submitForm,
   goBack,
   openAddDialog,
+  editChapter,
   handleVideoChange,
   handlePdfChange,
   submitChapter,
