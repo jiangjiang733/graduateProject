@@ -1,0 +1,141 @@
+/* 课程卡片iOS风格 */
+.course-card-ios {
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.course-visual {
+    position: relative;
+    width: 100%;
+    height: 180px;
+    overflow: hidden;
+}
+
+.rect-course-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.course-card-ios:hover .rect-course-img {
+    transform: scale(1.05);
+}
+
+.course-status-tag {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(52, 199, 89, 0.9);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    z-index: 2;
+}
+
+.course-visual-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.1) 100%);
+    pointer-events: none;
+}
+
+.course-details {
+    padding: 16px;
+}
+
+.course-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1C1C1E;
+    margin: 0 0 8px 0;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.course-stats {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    color: #8E8E93;
+}
+
+.course-stats span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.ios-action-btn {
+    width: 100%;
+    padding: 10px 16px;
+    background: linear-gradient(135deg, #007AFF 0%, #5E5CE6 100%);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    pointer-events: auto;
+    z-index: 10;
+}
+
+.ios-action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 122, 255, 0.3);
+}
+
+.ios-action-btn:active {
+    transform: translateY(0);
+}
+
+/* 添加课程卡片 */
+.add-card-ios {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 280px;
+    cursor: pointer;
+    border: 2px dashed rgba(0, 122, 255, 0.3);
+    transition: all 0.3s ease;
+}
+
+.add-card-ios:hover {
+    border-color: #007AFF;
+}
+
+.plus-circle {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #007AFF 0%, #5E5CE6 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    margin-bottom: 12px;
+}
+
+.add-text {
+    font-size: 15px;
+    font-weight: 600;
+    color: #007AFF;
+}
