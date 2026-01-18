@@ -243,3 +243,123 @@
         width: 100%;
     }
 }
+
+:global(.el-picker__popper) {
+    z-index: 10000 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1) !important;
+    border: 1px solid #e2e8f0 !important;
+    background: white !important;
+    overflow: visible !important;
+    margin-top: -60px !important;
+    /* 关键：整体上移，防止被遮挡或超出屏幕 */
+}
+
+/* 压缩内部空间，使组件更紧凑 */
+:global(.el-date-range-picker) {
+    width: 600px !important;
+    /* 稍微调窄一点 */
+}
+
+:global(.el-date-range-picker__content) {
+    padding: 12px !important;
+}
+
+:global(.el-date-range-picker__header) {
+    margin-bottom: 8px !important;
+    height: 30px !important;
+}
+
+:global(.el-date-table th) {
+    padding: 4px 0 !important;
+}
+
+:global(.el-date-table td) {
+    padding: 2px 0 !important;
+    height: 30px !important;
+}
+
+:global(.el-date-table td .el-date-table-cell) {
+    height: 24px !important;
+    line-height: 24px !important;
+}
+
+:global(.el-picker__popper .el-picker-panel) {
+    background: white !important;
+    border-radius: 16px !important;
+    overflow: hidden !important;
+    /* 面板内部可以裁圆角 */
+}
+
+:global(.el-picker-panel__footer) {
+    background: #f8fafc !important;
+    border-top: 1px solid #e2e8f0 !important;
+    padding: 8px 16px !important;
+    /* 压缩内边距 */
+    display: flex !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    gap: 8px !important;
+    min-height: 44px !important;
+    box-sizing: border-box !important;
+}
+
+/* 确保所有按钮都正常显示 */
+:global(.el-picker-panel__footer .el-button) {
+    display: inline-flex !important;
+    margin: 0 !important;
+    height: 28px !important;
+    /* 压缩高度 */
+    padding: 4px 12px !important;
+    font-size: 12px !important;
+    border-radius: 4px !important;
+    justify-content: center !important;
+}
+
+/* 取消/清空按钮样式 */
+:global(.el-picker-panel__footer .el-button:not(.el-button--primary)) {
+    background: white !important;
+    border: 1px solid #dcdfe6 !important;
+    color: #606266 !important;
+}
+
+:global(.el-picker-panel__footer .el-button:not(.el-button--primary):hover) {
+    color: #10b981 !important;
+    border-color: #c2e7b0 !important;
+    background-color: #f0f9eb !important;
+}
+
+/* 确定按钮样式 */
+:global(.el-picker-panel__footer .el-button--primary) {
+    background-color: #10b981 !important;
+    border-color: #10b981 !important;
+    color: white !important;
+    font-weight: 600 !important;
+}
+
+:global(.el-picker-panel__footer .el-button--primary:hover) {
+    background: #059669 !important;
+    border-color: #059669 !important;
+}
+
+:global(.el-date-range-picker__header) {
+    font-weight: 700 !important;
+}
+
+:global(.el-date-table th) {
+    color: #94a3b8 !important;
+    font-weight: 600 !important;
+}
+
+:global(.el-date-table td.available:hover) {
+    color: #10b981 !important;
+}
+
+:global(.el-date-table td.current:not(.disabled) .el-date-table-cell__text) {
+    background-color: #10b981 !important;
+}
+
+:global(.el-date-table td.today .el-date-table-cell__text) {
+    color: #10b981 !important;
+    font-weight: 700 !important;
+}

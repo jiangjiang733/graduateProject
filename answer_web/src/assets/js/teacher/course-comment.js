@@ -25,31 +25,65 @@ export function useCourseComment(props) {
     const userAvatar = computed(() => userInfoStore.avatarUrl);
 
     // 工具函数：将平铺列表转换为树形结构（以适应回复层级）
+    // 工具函数：将平铺列表转换为树形结构，并将所有子评论平铺到根评论的 replies 中
     const buildCommentTree = (list) => {
         const map = {};
-        const tree = [];
+        const roots = [];
+        const childrenMap = {};
 
-        // 初始化 map，并处理数据,使用 String key 避免类型不匹配
+        // 1. 初始化 map 和 childrenMap
         list.forEach(item => {
-            const key = String(item.commentId || item.id);
-            map[key] = item;
-            item.replies = item.replies || []; // 确保 replies 数组存在
-        });
+            // 重置 replies，防止重复累加
+            item.replies = [];
 
-        // 构建树形结构
-        list.forEach(item => {
+            // 确保使用 String 类型 key
             const id = String(item.commentId || item.id);
-            const parentKey = String(item.parentId);
+            map[id] = item;
 
-            // 如果有 parentId 且父节点存在，且不是自己指向自己
-            if (item.parentId && map[parentKey] && parentKey !== id) {
-                map[parentKey].replies.push(item);
+            const pid = item.parentId ? String(item.parentId) : null;
+            if (pid) {
+                if (!childrenMap[pid]) childrenMap[pid] = [];
+                childrenMap[pid].push(item);
             } else {
-                // 没有 parentId 或父节点不存在，作为根节点
-                tree.push(item);
+                roots.push(item);
             }
         });
-        return tree;
+
+        // 2. 为每个根节点收集所有后代（平铺）
+        roots.forEach(root => {
+            const allReplies = [];
+            // 使用队列进行广度优先遍历查找所有后代
+            const rootId = String(root.commentId || root.id);
+            const queue = [...(childrenMap[rootId] || [])];
+
+            while (queue.length > 0) {
+                const node = queue.shift();
+
+                // 确保 targetUserName 存在，如果接口未返回但有 parentId，尝试从本地 map 获取
+                if (!node.targetUserName && node.parentId) {
+                    const parent = map[String(node.parentId)];
+                    if (parent) {
+                        node.targetUserName = parent.userName;
+                        node.targetUserId = parent.userId;
+                    }
+                }
+
+                allReplies.push(node);
+
+                // 将该节点的直接子节点加入队列
+                const nodeId = String(node.commentId || node.id);
+                if (childrenMap[nodeId]) {
+                    queue.push(...childrenMap[nodeId]);
+                }
+            }
+
+            // 按时间正序排序（旧的在前）
+            allReplies.sort((a, b) => new Date(a.createTime).getTime() - new Date(b.createTime).getTime());
+
+            root.replies = allReplies;
+        });
+
+        return roots;
     };
 
     // 过滤评论

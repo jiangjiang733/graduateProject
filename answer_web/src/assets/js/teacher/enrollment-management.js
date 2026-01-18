@@ -166,8 +166,7 @@ export function useEnrollmentManagement() {
 
             if (response.success) {
                 ElMessage.success('已通过报名申请')
-                enrollment.status = 'approved'
-                enrollment.reviewTime = new Date().toISOString()
+                loadEnrollments() // 重新加载列表以确保统计数据和状态同步
             } else {
                 ElMessage.error(response.message || '操作失败')
             }
@@ -204,10 +203,8 @@ export function useEnrollmentManagement() {
 
             if (response.success) {
                 ElMessage.success('已拒绝报名申请')
-                currentEnrollment.value.status = 'rejected'
-                currentEnrollment.value.reviewTime = new Date().toISOString()
-                currentEnrollment.value.rejectReason = rejectForm.reason
                 rejectDialogVisible.value = false
+                loadEnrollments() // 重新加载列表
             } else {
                 ElMessage.error(response.message || '操作失败')
             }

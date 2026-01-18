@@ -4,8 +4,10 @@ import axios from 'axios'
 import { getProfile, updateProfile, updatePassword, uploadAvatar as uploadAvatarAPI } from '@/api/teacher'
 import { getCourseList } from '@/api/course.js'
 import { getCourseSchedules } from '@/api/schedule.js'
+import { useTeacherStore } from '@/stores/teacher.js'
 
 export function useProfile() {
+    const teacherStore = useTeacherStore()
     // 用户个人信息状态
     const profileData = ref({})
     // 表单状态
@@ -66,7 +68,8 @@ export function useProfile() {
 
             if (response && response.data) {
                 profileData.value = response.data
-                // 更新localStorage
+                teacherStore.setTeacherInfo(response.data)
+
                 localStorage.setItem('teacherName', profileData.value.teacherUsername || '')
                 localStorage.setItem('teacherEmail', profileData.value.teacherEmail || '')
                 localStorage.setItem('teacherHead', profileData.value.teacherHead || '')
@@ -369,7 +372,7 @@ export function useProfile() {
         try {
             console.log('=== 开始加载教师课程表 ===')
             loading.value = true
-            
+
             const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
             if (!teacherId) {
                 console.log('教师ID为空，跳过加载')
@@ -401,7 +404,7 @@ export function useProfile() {
                 try {
                     const scheduleResponse = await getCourseSchedules(course.id)
                     console.log(`课程 ${course.courseName} 的时间表:`, scheduleResponse)
-                    
+
                     if (scheduleResponse.success && scheduleResponse.data && scheduleResponse.data.length > 0) {
                         // 将课程时间表转换为显示格式
                         return scheduleResponse.data.map(schedule => ({
@@ -422,10 +425,10 @@ export function useProfile() {
 
             // 3. 等待所有时间表加载完成
             const scheduleResults = await Promise.all(schedulePromises)
-            
+
             // 4. 扁平化数组并设置数据
             courseData.value = scheduleResults.flat()
-            
+
             console.log('最终课程表数据:', courseData.value)
             console.log('=== 教师课程表加载完成 ===')
 
@@ -441,17 +444,17 @@ export function useProfile() {
     const formatScheduleTime = (schedule) => {
         const dayNames = ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日']
         const dayName = dayNames[schedule.dayOfWeek] || '未知'
-        
+
         // 节次时间映射
         const sectionTimes = {
             1: '08:00', 2: '08:55', 3: '10:00', 4: '10:55',
             5: '14:00', 6: '14:55', 7: '16:00', 8: '16:55',
             9: '19:00', 10: '19:55', 11: '20:50', 12: '21:45'
         }
-        
+
         const startTime = sectionTimes[schedule.startSection] || '00:00'
         const endTime = sectionTimes[schedule.endSection + 1] || '23:59'
-        
+
         return `${dayName} ${startTime}-${endTime} (第${schedule.startWeek}-${schedule.endWeek}周)`
     }
 

@@ -766,8 +766,18 @@ export function useExamForm() {
         try {
             const examId = route.params.id
             const response = await getExamDetail(examId)
-            if (response.success && response.data) {
-                const { exam, questions: examQuestions } = response.data
+            if ((response.success || response.code === 200) && response.data) {
+                // 兼容不同的后端返回结构
+                let exam, examQuestions;
+                if (response.data.exam) {
+                    exam = response.data.exam
+                    examQuestions = response.data.questions || response.data.exam.questions || []
+                } else {
+                    exam = response.data
+                    examQuestions = response.data.questions || response.data.questionList || []
+                }
+
+                if (!exam) return;
 
                 // 填充基础信息
                 Object.assign(examForm, {

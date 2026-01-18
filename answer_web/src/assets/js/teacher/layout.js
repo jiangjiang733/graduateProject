@@ -3,6 +3,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useTeacherStore } from '@/stores/teacher.js'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getUnreadCount } from '@/api/message.js'
+import { getProfile } from '@/api/teacher.js'
 
 export function useTeacherLayout() {
     const route = useRoute()
@@ -58,8 +59,25 @@ export function useTeacherLayout() {
         }
     }
 
+    const fetchProfile = async () => {
+        try {
+            const teacherId = teacherStore.teacherId
+            if (!teacherId) return
+            const res = await getProfile(teacherId)
+            // 增加更严谨的校验，确保 res 存在且包含 data
+            if (res && res.data && (res.code === 200 || res.success)) {
+                // 更新 store 中的教师信息
+                teacherStore.setTeacherInfo(res.data)
+                console.log('Teacher profile synced:', res.data)
+            }
+        } catch (error) {
+            console.error('Fetch profile failed:', error)
+        }
+    }
+
     onMounted(() => {
-        if (teacherStore.isLoggedIn) {
+        // 初始拉取未读消息数
+        if (teacherStore.teacherId) {
             fetchUnreadCount()
         }
     })

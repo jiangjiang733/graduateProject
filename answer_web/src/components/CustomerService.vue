@@ -81,6 +81,7 @@ const props = defineProps({
   }
 })
 
+// 状态声明
 const visible = ref(false)
 const history = ref([])
 const unreadCount = ref(0)
@@ -88,20 +89,65 @@ const inputContent = ref('')
 const sending = ref(false)
 const messageBox = ref(null)
 const pollTimer = ref(null)
-
 const userStore = useUserInfo()
 
-// 监听未读数变化，弹出提示
-watch(unreadCount, (newVal, oldVal) => {
-  if (newVal > oldVal && !visible.value) {
-    ElMessage({
-      message: '您有新的工作人员回复，请点击右下角查看',
-      type: 'info',
-      duration: 5000,
-      offset: 70
+// --- 函数定义 (置顶以防 TDZ 错误) ---
+
+const scrollToBottom = () => {
+  nextTick(() => {
+    if (messageBox.value) {
+      messageBox.value.scrollTop = messageBox.value.scrollHeight
+    }
+  })
+}
+
+const loadHistory = async () => {
+  if (!props.userId) return
+  try {
+    const res = await getChatHistory({
+      user1Id: props.userId,
+      user1Type: props.userType.toUpperCase(),
+      user2Id: '1',
+      user2Type: 'ADMIN'
     })
+    if (res.code === 200) {
+      history.value = res.data || []
+      scrollToBottom()
+    }
+  } catch (e) {
+    console.error('Failed to load chat history:', e)
   }
-})
+}
+
+const markAsRead = async () => {
+  if (!props.userId) return
+  try {
+    await markChatRead({
+      currentUserId: props.userId,
+      currentUserType: props.userType.toUpperCase(),
+      senderId: '1',
+      senderType: 'ADMIN'
+    })
+  } catch (e) {
+    console.error('Failed to mark chats as read:', e)
+  }
+}
+
+const loadUnread = async () => {
+  if (!props.userId) return
+  try {
+    const res = await getAdminChatInfo(props.userType.toUpperCase(), props.userId)
+    if (res.code === 200) {
+      unreadCount.value = res.data?.unreadCount || 0
+      if (visible.value && unreadCount.value > 0) {
+        loadHistory()
+        markAsRead()
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to poll unread count:', e.message)
+  }
+}
 
 const isMe = (msg) => {
   return String(msg.senderId) === String(props.userId) && msg.senderType === props.userType.toUpperCase()
@@ -129,46 +175,6 @@ const toggleChat = () => {
     loadHistory()
     markAsRead()
   }
-}
-
-const loadHistory = async () => {
-  try {
-    const res = await getChatHistory({
-      user1Id: props.userId,
-      user1Type: props.userType.toUpperCase(),
-      user2Id: '1',
-      user2Type: 'ADMIN'
-    })
-    if (res.code === 200) {
-      history.value = res.data || []
-      scrollToBottom()
-    }
-  } catch (e) {}
-}
-
-const loadUnread = async () => {
-  try {
-    const res = await getAdminChatInfo(props.userType.toUpperCase(), props.userId)
-    if (res.code === 200) {
-      unreadCount.value = res.data.unreadCount || 0
-      // If unread messages and dialog is open, refresh history
-      if (visible.value && unreadCount.value > 0) {
-        loadHistory()
-        markAsRead()
-      }
-    }
-  } catch (e) {}
-}
-
-const markAsRead = async () => {
-  try {
-    await markChatRead({
-      currentUserId: props.userId,
-      currentUserType: props.userType.toUpperCase(),
-      senderId: '1',
-      senderType: 'ADMIN'
-    })
-  } catch (e) {}
 }
 
 const handleSend = async () => {
@@ -200,13 +206,30 @@ const handleSend = async () => {
   }
 }
 
-const scrollToBottom = () => {
-  nextTick(() => {
-    if (messageBox.value) {
-      messageBox.value.scrollTop = messageBox.value.scrollHeight
+// --- 侦听器与生命周期 ---
+
+// 监听未读数变化，弹出提示
+watch(unreadCount, (newVal, oldVal) => {
+  if (newVal > oldVal && !visible.value) {
+    ElMessage({
+      message: '您有新的工作人员回复，请点击右下角查看',
+      type: 'info',
+      duration: 5000,
+      offset: 70
+    })
+  }
+})
+
+// 监听 userId 变化，当其从空变为有值时立即加载数据
+watch(() => props.userId, (newVal) => {
+  if (newVal) {
+    loadUnread()
+    if (visible.value) {
+      loadHistory()
+      markAsRead()
     }
-  })
-}
+  }
+}, { immediate: true })
 
 onMounted(() => {
   loadUnread()

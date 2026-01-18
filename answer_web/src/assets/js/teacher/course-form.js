@@ -1,6 +1,7 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import axios from 'axios'
 import {
     createCourse,
     getCourseDetail,
@@ -12,6 +13,7 @@ import {
     createTextChapter,
     createMixedChapter,
     getChapterDetail,
+    updateChapter,
     deleteChapter as deleteChapterApi
 } from '@/api/course.js'
 import {
@@ -65,10 +67,10 @@ export function useCourseForm() {
     // 提交状态
     const submitting = ref(false)
 
-    // ==================== 章节管理相关 ====================
     const treeData = ref([])
     const chaptersLoading = ref(false)
     const addDialogVisible = ref(false)
+    const isEditChapter = ref(false)
     const detailDialogVisible = ref(false)
     const currentParent = ref(null)
     const currentChapter = ref(null)
@@ -442,11 +444,12 @@ export function useCourseForm() {
 
     // 打开添加对话框
     const openAddDialog = (parent) => {
+        isEditChapter.value = false
         currentParent.value = parent
         chapterForm.value = {
             type: 'MIXED',
             title: '',
-            order: parent ? parent.children.length + 1 : treeData.value.length + 1,
+            order: parent ? (parent.children?.length || 0) + 1 : treeData.value.length + 1,
             video: null,
             pdf: null,
             content: ''
@@ -459,9 +462,10 @@ export function useCourseForm() {
 
     // 编辑章节
     const editChapter = (chapter) => {
-        currentParent.value = null // 清空父节点，表示是编辑模式
+        isEditChapter.value = true
+        currentParent.value = null
         chapterForm.value = {
-            chapterId: chapter.chapterId, // 添加章节ID
+            chapterId: chapter.chapterId,
             type: chapter.chapterType,
             title: chapter.chapterTitle,
             order: chapter.chapterOrder || chapter.order || 1,
@@ -553,65 +557,74 @@ export function useCourseForm() {
             console.log('课程ID:', data.courseId)
 
             let response
-            switch (chapterForm.value.type) {
-                case 'FOLDER':
-                    console.log('创建文件夹章节')
-                    response = await createFolderChapter(data)
-                    break
-                case 'VIDEO':
-                    data.video = chapterForm.value.video
-                    console.log('创建视频章节')
-                    console.log('  chapterForm.value.video:', chapterForm.value.video)
-                    console.log('  data.video:', data.video)
-                    console.log('  data.video 是File对象:', data.video instanceof File)
-                    if (data.video) {
-                        console.log('  视频文件详情:', {
-                            name: data.video.name,
-                            size: data.video.size + ' bytes',
-                            type: data.video.type,
-                            lastModified: data.video.lastModified
-                        })
-                    } else {
-                        console.error('data.video 为 null 或 undefined!')
-                    }
-                    response = await createVideoChapter(data)
-                    break
-                case 'PDF':
-                    data.pdf = chapterForm.value.pdf
-                    console.log('创建PDF章节')
-                    console.log('  PDF文件:', data.pdf ? data.pdf.name : '无')
-                    response = await createPdfChapter(data)
-                    break
-                case 'TEXT':
-                    data.content = chapterForm.value.content
-                    console.log('创建文本章节')
-                    response = await createTextChapter(data)
-                    break
-                case 'MIXED':
-                    data.video = chapterForm.value.video
-                    data.pdf = chapterForm.value.pdf
-                    data.content = chapterForm.value.content
-                    console.log('创建混合章节')
-                    console.log('  视频:', data.video ? data.video.name : '无')
-                    console.log('  PDF:', data.pdf ? data.pdf.name : '无')
-                    console.log('  文本:', data.content ? '有' : '无')
-                    response = await createMixedChapter(data)
-                    break
+            if (isEditChapter.value) {
+                // ========== 编辑模式 (使用 JSON 避免 Content-Type 报错) ==========
+                const userId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
+                const updateData = {
+                    chapterTitle: chapterForm.value.title,
+                    chapterOrder: chapterForm.value.order,
+                    chapterType: chapterForm.value.type,
+                    textContent: chapterForm.value.content || ''
+                }
+
+                console.log('正在更新章节 (JSON):', chapterForm.value.chapterId, updateData)
+                response = await updateChapter(chapterForm.value.chapterId, userId, updateData)
+
+                // 处理通过 request 实例返回的数据 (拦截器已处理 .data)
+                const result = response
+                if (result.success || result.code === 200) {
+                    ElMessage.success('章节更新成功')
+                    addDialogVisible.value = false
+                    fetchChapters()
+                } else {
+                    ElMessage.error(result.message || '更新失败')
+                }
+                return
+            } else {
+                // ========== 创建模式 ==========
+                switch (chapterForm.value.type) {
+                    case 'FOLDER':
+                        console.log('创建文件夹章节')
+                        response = await createFolderChapter(data)
+                        break
+                    case 'VIDEO':
+                        data.video = chapterForm.value.video
+                        console.log('创建视频章节')
+                        response = await createVideoChapter(data)
+                        break
+                    case 'PDF':
+                        data.pdf = chapterForm.value.pdf
+                        console.log('创建PDF章节')
+                        response = await createPdfChapter(data)
+                        break
+                    case 'TEXT':
+                        data.content = chapterForm.value.content
+                        console.log('创建文本章节')
+                        response = await createTextChapter(data)
+                        break
+                    case 'MIXED':
+                        data.video = chapterForm.value.video
+                        data.pdf = chapterForm.value.pdf
+                        data.content = chapterForm.value.content
+                        console.log('创建混合章节')
+                        response = await createMixedChapter(data)
+                        break
+                }
+
+                // 处理直接用 axios 返回的数据
+                const result = response.data
+                if (result.success || result.code === 200) {
+                    ElMessage.success('章节创建成功')
+                    addDialogVisible.value = false
+                    fetchChapters()
+                } else {
+                    ElMessage.error(result.message || '创建失败')
+                }
             }
 
             console.log('服务器响应:', response)
-            console.log('服务器响应数据:', response.data)
             console.log('=== 请求完成 ===\n')
 
-            // 修复：axios返回的数据在response.data中
-            const result = response.data
-            if (result.success || result.code === 200) {
-                ElMessage.success('章节创建成功')
-                addDialogVisible.value = false
-                fetchChapters()
-            } else {
-                ElMessage.error(result.message || '创建失败')
-            }
         } catch (error) {
             console.error('创建失败:', error)
             console.error('错误详情:', error.response?.data || error.message)
@@ -758,6 +771,7 @@ export function useCourseForm() {
         treeData,
         chaptersLoading,
         addDialogVisible,
+        isEditChapter,
         detailDialogVisible,
         currentParent,
         currentChapter,

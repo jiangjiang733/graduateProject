@@ -159,7 +159,7 @@
 
         <el-form-item label="考试时间" prop="timeRange">
           <el-date-picker
-            v-model="timeRange"
+            v-model="examForm.timeRange"
             type="datetimerange"
             range-separator="至"
             start-placeholder="开始时间"
@@ -187,8 +187,12 @@
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="dialogVisible = false">取消</el-button>
-          <el-button @click="saveAsDraft" :loading="submitting">保存草稿</el-button>
-          <el-button type="primary" @click="submitExam" :loading="submitting">创建并发布</el-button>
+          <el-button @click="saveAsDraft" :loading="submitting">
+            {{ isEdit ? '保存修改' : '保存草稿' }}
+          </el-button>
+          <el-button type="primary" @click="submitExam" :loading="submitting">
+            {{ isEdit ? '确定发布' : '确定并发布' }}
+          </el-button>
         </span>
       </template>
     </el-dialog>
@@ -209,7 +213,6 @@ const {
   formRef,
   courses,
   exams,
-  timeRange,
   filterForm,
   examForm,
   rules,

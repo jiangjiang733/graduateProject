@@ -5,8 +5,8 @@
       <el-button @click="goBack" icon="ArrowLeft">返回</el-button>
       <h2>{{ exam.examTitle }}</h2>
       <div class="header-actions">
-        <el-button v-if="exam.status === 0" type="primary" @click="publishExam">发布考试</el-button>
-        <el-button v-if="exam.status === 1" type="warning" @click="unpublishExam">取消发布</el-button>
+        <el-button v-if="exam.status === 0 || String(exam.status).toUpperCase() === 'DRAFT'" type="primary" @click="publishExam">发布考试</el-button>
+        <el-button v-if="exam.status === 1 || String(exam.status).toUpperCase() === 'PUBLISHED'" type="warning" @click="unpublishExam">取消发布</el-button>
         <el-button @click="editExam">编辑考试</el-button>
         <el-button type="danger" @click="deleteExam">删除考试</el-button>
       </div>

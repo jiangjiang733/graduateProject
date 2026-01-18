@@ -1,0 +1,1097 @@
+/* ================================================
+   智慧课堂 - Smart Classroom Theme
+   现代化教育产品设计系统
+   ================================================ */
+
+/* === CSS Variables - 设计令牌 === */
+:root {
+    /* 主色系 - 深邃蓝紫渐变 */
+    --smart-primary: #6366f1;
+    --smart-primary-light: #818cf8;
+    --smart-primary-dark: #4f46e5;
+    --smart-primary-bg: rgba(99, 102, 241, 0.08);
+
+    /* 辅助色 - 活力渐变 */
+    --smart-accent: #06b6d4;
+    --smart-accent-light: #22d3ee;
+    --smart-accent-dark: #0891b2;
+
+    /* 成功/警告/危险色 */
+    --smart-success: #10b981;
+    --smart-success-light: #34d399;
+    --smart-success-bg: rgba(16, 185, 129, 0.1);
+
+    --smart-warning: #f59e0b;
+    --smart-warning-light: #fbbf24;
+    --smart-warning-bg: rgba(245, 158, 11, 0.1);
+
+    --smart-danger: #ef4444;
+    --smart-danger-light: #f87171;
+    --smart-danger-bg: rgba(239, 68, 68, 0.1);
+
+    /* 中性色板 */
+    --smart-text-primary: #0f172a;
+    --smart-text-secondary: #475569;
+    --smart-text-tertiary: #94a3b8;
+    --smart-text-placeholder: #cbd5e1;
+
+    /* 背景色 */
+    --smart-bg-primary: #f8fafc;
+    --smart-bg-secondary: #f1f5f9;
+    --smart-bg-card: #ffffff;
+    --smart-bg-elevated: rgba(255, 255, 255, 0.95);
+
+    /* 边框色 */
+    --smart-border: #e2e8f0;
+    --smart-border-light: #f1f5f9;
+    --smart-border-focus: #6366f1;
+
+    /* 渐变 */
+    --smart-gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+    --smart-gradient-accent: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+    --smart-gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    --smart-gradient-warm: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+    --smart-gradient-cool: linear-gradient(135deg, #06b6d4 0%, #6366f1 100%);
+    --smart-gradient-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.7) 100%);
+
+    /* 阴影 */
+    --smart-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --smart-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    --smart-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    --smart-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    --smart-shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    --smart-shadow-glow: 0 0 40px rgba(99, 102, 241, 0.15);
+    --smart-shadow-card: 0 4px 20px rgba(0, 0, 0, 0.08);
+    --smart-shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.12);
+
+    /* 圆角 */
+    --smart-radius-sm: 8px;
+    --smart-radius-md: 12px;
+    --smart-radius-lg: 16px;
+    --smart-radius-xl: 20px;
+    --smart-radius-2xl: 24px;
+    --smart-radius-full: 9999px;
+
+    /* 间距 */
+    --smart-space-xs: 4px;
+    --smart-space-sm: 8px;
+    --smart-space-md: 16px;
+    --smart-space-lg: 24px;
+    --smart-space-xl: 32px;
+    --smart-space-2xl: 48px;
+
+    /* 过渡动画 */
+    --smart-transition-fast: 0.15s ease;
+    --smart-transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --smart-transition-slow: 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    --smart-transition-bounce: 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+    /* 字体 */
+    --smart-font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, sans-serif;
+    --smart-font-size-xs: 12px;
+    --smart-font-size-sm: 14px;
+    --smart-font-size-base: 16px;
+    --smart-font-size-lg: 18px;
+    --smart-font-size-xl: 20px;
+    --smart-font-size-2xl: 24px;
+    --smart-font-size-3xl: 30px;
+    --smart-font-size-4xl: 36px;
+}
+
+/* === 基础重置 === */
+.smart-classroom * {
+    box-sizing: border-box;
+}
+
+.smart-classroom {
+    font-family: var(--smart-font-family);
+    color: var(--smart-text-primary);
+    background: var(--smart-bg-primary);
+    min-height: 100vh;
+}
+
+/* === 背景装饰 - 动态光晕 === */
+.smart-bg-decoration {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+}
+
+.smart-bg-blob {
+    position: absolute;
+    filter: blur(120px);
+    opacity: 0.4;
+    border-radius: 50%;
+    animation: smart-blob-float 20s infinite alternate ease-in-out;
+}
+
+.smart-bg-blob-1 {
+    width: 600px;
+    height: 600px;
+    background: var(--smart-gradient-primary);
+    top: -200px;
+    right: -100px;
+    animation-delay: 0s;
+}
+
+.smart-bg-blob-2 {
+    width: 500px;
+    height: 500px;
+    background: var(--smart-gradient-accent);
+    bottom: -150px;
+    left: -100px;
+    animation-delay: -5s;
+}
+
+.smart-bg-blob-3 {
+    width: 400px;
+    height: 400px;
+    background: var(--smart-gradient-warm);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    animation-delay: -10s;
+    opacity: 0.2;
+}
+
+@keyframes smart-blob-float {
+    0% {
+        transform: translate(0, 0) scale(1) rotate(0deg);
+    }
+
+    50% {
+        transform: translate(30px, -30px) scale(1.1) rotate(180deg);
+    }
+
+    100% {
+        transform: translate(-30px, 30px) scale(0.95) rotate(360deg);
+    }
+}
+
+/* === 玻璃态卡片 === */
+.smart-glass-card {
+    background: var(--smart-gradient-glass);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: var(--smart-radius-xl);
+    box-shadow: var(--smart-shadow-card);
+    transition: var(--smart-transition-normal);
+}
+
+.smart-glass-card:hover {
+    box-shadow: var(--smart-shadow-hover);
+    border-color: rgba(99, 102, 241, 0.2);
+    transform: translateY(-4px);
+}
+
+/* === 实体卡片 === */
+.smart-solid-card {
+    background: var(--smart-bg-card);
+    border: 1px solid var(--smart-border);
+    border-radius: var(--smart-radius-xl);
+    box-shadow: var(--smart-shadow-md);
+    transition: var(--smart-transition-normal);
+    overflow: hidden;
+}
+
+.smart-solid-card:hover {
+    box-shadow: var(--smart-shadow-xl);
+    border-color: var(--smart-primary);
+    transform: translateY(-6px) scale(1.01);
+}
+
+/* === 页面容器 === */
+.smart-page-container {
+    position: relative;
+    z-index: 1;
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: var(--smart-space-xl);
+}
+
+/* === 页面标题区 === */
+.smart-page-header {
+    margin-bottom: var(--smart-space-xl);
+}
+
+.smart-page-title {
+    font-size: var(--smart-font-size-3xl);
+    font-weight: 800;
+    background: var(--smart-gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0 0 var(--smart-space-sm) 0;
+    letter-spacing: -0.5px;
+}
+
+.smart-page-subtitle {
+    font-size: var(--smart-font-size-base);
+    color: var(--smart-text-secondary);
+    font-weight: 500;
+    margin: 0;
+}
+
+.smart-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: var(--smart-space-sm);
+    font-size: var(--smart-font-size-sm);
+    color: var(--smart-primary);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--smart-space-sm);
+}
+
+/* === 统计卡片网格 === */
+.smart-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--smart-space-lg);
+    margin-bottom: var(--smart-space-xl);
+}
+
+.smart-stat-card {
+    padding: var(--smart-space-lg);
+    display: flex;
+    align-items: flex-start;
+    gap: var(--smart-space-md);
+    position: relative;
+    overflow: hidden;
+}
+
+.smart-stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100px;
+    height: 100px;
+    background: var(--smart-gradient-primary);
+    opacity: 0.05;
+    border-radius: 50%;
+    transform: translate(30%, -30%);
+}
+
+.smart-stat-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--smart-radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: var(--smart-gradient-primary);
+    color: white;
+    font-size: 24px;
+    box-shadow: 0 8px 16px rgba(99, 102, 241, 0.25);
+}
+
+.smart-stat-icon.accent {
+    background: var(--smart-gradient-accent);
+    box-shadow: 0 8px 16px rgba(6, 182, 212, 0.25);
+}
+
+.smart-stat-icon.success {
+    background: var(--smart-gradient-success);
+    box-shadow: 0 8px 16px rgba(16, 185, 129, 0.25);
+}
+
+.smart-stat-icon.warning {
+    background: var(--smart-gradient-warm);
+    box-shadow: 0 8px 16px rgba(245, 158, 11, 0.25);
+}
+
+.smart-stat-info {
+    flex: 1;
+}
+
+.smart-stat-label {
+    font-size: var(--smart-font-size-sm);
+    color: var(--smart-text-tertiary);
+    font-weight: 600;
+    display: block;
+    margin-bottom: var(--smart-space-xs);
+}
+
+.smart-stat-value {
+    font-size: var(--smart-font-size-3xl);
+    font-weight: 800;
+    color: var(--smart-text-primary);
+    line-height: 1.2;
+}
+
+.smart-stat-trend {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: var(--smart-radius-full);
+    font-size: var(--smart-font-size-xs);
+    font-weight: 700;
+    margin-top: var(--smart-space-xs);
+}
+
+.smart-stat-trend.up {
+    background: var(--smart-success-bg);
+    color: var(--smart-success);
+}
+
+.smart-stat-trend.down {
+    background: var(--smart-danger-bg);
+    color: var(--smart-danger);
+}
+
+/* === 区块标题 === */
+.smart-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--smart-space-lg);
+}
+
+.smart-section-title {
+    font-size: var(--smart-font-size-xl);
+    font-weight: 700;
+    color: var(--smart-text-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--smart-space-sm);
+}
+
+.smart-section-title::before {
+    content: '';
+    width: 4px;
+    height: 20px;
+    background: var(--smart-gradient-primary);
+    border-radius: 2px;
+}
+
+/* === 按钮系统 === */
+.smart-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--smart-space-sm);
+    padding: 12px 24px;
+    border-radius: var(--smart-radius-md);
+    font-size: var(--smart-font-size-sm);
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: var(--smart-transition-normal);
+    text-decoration: none;
+    position: relative;
+    overflow: hidden;
+}
+
+.smart-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%);
+    opacity: 0;
+    transition: var(--smart-transition-fast);
+}
+
+.smart-btn:hover::before {
+    opacity: 1;
+}
+
+.smart-btn-primary {
+    background: var(--smart-gradient-primary);
+    color: white;
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+}
+
+.smart-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.5);
+}
+
+.smart-btn-primary:active {
+    transform: translateY(0);
+}
+
+.smart-btn-accent {
+    background: var(--smart-gradient-accent);
+    color: white;
+    box-shadow: 0 4px 15px rgba(6, 182, 212, 0.4);
+}
+
+.smart-btn-accent:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(6, 182, 212, 0.5);
+}
+
+.smart-btn-success {
+    background: var(--smart-gradient-success);
+    color: white;
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+}
+
+.smart-btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.5);
+}
+
+.smart-btn-outline {
+    background: transparent;
+    color: var(--smart-primary);
+    border: 2px solid var(--smart-primary);
+}
+
+.smart-btn-outline:hover {
+    background: var(--smart-primary-bg);
+    transform: translateY(-2px);
+}
+
+.smart-btn-ghost {
+    background: transparent;
+    color: var(--smart-text-secondary);
+}
+
+.smart-btn-ghost:hover {
+    background: var(--smart-bg-secondary);
+    color: var(--smart-primary);
+}
+
+.smart-btn-icon {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: var(--smart-radius-md);
+    background: var(--smart-bg-secondary);
+    color: var(--smart-text-secondary);
+}
+
+.smart-btn-icon:hover {
+    background: var(--smart-primary-bg);
+    color: var(--smart-primary);
+}
+
+/* === 输入框系统 === */
+.smart-input-wrapper {
+    position: relative;
+}
+
+.smart-input {
+    width: 100%;
+    padding: 14px 18px;
+    border: 2px solid var(--smart-border);
+    border-radius: var(--smart-radius-md);
+    font-size: var(--smart-font-size-sm);
+    background: var(--smart-bg-card);
+    color: var(--smart-text-primary);
+    transition: var(--smart-transition-normal);
+    outline: none;
+}
+
+.smart-input::placeholder {
+    color: var(--smart-text-placeholder);
+}
+
+.smart-input:hover {
+    border-color: var(--smart-text-tertiary);
+}
+
+.smart-input:focus {
+    border-color: var(--smart-primary);
+    box-shadow: 0 0 0 4px var(--smart-primary-bg);
+}
+
+.smart-input-icon {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--smart-text-tertiary);
+    font-size: 18px;
+}
+
+.smart-input.has-icon {
+    padding-left: 48px;
+}
+
+/* === 搜索框 === */
+.smart-search-box {
+    display: flex;
+    align-items: center;
+    gap: var(--smart-space-sm);
+    padding: 8px 16px;
+    background: var(--smart-bg-secondary);
+    border-radius: var(--smart-radius-lg);
+    border: 2px solid transparent;
+    transition: var(--smart-transition-normal);
+}
+
+.smart-search-box:focus-within {
+    background: var(--smart-bg-card);
+    border-color: var(--smart-primary);
+    box-shadow: 0 0 0 4px var(--smart-primary-bg);
+}
+
+.smart-search-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: var(--smart-font-size-sm);
+    color: var(--smart-text-primary);
+}
+
+.smart-search-input::placeholder {
+    color: var(--smart-text-placeholder);
+}
+
+.smart-search-icon {
+    color: var(--smart-text-tertiary);
+    font-size: 18px;
+}
+
+/* === 标签系统 === */
+.smart-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    border-radius: var(--smart-radius-full);
+    font-size: var(--smart-font-size-xs);
+    font-weight: 700;
+}
+
+.smart-tag-primary {
+    background: var(--smart-primary-bg);
+    color: var(--smart-primary);
+}
+
+.smart-tag-accent {
+    background: rgba(6, 182, 212, 0.1);
+    color: var(--smart-accent);
+}
+
+.smart-tag-success {
+    background: var(--smart-success-bg);
+    color: var(--smart-success);
+}
+
+.smart-tag-warning {
+    background: var(--smart-warning-bg);
+    color: var(--smart-warning);
+}
+
+.smart-tag-danger {
+    background: var(--smart-danger-bg);
+    color: var(--smart-danger);
+}
+
+/* === 列表卡片 === */
+.smart-list-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--smart-space-lg);
+    background: var(--smart-bg-card);
+    border: 1px solid var(--smart-border);
+    border-radius: var(--smart-radius-lg);
+    transition: var(--smart-transition-normal);
+    margin-bottom: var(--smart-space-md);
+}
+
+.smart-list-card:hover {
+    border-color: var(--smart-primary);
+    box-shadow: var(--smart-shadow-lg);
+    transform: translateX(4px);
+}
+
+.smart-list-card:last-child {
+    margin-bottom: 0;
+}
+
+.smart-list-content {
+    flex: 1;
+}
+
+.smart-list-title {
+    font-size: var(--smart-font-size-lg);
+    font-weight: 700;
+    color: var(--smart-text-primary);
+    margin: 0 0 var(--smart-space-sm) 0;
+}
+
+.smart-list-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--smart-space-md);
+    font-size: var(--smart-font-size-sm);
+    color: var(--smart-text-tertiary);
+}
+
+.smart-list-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.smart-list-actions {
+    display: flex;
+    gap: var(--smart-space-sm);
+}
+
+/* === 课程卡片 === */
+.smart-course-card {
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.smart-course-cover {
+    position: relative;
+    width: 100%;
+    height: 180px;
+    overflow: hidden;
+}
+
+.smart-course-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: var(--smart-transition-slow);
+}
+
+.smart-course-card:hover .smart-course-cover img {
+    transform: scale(1.08);
+}
+
+.smart-course-cover-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.4) 100%);
+    pointer-events: none;
+}
+
+.smart-course-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    padding: 6px 14px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: var(--smart-radius-full);
+    font-size: var(--smart-font-size-xs);
+    font-weight: 700;
+    color: var(--smart-success);
+    box-shadow: var(--smart-shadow-md);
+}
+
+.smart-course-body {
+    padding: var(--smart-space-lg);
+}
+
+.smart-course-title {
+    font-size: var(--smart-font-size-lg);
+    font-weight: 700;
+    color: var(--smart-text-primary);
+    margin: 0 0 var(--smart-space-sm) 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.smart-course-stats {
+    display: flex;
+    gap: var(--smart-space-md);
+    margin-bottom: var(--smart-space-md);
+    font-size: var(--smart-font-size-sm);
+    color: var(--smart-text-tertiary);
+}
+
+.smart-course-stat {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.smart-course-action {
+    width: 100%;
+    padding: 12px;
+    background: var(--smart-gradient-primary);
+    border: none;
+    border-radius: var(--smart-radius-md);
+    color: white;
+    font-size: var(--smart-font-size-sm);
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--smart-transition-normal);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--smart-space-sm);
+}
+
+.smart-course-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.35);
+}
+
+/* === 添加卡片 === */
+.smart-add-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 320px;
+    border: 2px dashed var(--smart-border);
+    background: transparent;
+    cursor: pointer;
+    transition: var(--smart-transition-normal);
+}
+
+.smart-add-card:hover {
+    border-color: var(--smart-primary);
+    background: var(--smart-primary-bg);
+}
+
+.smart-add-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: var(--smart-gradient-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 32px;
+    margin-bottom: var(--smart-space-md);
+    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.35);
+    transition: var(--smart-transition-normal);
+}
+
+.smart-add-card:hover .smart-add-icon {
+    transform: scale(1.1) rotate(90deg);
+}
+
+.smart-add-text {
+    font-size: var(--smart-font-size-base);
+    font-weight: 600;
+    color: var(--smart-primary);
+}
+
+/* === 筛选区 === */
+.smart-filter-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--smart-space-lg);
+    padding: var(--smart-space-lg);
+    margin-bottom: var(--smart-space-lg);
+}
+
+.smart-filter-left {
+    display: flex;
+    align-items: center;
+    gap: var(--smart-space-md);
+    flex: 1;
+}
+
+.smart-filter-right {
+    display: flex;
+    align-items: center;
+    gap: var(--smart-space-md);
+}
+
+.smart-filter-tabs {
+    display: flex;
+    gap: var(--smart-space-sm);
+    padding: 4px;
+    background: var(--smart-bg-secondary);
+    border-radius: var(--smart-radius-lg);
+}
+
+.smart-filter-tab {
+    padding: 10px 20px;
+    border-radius: var(--smart-radius-md);
+    font-size: var(--smart-font-size-sm);
+    font-weight: 600;
+    color: var(--smart-text-secondary);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: var(--smart-transition-fast);
+}
+
+.smart-filter-tab:hover {
+    color: var(--smart-primary);
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.smart-filter-tab.active {
+    color: white;
+    background: var(--smart-gradient-primary);
+    box-shadow: var(--smart-shadow-md);
+}
+
+/* === 表格样式 === */
+.smart-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.smart-table thead th {
+    padding: var(--smart-space-md) var(--smart-space-lg);
+    text-align: left;
+    font-size: var(--smart-font-size-xs);
+    font-weight: 700;
+    color: var(--smart-text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: var(--smart-bg-secondary);
+    border-bottom: 2px solid var(--smart-border);
+}
+
+.smart-table thead th:first-child {
+    border-radius: var(--smart-radius-lg) 0 0 0;
+}
+
+.smart-table thead th:last-child {
+    border-radius: 0 var(--smart-radius-lg) 0 0;
+}
+
+.smart-table tbody td {
+    padding: var(--smart-space-md) var(--smart-space-lg);
+    font-size: var(--smart-font-size-sm);
+    color: var(--smart-text-primary);
+    border-bottom: 1px solid var(--smart-border-light);
+    transition: var(--smart-transition-fast);
+}
+
+.smart-table tbody tr:hover td {
+    background: var(--smart-primary-bg);
+}
+
+.smart-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* === 分页 === */
+.smart-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--smart-space-sm);
+    padding: var(--smart-space-lg);
+}
+
+.smart-page-btn {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--smart-radius-md);
+    font-size: var(--smart-font-size-sm);
+    font-weight: 600;
+    color: var(--smart-text-secondary);
+    background: var(--smart-bg-card);
+    border: 1px solid var(--smart-border);
+    cursor: pointer;
+    transition: var(--smart-transition-fast);
+}
+
+.smart-page-btn:hover {
+    border-color: var(--smart-primary);
+    color: var(--smart-primary);
+}
+
+.smart-page-btn.active {
+    background: var(--smart-gradient-primary);
+    color: white;
+    border-color: var(--smart-primary);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+/* === 空状态 === */
+.smart-empty-state {
+    padding: var(--smart-space-2xl);
+    text-align: center;
+}
+
+.smart-empty-icon {
+    width: 120px;
+    height: 120px;
+    margin: 0 auto var(--smart-space-lg);
+    background: var(--smart-bg-secondary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    color: var(--smart-text-placeholder);
+}
+
+.smart-empty-title {
+    font-size: var(--smart-font-size-lg);
+    font-weight: 700;
+    color: var(--smart-text-primary);
+    margin: 0 0 var(--smart-space-sm) 0;
+}
+
+.smart-empty-desc {
+    font-size: var(--smart-font-size-sm);
+    color: var(--smart-text-tertiary);
+    margin: 0 0 var(--smart-space-lg) 0;
+}
+
+/* === 加载动画 === */
+.smart-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: var(--smart-space-2xl);
+}
+
+.smart-loading-spinner {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 4px solid var(--smart-border);
+    border-top-color: var(--smart-primary);
+    animation: smart-spin 1s linear infinite;
+}
+
+@keyframes smart-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* === 骨架屏 === */
+.smart-skeleton {
+    background: linear-gradient(90deg, var(--smart-bg-secondary) 0%, var(--smart-border) 50%, var(--smart-bg-secondary) 100%);
+    background-size: 200% 100%;
+    animation: smart-skeleton-loading 1.5s ease-in-out infinite;
+    border-radius: var(--smart-radius-md);
+}
+
+@keyframes smart-skeleton-loading {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* === 动画类 === */
+.smart-fade-in {
+    animation: smart-fade-in 0.5s ease-out;
+}
+
+@keyframes smart-fade-in {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.smart-slide-up {
+    animation: smart-slide-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes smart-slide-up {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.smart-scale-in {
+    animation: smart-scale-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes smart-scale-in {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* === 响应式设计 === */
+@media (max-width: 1280px) {
+    .smart-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 1024px) {
+    .smart-page-container {
+        padding: var(--smart-space-lg);
+    }
+
+    .smart-filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .smart-filter-left,
+    .smart-filter-right {
+        justify-content: space-between;
+    }
+}
+
+@media (max-width: 768px) {
+    .smart-stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .smart-page-title {
+        font-size: var(--smart-font-size-2xl);
+    }
+
+    .smart-filter-tabs {
+        flex-direction: column;
+    }
+
+    .smart-list-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--smart-space-md);
+    }
+
+    .smart-list-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
+
+@media (max-width: 480px) {
+    .smart-page-container {
+        padding: var(--smart-space-md);
+    }
+
+    .smart-btn {
+        padding: 10px 18px;
+        font-size: var(--smart-font-size-xs);
+    }
+}

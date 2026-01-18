@@ -25,13 +25,18 @@ export const useTeacherStore = defineStore('teacher', () => {
   const isLoggedIn = computed(() => !!teacherId.value)
 
   const avatarUrl = computed(() => {
-    if (teacherHead.value && teacherHead.value.trim() !== '') {
-      if (teacherHead.value.startsWith('http://') || teacherHead.value.startsWith('https://')) {
-        return teacherHead.value
+    try {
+      const head = teacherHead.value
+      if (head && typeof head === 'string' && head.trim() !== '') {
+        if (head.startsWith('http://') || head.startsWith('https://')) {
+          return head
+        }
+        return `http://localhost:8088${head}`
       }
-      return `http://localhost:8088${teacherHead.value}`
+    } catch (e) {
+      console.error('Error computing avatarUrl', e)
     }
-    return '/src/assets/image/avatar.jpeg'
+    return ''
   })
 
   // 方法
@@ -39,34 +44,57 @@ export const useTeacherStore = defineStore('teacher', () => {
    * 设置教师信息并持久化到localStorage
    */
   const setTeacherInfo = (info) => {
-    if (info.teacherId) {
-      teacherId.value = info.teacherId
-      localStorage.setItem('teacherId', info.teacherId)
-      localStorage.setItem('t_id', info.teacherId)
-    }
-    if (info.teacherName) {
-      teacherName.value = info.teacherName
-      localStorage.setItem('teacherName', info.teacherName)
-    }
-    if (info.teacherHead !== undefined) {
-      teacherHead.value = info.teacherHead
-      localStorage.setItem('teacherHead', info.teacherHead)
-    }
-    if (info.teacherEmail) {
-      teacherEmail.value = info.teacherEmail
-      localStorage.setItem('teacherEmail', info.teacherEmail)
-    }
-    if (info.teacherDepartment) {
-      teacherDepartment.value = info.teacherDepartment
-      localStorage.setItem('teacherDepartment', info.teacherDepartment)
-    }
-    if (info.teacherLevel) {
-      teacherLevel.value = info.teacherLevel
-      localStorage.setItem('teacherLevel', info.teacherLevel)
-    }
-    if (info.teacherPhone) {
-      teacherPhone.value = info.teacherPhone
-      localStorage.setItem('teacherPhone', info.teacherPhone)
+    try {
+      if (!info) return
+
+      if (info.teacherId || info.t_id) {
+        const id = String(info.teacherId || info.t_id)
+        teacherId.value = id
+        localStorage.setItem('teacherId', id)
+        localStorage.setItem('t_id', id)
+      }
+
+      const name = info.teacherName || info.teacherUsername || info.name
+      if (name) {
+        teacherName.value = name
+        localStorage.setItem('teacherName', name)
+      }
+
+      if (info.teacherHead !== undefined && info.teacherHead !== null) {
+        const head = String(info.teacherHead)
+        teacherHead.value = head
+        localStorage.setItem('teacherHead', head)
+      } else if (info.avatar !== undefined && info.avatar !== null) {
+        const head = String(info.avatar)
+        teacherHead.value = head
+        localStorage.setItem('teacherHead', head)
+      }
+
+      if (info.teacherEmail || info.email) {
+        const mail = info.teacherEmail || info.email
+        teacherEmail.value = mail
+        localStorage.setItem('teacherEmail', mail)
+      }
+
+      if (info.teacherDepartment || info.department) {
+        const dept = info.teacherDepartment || info.department
+        teacherDepartment.value = dept
+        localStorage.setItem('teacherDepartment', dept)
+      }
+
+      if (info.teacherLevel || info.level) {
+        const lvl = info.teacherLevel || info.level
+        teacherLevel.value = lvl
+        localStorage.setItem('teacherLevel', lvl)
+      }
+
+      if (info.teacherPhone || info.phone) {
+        const ph = info.teacherPhone || info.phone
+        teacherPhone.value = ph
+        localStorage.setItem('teacherPhone', ph)
+      }
+    } catch (e) {
+      console.error('Error in setTeacherInfo', e)
     }
   }
 

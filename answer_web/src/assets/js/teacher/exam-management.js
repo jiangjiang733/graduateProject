@@ -14,8 +14,6 @@ export function useExamManagement() {
 
     const courses = ref([])
     const exams = ref([])
-    const timeRange = ref([])
-
     const filterForm = reactive({
         courseId: '',
         status: '',
@@ -31,13 +29,14 @@ export function useExamManagement() {
         duration: 120,
         totalScore: 100,
         passScore: 60,
-        status: 'DRAFT'
+        status: 'DRAFT',
+        timeRange: []
     })
 
     const rules = {
         examTitle: [{ required: true, message: '请输入考试标题', trigger: 'blur' }],
         courseId: [{ required: true, message: '请选择所属课程', trigger: 'change' }],
-        timeRange: [{ required: true, message: '请选择考试时间', trigger: 'change' }]
+        timeRange: [{ required: true, message: '请选择考试时间', type: 'array', trigger: 'change' }]
     }
 
     // 监听总分变化，自动计算及格分
@@ -46,7 +45,7 @@ export function useExamManagement() {
     })
 
     // 监听时间范围变化
-    watch(timeRange, (val) => {
+    watch(() => examForm.timeRange, (val) => {
         if (val && val.length === 2) {
             examForm.startTime = val[0]
             examForm.endTime = val[1]
@@ -124,9 +123,9 @@ export function useExamManagement() {
             duration: 120,
             totalScore: 100,
             passScore: 60,
-            status: 'DRAFT'
+            status: 'DRAFT',
+            timeRange: []
         })
-        timeRange.value = []
         dialogVisible.value = true
     }
 
@@ -152,7 +151,7 @@ export function useExamManagement() {
                     if (isEdit.value) {
                         res = await request.put(`/exam/${examForm.examId}`, data)
                     } else {
-                        res = await request.post('/exam/create', data)
+                        res = await request.post('/exam', data)
                     }
                     if (res.data) {
                         ElMessage.success(isEdit.value ? '修改成功' : '创建成功')
@@ -169,22 +168,23 @@ export function useExamManagement() {
     }
 
     const viewExam = (exam) => {
-        router.push(`/teacher/exam-detail/${exam.examId}`)
+        router.push(`/teacher/exam/${exam.examId}`)
     }
 
     const manageQuestions = (exam) => {
-        router.push(`/teacher/exam-questions/${exam.examId}`)
+        router.push(`/teacher/exam/${exam.examId}/questions`)
     }
 
     const viewScores = (exam) => {
-        router.push(`/teacher/exam-scores/${exam.examId}`)
+        // 成绩通常在详情页底部，或者跳转到详情页
+        router.push(`/teacher/exam/${exam.examId}`)
     }
 
     const editExam = (exam) => {
         isEdit.value = true
         Object.assign(examForm, exam)
         if (exam.startTime && exam.endTime) {
-            timeRange.value = [exam.startTime, exam.endTime]
+            examForm.timeRange = [exam.startTime, exam.endTime]
         }
         dialogVisible.value = true
     }
@@ -192,7 +192,7 @@ export function useExamManagement() {
     const publishExam = async (exam) => {
         try {
             await ElMessageBox.confirm('确定要发布该考试吗？发布后部分信息将无法修改', '提示')
-            const res = await request.post(`/exam/${exam.examId}/publish`)
+            const res = await request.put(`/exam/${exam.examId}/publish`)
             if (res.data) {
                 ElMessage.success('发布成功')
                 loadExams()
@@ -255,7 +255,6 @@ export function useExamManagement() {
         formRef,
         courses,
         exams,
-        timeRange,
         filterForm,
         examForm,
         rules,

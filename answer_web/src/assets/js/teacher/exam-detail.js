@@ -1,4 +1,4 @@
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getExamDetail, publishExam as publishExamApi, unpublishExam as unpublishExamApi, deleteExam as deleteExamApi, getStudentExams, returnStudentExam as returnStudentExamApi, getExamStatistics } from '@/api/exam'
@@ -23,9 +23,16 @@ export function useExamDetail() {
       const examId = route.params.id
       const res = await getExamDetail(examId)
 
-      if (res.code === 200) {
-        exam.value = res.data.exam || {}
-        questions.value = res.data.questions || []
+      if (res.code === 200 && res.data) {
+        // 兼容不同的后端返回结构：有的返回 {exam, questions}，有的连同 root 返回直接就是 exam 对象
+        if (res.data.exam) {
+          exam.value = res.data.exam
+          questions.value = res.data.questions || res.data.exam.questions || []
+        } else {
+          exam.value = res.data
+          questions.value = res.data.questions || res.data.questionList || []
+        }
+
         // 获取学生答题情况
         fetchStudentExams()
         // 获取统计信息
@@ -47,9 +54,11 @@ export function useExamDetail() {
       const res = await getExamStatistics(route.params.id)
       if (res.code === 200) {
         statistics.value = res.data
-        if (chartRef.value) {
-          initCharts()
-        }
+        nextTick(() => {
+          if (chartRef.value) {
+            initCharts()
+          }
+        })
       }
     } catch (error) {
       console.error('获取统计信息失败:', error)
@@ -355,18 +364,18 @@ export function useExamDetail() {
   // 获取状态文本
   const getStatusText = (status) => {
     // 优先使用后端计算的状态文本
-    const st = exam.value.statusText
-    if (st === 'DRAFT') return '草稿'
-    if (st === 'PUBLISHED') return '即将开始'
+    const st = String(exam.value.statusText || status).toUpperCase()
+    if (st === 'DRAFT' || st === '0') return '草稿'
+    if (st === 'PUBLISHED' || st === '1') return '即将开始'
     if (st === 'ONGOING') return '进行中'
-    if (st === 'ENDED') return '已结束'
+    if (st === 'ENDED' || st === '2') return '已结束'
 
     const texts = {
       0: '草稿',
       1: '已发布',
       2: '已结束'
     }
-    return texts[status] || '未知'
+    return texts[status] || status || '未知'
   }
 
   // 获取题型名称

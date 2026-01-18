@@ -234,7 +234,7 @@
     <!-- 添加章节对话框 -->
     <el-dialog
       v-model="addDialogVisible"
-      :title="currentParent ? `添加子章节到: ${currentParent.chapterTitle}` : '添加章节'"
+      :title="isEditChapter ? '编辑章节' : (currentParent ? `添加子章节到: ${currentParent.chapterTitle}` : '添加章节')"
       width="600px"
     >
       <el-form :model="chapterForm" label-width="100px">
@@ -300,7 +300,7 @@
       <template #footer>
         <el-button @click="addDialogVisible = false">取消</el-button>
         <el-button type="primary" @click="submitChapter" :loading="chaptersLoading">
-          创建
+          {{ isEditChapter ? '保存修改' : '立即创建' }}
         </el-button>
       </template>
     </el-dialog>
@@ -495,6 +495,7 @@ const {
   treeData,
   chaptersLoading,
   addDialogVisible,
+  isEditChapter,
   detailDialogVisible,
   currentParent,
   currentChapter,
