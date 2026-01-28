@@ -246,3 +246,93 @@
   justify-content: space-between;
   align-items: center;
 }
+
+/* ========== 暗黑模式完整适配 ========== */
+.dark-theme .exam-detail-container {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+}
+
+.dark-theme .page-header h2 {
+  color: #f1f5f9;
+}
+
+.dark-theme .question-item {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+.dark-theme .question-item:hover {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+}
+
+.dark-theme .question-header {
+  border-bottom-color: #334155;
+}
+
+.dark-theme .question-number {
+  color: #3b82f6;
+}
+
+.dark-theme .question-score {
+  color: #f87171;
+}
+
+.dark-theme .question-text {
+  color: #f1f5f9;
+}
+
+.dark-theme .option-item {
+  background: #1e293b;
+  border-color: #334155;
+  color: #94a3b8;
+}
+
+.dark-theme .question-answer {
+  background: #064e3b;
+  color: #a7f3d0;
+}
+
+.dark-theme .correct-answer {
+  color: #34d399;
+}
+
+.dark-theme .question-analysis {
+  background: #78350f;
+  color: #fcd34d;
+}
+
+.dark-theme .question-analysis strong {
+  color: #fbbf24;
+}
+
+.dark-theme .summary-item .label {
+  color: #64748b;
+}
+
+.dark-theme .summary-item .value {
+  color: #f1f5f9;
+}
+
+.dark-theme .summary-item .value.success {
+  color: #34d399;
+}
+
+.dark-theme .summary-item .value.primary {
+  color: #3b82f6;
+}
+
+.dark-theme .summary-item .value.warning {
+  color: #fbbf24;
+}
+
+.dark-theme .score-fail {
+  color: #f87171;
+}
+
+.dark-theme .score-pass {
+  color: #34d399;
+}
+
+.dark-theme .not-available {
+  color: #64748b;
+}

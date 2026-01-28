@@ -1,6 +1,9 @@
-/* ================================
-   教师端 ExamQuestions 试题管理样式
-================================ */
+/* 管理试卷题目页面样式 - 双面板布局 (匹配图片0) */
+.exam-questions.modern-page {
+    padding: 24px;
+    background-color: #f8fafc;
+    min-height: calc(100vh - 64px);
+}
 
 .page-header {
     display: flex;
@@ -16,323 +19,748 @@
 }
 
 .back-btn {
-    background: white;
     border: none;
-    font-size: 16px;
-    width: 40px;
-    height: 40px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    background: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .page-title {
-    margin: 0;
-    font-size: 20px;
-    color: #1f2937;
+    font-size: 24px;
     font-weight: 700;
+    color: #1e293b;
+    margin: 0;
 }
 
 .page-subtitle {
-    margin: 4px 0 0;
-    font-size: 13px;
-    color: #6b7280;
+    font-size: 14px;
+    color: #64748b;
+    margin: 4px 0 0 0;
 }
 
-.question-list-container {
-    padding: 0;
-    min-height: 500px;
-    padding-bottom: 40px;
+.main-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    height: calc(100vh - 200px);
+}
+
+/* 面板通用样式 */
+.panel {
+    background: white;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
     overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    border: 1px solid #e2e8f0;
 }
 
-.list-header {
+.panel-header {
+    padding: 16px 20px;
+    color: white;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 24px;
-    background: rgba(255, 255, 255, 0.4);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
 }
 
-.list-info {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+.panel-header.blue {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
 }
 
-.list-title {
-    font-size: 18px;
-    font-weight: 700;
-    color: #374151;
+.panel-header.green {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
 }
 
-.score-tag {
-    background: rgba(255, 255, 255, 0.5);
-    border: 1px solid rgba(0, 0, 0, 0.05);
-    color: #4b5563;
-}
-
-.empty-state {
-    padding: 60px 0;
-    text-align: center;
-}
-
-.q-list {
-    padding: 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.q-item {
-    border-radius: 16px;
-    background: white;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
-    transition: all 0.3s;
-    border: 1px solid #f3f4f6;
-    overflow: hidden;
-}
-
-.q-item:hover {
-    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.08);
-    transform: translateY(-3px);
-}
-
-.q-item-header {
-    display: flex;
-    align-items: center;
-    padding: 12px 20px;
-    background: #f9fafb;
-    border-bottom: 1px solid #f3f4f6;
-    gap: 16px;
-}
-
-.q-seq-box {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: #e5e7eb;
-    color: #4b5563;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700;
-    flex-shrink: 0;
-}
-
-.q-meta {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    flex: 1;
-}
-
-.score-input-box {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.score-input-box .unit {
-    color: #6b7280;
-    font-size: 12px;
-}
-
-.q-ops {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.move-btns {
-    display: flex;
-    background: #f3f4f6;
-    border-radius: 6px;
-    padding: 2px;
-}
-
-.q-item-content {
-    padding: 20px;
-}
-
-.q-stem {
+.panel-title {
     font-size: 16px;
-    margin-bottom: 16px;
-    color: #1f2937;
-    line-height: 1.6;
-    font-weight: 500;
-}
-
-.opt-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 10px;
-    padding: 10px 16px;
-    border-radius: 10px;
-    border: 1px solid transparent;
-    background: #f9fafb;
-    transition: all 0.2s;
-}
-
-.opt-row.correct {
-    background: #ecfdf5;
-    border-color: #a7f3d0;
-    color: #065f46;
-}
-
-.opt-idx-circle {
-    width: 24px;
-    height: 24px;
-    border-radius: 12px;
-    background: white;
-    border: 1px solid #d1d5db;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    font-weight: 700;
-    color: #6b7280;
-}
-
-.opt-row.correct .opt-idx-circle {
-    border-color: #10b981;
-    color: #10b981;
-}
-
-.opt-txt {
-    flex: 1;
-    font-size: 14px;
-}
-
-.check-icon {
-    font-size: 18px;
-}
-
-.q-answer-box,
-.q-analysis-box {
-    margin-top: 16px;
-    background: #f9fafb;
-    padding: 12px;
-    border-radius: 8px;
-    font-size: 14px;
-}
-
-.q-answer-box .label,
-.q-analysis-box .label {
-    display: block;
-    font-size: 12px;
-    color: #9ca3af;
-    margin-bottom: 4px;
-    font-weight: 700;
-}
-
-.q-answer-box .value {
-    color: #10b981;
     font-weight: 600;
-}
-
-.q-analysis-box .value {
-    color: #4b5563;
-}
-
-/* Dialog Styles */
-.bank-filter {
     display: flex;
-    gap: 12px;
+    align-items: center;
+    gap: 8px;
+}
+
+.total-score {
+    font-size: 13px;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    background: #fdfdfd;
+}
+
+/* 搜索栏 */
+.panel-search {
     margin-bottom: 20px;
 }
 
-.glass-table {
-    border-radius: 12px;
-    overflow: hidden;
+.search-input {
+    border-radius: 8px;
 }
 
-.pagination-row {
-    margin-top: 16px;
+/* 题目卡片 */
+.q-card-item {
+    background: white;
+    border: 1px solid #f1f5f9;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+    position: relative;
+    transition: all 0.2s;
+}
+
+.q-card-item:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    border-color: #e2e8f0;
+}
+
+.q-card-top {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
 }
 
-.question-form {
-    padding: 0 10px;
+.q-card-tags {
+    display: flex;
+    gap: 8px;
+    align-items: center;
 }
 
-.options-label {
-    margin: 16px 0 12px;
-    font-weight: 700;
-    color: #374151;
-    font-size: 14px;
+.type-badge {
+    padding: 2px 8px;
+    font-size: 12px;
+    border-radius: 4px;
+    font-weight: 500;
 }
 
-.form-opt-row {
+.type-badge.single {
+    background: #dbeafe;
+    color: #3b82f6;
+}
+
+.type-badge.multiple {
+    background: #dcfce7;
+    color: #10b981;
+}
+
+.type-badge.judge {
+    background: #fef3c7;
+    color: #f59e0b;
+}
+
+.type-badge.essay {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.score-badge {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.q-action-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.q-action-btn.remove {
+    background: #fee2e2;
+    color: #ef4444;
+}
+
+.q-action-btn.remove:hover {
+    background: #fecaca;
+}
+
+.q-action-btn.add {
+    background: #dbeafe;
+    color: #3b82f6;
+}
+
+.q-action-btn.add:hover {
+    background: #bfdbfe;
+}
+
+/* 已添加到试卷的题目样式 */
+.q-card-item.already-added {
+    opacity: 0.7;
+    background: #f8fafc;
+    border-color: #e2e8f0;
+}
+
+.q-card-item.already-added .q-stem-preview {
+    color: #94a3b8;
+}
+
+.q-card-item.already-added .q-options-preview {
+    color: #cbd5e1;
+}
+
+.q-action-btn.added {
+    background: #d1fae5;
+    color: #10b981;
+    cursor: not-allowed;
+}
+
+.q-action-btn.added:hover {
+    background: #d1fae5;
+}
+
+.q-stem-preview {
+    font-size: 14px;
+    color: #334155;
+    line-height: 1.6;
+    margin: 8px 0;
+    font-weight: 500;
+}
+
+.q-options-preview {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 4px;
+}
+
+/* 右侧列表序号 */
+.q-num {
+    width: 20px;
+    height: 20px;
+    background: #e2e8f0;
+    color: #475569;
+    border-radius: 50%;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    margin-right: 12px;
+}
+
+.exam-item-header {
+    display: flex;
+    align-items: center;
+}
+
+.item-ops {
+    display: flex;
+    gap: 4px;
+}
+
+/* 底部操作 */
+.fixed-footer {
+    position: fixed;
+    bottom: 24px;
+    right: 48px;
+    display: flex;
     gap: 12px;
+}
+
+.bottom-save-btn {
+    box-shadow: 0 8px 16px rgba(16, 185, 129, 0.2);
+}
+
+/* 响应式 */
+@media (max-width: 1024px) {
+    .main-content {
+        grid-template-columns: 1fr;
+        height: auto;
+    }
+}
+
+/* =================================================================
+   Create/Edit Question Dialog Styles (New Design)
+   ================================================================= */
+
+/* Premium Dialog Styles */
+.premium-dialog {
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.premium-dialog .el-dialog__header {
+    margin: 0;
+    padding: 20px 24px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.premium-dialog .el-dialog__body {
+    padding: 0;
+    background: #f8fafc;
+}
+
+.premium-dialog .el-dialog__footer {
+    padding: 16px 24px;
+    background: white;
+    border-top: 1px solid #f1f5f9;
+}
+
+.dialog-body-content {
+    padding: 24px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+/* Custom Tabs */
+.custom-tabs {
+    background: #f1f5f9;
+    padding: 4px;
+    border-radius: 10px;
+    display: inline-flex;
+    gap: 4px;
+    margin-bottom: 24px;
+}
+
+.tab-item {
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    font-weight: 600;
+    user-select: none;
+}
+
+.tab-item:hover {
+    color: #334155;
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.tab-item.active {
+    background: white;
+    color: #6366f1;
+    /* Indigo-500 matching the image purple/blue vibe */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Form Sections */
+.form-section {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    transition: all 0.3s;
+}
+
+.form-section:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 12px;
 }
 
-.opt-idx-label {
-    width: 20px;
-    text-align: center;
-    font-weight: 700;
-    color: #9ca3af;
-}
-
-.add-opt-btn {
-    margin-left: 32px;
-    margin-top: 8px;
-}
-
-.del-opt-btn {
-    opacity: 0.5;
-    transition: opacity 0.2s;
-}
-
-.del-opt-btn:hover {
-    opacity: 1;
-}
-
-.truncate-2-lines {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-.ai-btn {
-    background: linear-gradient(135deg, #6366f1, #a855f7);
-    color: white !important;
-    border: none !important;
-}
-
-.ai-btn:hover {
-    box-shadow: 0 4px 12px rgba(168, 85, 247, 0.4);
-    opacity: 0.9;
-}
-
-.ai-intro {
-    text-align: center;
-    margin-bottom: 24px;
-    color: #6366f1;
-}
-
-.ai-intro .el-icon {
-    font-size: 40px;
-    margin-bottom: 8px;
-}
-
-.ai-intro p {
+.section-title {
     font-size: 14px;
-    color: #6b7280;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 12px;
 }
 
-.ai-config-form {
-    padding: 0 20px;
+.section-header .section-title {
+    margin-bottom: 0;
 }
 
-.form-tip {
-    font-size: 12px;
-    color: #9ca3af;
-    margin-left: 8px;
+/* Clean Inputs */
+.clean-textarea .el-textarea__inner,
+.clean-input .el-input__wrapper {
+    box-shadow: none !important;
+    background: #f8fafc;
+    border: 1px solid transparent;
+    /* #f1f5f9 */
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.clean-textarea .el-textarea__inner:hover,
+.clean-input .el-input__wrapper:hover {
+    background: #f1f5f9;
+}
+
+.clean-textarea .el-textarea__inner:focus,
+.clean-input .el-input__wrapper.is-focus {
+    background: white;
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1) !important;
+    /* Indigo focus ring */
+    border-color: #6366f1;
+}
+
+/* Styled Options */
+.options-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.styled-option-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.2s;
+}
+
+.option-prefix {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: #f1f5f9;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.option-prefix:hover {
+    background: #e2e8f0;
+}
+
+.option-prefix.active {
+    background: #e0e7ff;
+    /* Indigo-100 */
+    color: #4338ca;
+    /* Indigo-700 */
+}
+
+/* Buttons */
+.save-btn {
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    background: #6366f1;
+    border-color: #6366f1;
+}
+
+.save-btn:hover {
+    background: #4f46e5;
+    border-color: #4f46e5;
+}
+
+.cancel-btn {
+    border-radius: 8px;
+    font-weight: 600;
+    color: #64748b;
+}
+
+.del-btn {
+    margin-left: 4px;
+    padding: 8px;
+}
+
+/* Judge Options */
+.judge-options {
+    display: flex;
+    gap: 16px;
+}
+
+.judge-item {
+    flex: 1;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.judge-item:hover {
+    border-color: #cbd5e1;
+    background: #f1f5f9;
+}
+
+.judge-item.active {
+    background: #eff6ff;
+    border-color: #3b82f6;
+    color: #1e40af;
+}
+
+.radio-circle {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid #cbd5e1;
+    position: relative;
+}
+
+.judge-item.active .radio-circle {
+    border-color: #3b82f6;
+}
+
+.judge-item.active .radio-circle::after {
+    content: '';
+    position: absolute;
+    inset: 3px;
+    background: #3b82f6;
+    border-radius: 50%;
+}
+
+/* Score */
+.score-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.score-row .label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748b;
+}
+
+/* ========== 暗黑模式完整适配 ========== */
+.dark-theme .exam-questions.modern-page {
+    background-color: #0f172a;
+}
+
+.dark-theme .page-title {
+    color: #f1f5f9;
+}
+
+.dark-theme .page-subtitle {
+    color: #64748b;
+}
+
+.dark-theme .back-btn {
+    background: #1e293b;
+    border-color: #334155;
+    color: #94a3b8;
+}
+
+.dark-theme .back-btn:hover {
+    background: #334155;
+    color: #f1f5f9;
+}
+
+.dark-theme .panel {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+.dark-theme .panel-body {
+    background: #0f172a;
+}
+
+.dark-theme .q-card-item {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+.dark-theme .q-card-item:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    border-color: #3b82f6;
+}
+
+.dark-theme .q-stem-preview {
+    color: #f1f5f9;
+}
+
+.dark-theme .q-options-preview {
+    color: #94a3b8;
+}
+
+.dark-theme .q-num {
+    background: #334155;
+    color: #94a3b8;
+}
+
+.dark-theme .type-badge.single {
+    background: #1e3a8a;
+    color: #93c5fd;
+}
+
+.dark-theme .type-badge.multiple {
+    background: #064e3b;
+    color: #6ee7b7;
+}
+
+.dark-theme .type-badge.judge {
+    background: #78350f;
+    color: #fcd34d;
+}
+
+.dark-theme .type-badge.essay {
+    background: #334155;
+    color: #94a3b8;
+}
+
+.dark-theme .score-badge {
+    color: #64748b;
+}
+
+.dark-theme .q-action-btn.remove {
+    background: #7f1d1d;
+    color: #fca5a5;
+}
+
+.dark-theme .q-action-btn.remove:hover {
+    background: #991b1b;
+}
+
+.dark-theme .q-action-btn.add {
+    background: #1e3a8a;
+    color: #93c5fd;
+}
+
+.dark-theme .q-action-btn.add:hover {
+    background: #1e40af;
+}
+
+/* 对话框暗黑模式 */
+.dark-theme .premium-dialog {
+    background: #1e293b;
+}
+
+.dark-theme .premium-dialog .el-dialog__header {
+    background: #1e293b;
+    border-bottom-color: #334155;
+}
+
+.dark-theme .premium-dialog .el-dialog__body {
+    background: #0f172a;
+}
+
+.dark-theme .premium-dialog .el-dialog__footer {
+    background: #1e293b;
+    border-top-color: #334155;
+}
+
+.dark-theme .custom-tabs {
+    background: #334155;
+}
+
+.dark-theme .tab-item {
+    color: #94a3b8;
+}
+
+.dark-theme .tab-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #f1f5f9;
+}
+
+.dark-theme .tab-item.active {
+    background: #1e293b;
+    color: #818cf8;
+}
+
+.dark-theme .form-section {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+.dark-theme .form-section:hover {
+    border-color: #475569;
+}
+
+.dark-theme .section-title {
+    color: #f1f5f9;
+}
+
+.dark-theme .clean-textarea .el-textarea__inner,
+.dark-theme .clean-input .el-input__wrapper {
+    background: #0f172a !important;
+    border-color: #334155;
+    color: #f1f5f9;
+}
+
+.dark-theme .clean-textarea .el-textarea__inner:hover,
+.dark-theme .clean-input .el-input__wrapper:hover {
+    background: #1e293b !important;
+}
+
+.dark-theme .clean-textarea .el-textarea__inner:focus,
+.dark-theme .clean-input .el-input__wrapper.is-focus {
+    background: #1e293b !important;
+    border-color: #6366f1;
+}
+
+.dark-theme .option-prefix {
+    background: #334155;
+    color: #94a3b8;
+}
+
+.dark-theme .option-prefix:hover {
+    background: #475569;
+}
+
+.dark-theme .option-prefix.active {
+    background: #4338ca;
+    color: #c7d2fe;
+}
+
+.dark-theme .judge-item {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+.dark-theme .judge-item:hover {
+    background: #1e293b;
+    border-color: #475569;
+}
+
+.dark-theme .judge-item.active {
+    background: #1e3a8a;
+    border-color: #3b82f6;
+    color: #93c5fd;
+}
+
+.dark-theme .radio-circle {
+    border-color: #64748b;
+}
+
+.dark-theme .cancel-btn {
+    color: #94a3b8;
+}
+
+.dark-theme .score-row .label {
+    color: #64748b;
+}
+
+/* 暗黑模式下的已添加题目样式 */
+.dark-theme .q-card-item.already-added {
+    opacity: 0.6;
+    background: #0f172a;
+    border-color: #1e293b;
+}
+
+.dark-theme .q-card-item.already-added .q-stem-preview {
+    color: #64748b;
+}
+
+.dark-theme .q-card-item.already-added .q-options-preview {
+    color: #475569;
+}
+
+.dark-theme .q-action-btn.added {
+    background: #064e3b;
+    color: #34d399;
+}
+
+.dark-theme .q-action-btn.added:hover {
+    background: #064e3b;
 }

@@ -1,6 +1,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getCourseEnrollments, cancelEnrollment, directEnroll } from '@/api/enrollment.js'
+import { getProfile } from '@/api/student.js'
 
 export function useCourseStudents(props) {
     const loading = ref(false)
@@ -57,7 +58,28 @@ export function useCourseStudents(props) {
         try {
             const response = await getCourseEnrollments(props.courseId)
             if (response.success) {
-                students.value = (response.data || []).filter(item => item.status === 'approved')
+                const enrolledList = (response.data || []).filter(item => item.status === 'approved')
+
+                // 并行获取学生详细信息以修正名称和头像显示
+                const detailedStudents = await Promise.all(enrolledList.map(async (item) => {
+                    try {
+                        const profileRes = await getProfile(item.studentId)
+                        if (profileRes.success && profileRes.data) {
+                            // 优先使用 profile 中的数据
+                            const profile = profileRes.data
+                            return {
+                                ...item,
+                                studentName: profile.studentsUsername || profile.studentName || item.studentName,
+                                studentAvatar: profile.studentsHead || profile.studentAvatar || item.studentAvatar
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Failed to fetch profile for student ' + item.studentId, e)
+                    }
+                    return item
+                }))
+
+                students.value = detailedStudents
             } else {
                 students.value = []
             }
@@ -128,13 +150,13 @@ export function useCourseStudents(props) {
     }
 
     const getStudentAvatar = (student) => {
-        if (!student.studentAvatar) return ''
+        if (!student || !student.studentAvatar) return ''
         if (student.studentAvatar.startsWith('http')) return student.studentAvatar
         return `http://localhost:8088${student.studentAvatar}`
     }
 
     const getStudentInitial = (student) => {
-        if (student.studentName && student.studentName.length > 0) {
+        if (student && student.studentName && student.studentName.length > 0) {
             return student.studentName.charAt(0)
         }
         return 'S'

@@ -269,6 +269,10 @@
               <div class="el-upload__tip">支持 mp4、avi、mov、wmv 格式，最大 500MB</div>
             </template>
           </el-upload>
+          <div v-if="chapterForm.videoUrl && !chapterForm.video" style="margin-top: 8px; color: #67c23a; font-size: 13px; display: flex; align-items: center; gap: 4px;">
+             <el-icon><CircleCheckFilled /></el-icon>
+             <span>当前已包含视频文件，重新上传将覆盖</span>
+          </div>
         </el-form-item>
 
         <!-- 混合内容 - PDF上传 -->
@@ -284,6 +288,10 @@
               <div class="el-upload__tip">支持 PDF 格式，最大 50MB</div>
             </template>
           </el-upload>
+          <div v-if="chapterForm.pdfUrl && !chapterForm.pdf" style="margin-top: 8px; color: #67c23a; font-size: 13px; display: flex; align-items: center; gap: 4px;">
+             <el-icon><CircleCheckFilled /></el-icon>
+             <span>当前已包含PDF文件，重新上传将覆盖</span>
+          </div>
         </el-form-item>
 
         <!-- 混合内容 - 文本内容 -->
@@ -477,7 +485,7 @@
 </template>
 
 <script setup>
-import { ArrowLeft, Plus, Folder, VideoPlay, Document, Edit, View, Delete, Search, Check, Download, Warning } from '@element-plus/icons-vue'
+import { ArrowLeft, Plus, Folder, VideoPlay, Document, Edit, View, Delete, Search, Check, Download, Warning, CircleCheckFilled } from '@element-plus/icons-vue'
 import { useCourseForm } from '@/assets/js/teacher/course-form.js'
 import { onMounted } from 'vue'
 
@@ -546,4 +554,57 @@ onMounted(() => {
 
 <style scoped>
 @import '@/assets/css/teacher/course-form.css';
+</style>
+
+<style>
+/* 
+ * 全局暗黑模式覆盖 (针对 Dialog 等脱离文档流的组件)
+ */
+html.dark .el-dialog {
+    background-color: #111827 !important;
+    border: 1px solid #1f2937 !important;
+}
+
+html.dark .el-dialog__header {
+    margin-right: 0;
+    border-bottom: 1px solid #1f2937;
+    background-color: #111827 !important;
+}
+
+html.dark .el-dialog__title {
+    color: #f3f4f6 !important;
+}
+
+html.dark .el-dialog__body {
+    background-color: #111827 !important;
+    color: #e5e7eb !important;
+}
+
+html.dark .el-dialog__footer {
+    background-color: #111827 !important;
+    border-top: 1px solid #1f2937;
+}
+
+/* 确保 Dialog 内部的表单 label 可见 */
+html.dark .el-form-item__label {
+    color: #e5e7eb !important;
+}
+
+/* 确保 Dialog 内部的 Input 变黑 */
+html.dark .el-dialog .el-input__wrapper,
+html.dark .el-dialog .el-textarea__inner {
+    background-color: #1f2937 !important;
+    box-shadow: 0 0 0 1px #374151 inset !important;
+    color: #fff !important;
+}
+
+html.dark .el-dialog .el-input__wrapper:hover,
+html.dark .el-dialog .el-textarea__inner:hover {
+    box-shadow: 0 0 0 1px #4b5563 inset !important;
+}
+
+html.dark .el-dialog .el-input__wrapper.is-focus,
+html.dark .el-dialog .el-textarea__inner:focus {
+    box-shadow: 0 0 0 1px #409eff inset !important;
+}
 </style>

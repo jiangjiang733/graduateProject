@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useLoginStore } from '../stores/login'
 import '../assets/css/index/login.css'
-import { useRouter } from "vue-router"
+import { useRouter, useRoute } from "vue-router"
 import { watch } from "vue"
 import ImageCaptcha from '../components/ImageCaptcha.vue'
 import { ElMessage } from 'element-plus'
 
 const { activeTab, form, loading, onSubmit, loginClick: storeLoginClick, setActiveTab, rem } = useLoginStore()
 const router = useRouter()
+const route = useRoute()
 const captchaRef = ref(null)
 
 // 包装登录函数以验证验证码
@@ -28,13 +29,25 @@ const loginClick = () => {
   storeLoginClick()
 }
 
-// 监听路由变化，根据路由状态切换角色（隐藏参数方式）
-watch(() => router.currentRoute.value, (newRoute) => {
-  // 通过路由状态(history.state)获取角色信息，URL中不显示参数
-  if (history.state && history.state.role) {
-    setActiveTab(history.state.role)
-  }
-}, { immediate: true })
+// 在组件挂载时读取路由状态
+onMounted(() => {
+  nextTick(() => {
+    // 优先从 history.state 读取角色信息
+    if (history.state && history.state.role) {
+      setActiveTab(history.state.role)
+    }
+  })
+})
+
+// 监听路由变化，处理后续导航
+watch(() => route.fullPath, () => {
+  nextTick(() => {
+    if (history.state && history.state.role) {
+      setActiveTab(history.state.role)
+    }
+  })
+})
+
 
 </script>
 <template>

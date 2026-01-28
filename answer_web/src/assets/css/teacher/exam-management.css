@@ -363,3 +363,118 @@
     color: #10b981 !important;
     font-weight: 700 !important;
 }
+
+/* ========== 暗黑模式完整适配 ========== */
+.dark-theme .exam-management {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+}
+
+.dark-theme .filter-wrapper {
+    background: rgba(30, 41, 59, 0.9) !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+}
+
+.dark-theme .filter-item label {
+    color: #64748b;
+}
+
+.dark-theme :deep(.premium-select .el-input__wrapper),
+.dark-theme :deep(.premium-search .el-input__wrapper) {
+    background-color: #0f172a !important;
+    border-color: #334155;
+}
+
+.dark-theme :deep(.premium-select .el-input__wrapper:hover),
+.dark-theme :deep(.premium-search .el-input__wrapper:hover) {
+    background-color: #1e293b !important;
+}
+
+.dark-theme :deep(.premium-select .el-input__wrapper.is-focus),
+.dark-theme :deep(.premium-search .el-input__wrapper.is-focus) {
+    background-color: #1e293b !important;
+    border-color: #10b981;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1) !important;
+}
+
+.dark-theme :deep(.premium-select .el-input__inner),
+.dark-theme :deep(.premium-search .el-input__inner) {
+    color: #f1f5f9;
+}
+
+.dark-theme .divider {
+    background: #334155;
+}
+
+.dark-theme .list-card {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+.dark-theme .list-card:hover {
+    border-color: #10b981;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+}
+
+.dark-theme .card-title {
+    color: #f1f5f9;
+}
+
+.dark-theme .info-item {
+    color: #94a3b8;
+}
+
+.dark-theme .info-item .el-icon {
+    color: #64748b;
+}
+
+.dark-theme .empty-state {
+    background: rgba(30, 41, 59, 0.9);
+}
+
+.dark-theme :deep(.el-empty__description) {
+    color: #94a3b8;
+}
+
+/* 暗黑模式下的日期选择器 */
+.dark-theme :global(.el-picker__popper) {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+}
+
+.dark-theme :global(.el-picker__popper .el-picker-panel) {
+    background: #1e293b !important;
+}
+
+.dark-theme :global(.el-picker-panel__footer) {
+    background: #0f172a !important;
+    border-top-color: #334155 !important;
+}
+
+.dark-theme :global(.el-date-range-picker__header) {
+    color: #f1f5f9 !important;
+}
+
+.dark-theme :global(.el-date-table th) {
+    color: #64748b !important;
+}
+
+.dark-theme :global(.el-date-table td) {
+    color: #94a3b8;
+}
+
+.dark-theme :global(.el-date-table td.available:hover) {
+    color: #10b981 !important;
+}
+
+.dark-theme :global(.el-picker-panel__footer .el-button:not(.el-button--primary)) {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #94a3b8 !important;
+}
+
+.dark-theme :global(.el-picker-panel__footer .el-button:not(.el-button--primary):hover) {
+    background: #334155 !important;
+    border-color: #10b981 !important;
+    color: #10b981 !important;
+}

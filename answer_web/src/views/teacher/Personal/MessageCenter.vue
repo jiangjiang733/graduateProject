@@ -1,6 +1,6 @@
 <template>
-  <div class="message-center modern-page">
-    <div class="chat-container glass-panel">
+  <div class="message-container">run dev
+    <div class="chat-wrapper-box">
       <!-- Sidebar -->
       <aside class="chat-sidebar">
         <div class="sidebar-tabs">
@@ -127,11 +127,6 @@
             </div>
 
             <footer class="input-area">
-              <div class="toolbar">
-                <el-icon title="图片"><Picture /></el-icon>
-                <el-icon title="文件"><Folder /></el-icon>
-                <el-icon title="星标"><Star /></el-icon>
-              </div>
               <div class="input-wrapper">
                  <textarea
                      v-model="inputMessage"
@@ -208,7 +203,7 @@
                     {{ item.showReply ? '取消回复' : '快捷回复' }}
                   </el-button>
                   <el-button link size="small" @click="handleInteractionDetail(item)">查看详情</el-button>
-                  <el-button v-if="item.type === 'COMMENT' && item.relatedId" link type="danger" size="small" @click="handleDeleteComment(item)">删除</el-button>
+                  <el-button link type="danger" size="small" @click="handleDeleteComment(item)">删除</el-button>
                 </div>
 
                 <el-collapse-transition>
@@ -243,7 +238,6 @@ import { onMounted, onUnmounted } from 'vue'
 import {
   ChatLineRound, Search, MoreFilled, Picture, Folder, Comment, Bell, ArrowRight, VideoPlay, Star, BellFilled, ChatDotRound
 } from '@element-plus/icons-vue'
-import '@/assets/css/teacher/modern-theme.css'
 import { useMessageCenter } from '@/assets/js/teacher/message-center-logic.js'
 
 const {

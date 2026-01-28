@@ -5,43 +5,44 @@
   --primary-light: #4ECDC4;
   --primary-dark: #1A9874;
   --primary-hover: #2CC99A;
-  
+
   /* 辅助色 */
   --secondary-color: #409EFF;
   --success-color: #67C23A;
   --warning-color: #E6A23C;
   --danger-color: #F56C6C;
   --info-color: #909399;
-  
+
   /* 中性色 */
   --text-primary: #303133;
   --text-regular: #606266;
   --text-secondary: #909399;
   --text-placeholder: #C0C4CC;
-  
+
   /* 边框色 */
   --border-base: #DCDFE6;
   --border-light: #E4E7ED;
   --border-lighter: #EBEEF5;
   --border-extra-light: #F2F6FC;
-  
+
   /* 背景色 */
   --bg-color: #FFFFFF;
   --bg-page: #F5F7FA;
   --bg-overlay: rgba(0, 0, 0, 0.5);
-  
+
   /* 阴影 */
   --shadow-base: 0 2px 4px rgba(0, 0, 0, 0.12), 0 0 6px rgba(0, 0, 0, 0.04);
   --shadow-light: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
   --shadow-dark: 0 4px 16px rgba(0, 0, 0, 0.15);
-  
-  /* 字体 */
+
+  /* 字体控制 */
+  --global-scale: 1;
   --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
-  --font-size-base: 14px;
-  --font-size-small: 12px;
-  --font-size-large: 16px;
-  --font-size-extra-large: 18px;
-  
+  --font-size-base: calc(14px * var(--global-scale));
+  --font-size-small: calc(12px * var(--global-scale));
+  --font-size-large: calc(16px * var(--global-scale));
+  --font-size-extra-large: calc(18px * var(--global-scale));
+
   /* 间距 */
   --spacing-xs: 4px;
   --spacing-sm: 8px;
@@ -50,24 +51,24 @@
   --spacing-xl: 20px;
   --spacing-xxl: 24px;
   --spacing-xxxl: 32px;
-  
+
   /* 圆角 */
   --border-radius-base: 4px;
   --border-radius-small: 2px;
   --border-radius-large: 8px;
   --border-radius-round: 20px;
   --border-radius-circle: 50%;
-  
+
   /* 过渡 */
   --transition-base: all 0.3s ease;
   --transition-fast: all 0.2s ease;
   --transition-slow: all 0.4s ease;
-  
+
   /* 布局 */
   --header-height: 60px;
   --sidebar-width: 200px;
   --content-max-width: 1200px;
-  
+
   /* Z-index */
   --z-index-dropdown: 1000;
   --z-index-sticky: 1020;
@@ -76,4 +77,18 @@
   --z-index-modal: 1050;
   --z-index-popover: 1060;
   --z-index-tooltip: 1070;
+}
+
+/* 暗黑模式变量 */
+.dark-theme {
+  --bg-color: #111315;
+  --bg-page: #000000;
+  --text-primary: #efefef;
+  --text-regular: #cfd3dc;
+  --text-secondary: #909399;
+  --border-base: #333639;
+  --border-light: #2c2e31;
+  --border-lighter: #1e2023;
+  --shadow-base: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --card-bg: rgba(30, 32, 35, 0.9);
 }

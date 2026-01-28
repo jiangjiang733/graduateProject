@@ -401,3 +401,145 @@
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.3);
 }
+
+/* ========== 暗黑模式完整适配 ========== */
+.dark-theme .exam-form-page {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+}
+
+.dark-theme .page-title {
+  color: #f1f5f9;
+}
+
+.dark-theme :deep(.el-tabs--border-card > .el-tabs__header) {
+  border-bottom-color: #334155;
+}
+
+.dark-theme :deep(.el-tabs--border-card > .el-tabs__header .el-tabs__item) {
+  color: #94a3b8;
+}
+
+.dark-theme :deep(.el-tabs--border-card > .el-tabs__header .el-tabs__item.is-active) {
+  color: #3b82f6;
+  border-bottom-color: #3b82f6;
+}
+
+.dark-theme .section-title {
+  color: #f1f5f9;
+}
+
+.dark-theme :deep(.el-input__wrapper) {
+  background: #0f172a !important;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+
+.dark-theme :deep(.el-input__wrapper.is-focus) {
+  background: #1e293b !important;
+  border-color: #3b82f6;
+}
+
+.dark-theme :deep(.el-input__inner) {
+  color: #f1f5f9;
+}
+
+.dark-theme .step-num {
+  background: #3b82f6;
+}
+
+.dark-theme .glass-panel {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.dark-theme .q-item-card:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+  border-color: #3b82f6;
+}
+
+.dark-theme .q-index {
+  color: #64748b;
+}
+
+.dark-theme .q-score-edit {
+  color: #94a3b8;
+}
+
+.dark-theme .q-content {
+  color: #f1f5f9;
+}
+
+.dark-theme .opt-preview-item {
+  background: #0f172a;
+  color: #94a3b8;
+}
+
+.dark-theme .opt-preview-item.is-answer {
+  background: #064e3b;
+  color: #6ee7b7;
+  border-color: #059669;
+}
+
+.dark-theme .opt-prefix {
+  color: #64748b;
+}
+
+.dark-theme .is-answer .opt-prefix {
+  color: #059669;
+}
+
+.dark-theme .q-answer-preview .label {
+  color: #64748b;
+}
+
+.dark-theme .q-answer-preview .value {
+  color: #34d399;
+}
+
+.dark-theme .ai-hero {
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+}
+
+.dark-theme .ai-icon-wrap {
+  background: #3b82f6;
+}
+
+.dark-theme .ai-text h3 {
+  color: #93c5fd;
+}
+
+.dark-theme .ai-text p {
+  color: #bfdbfe;
+}
+
+.dark-theme .premium-btn.ghost {
+  background: #1e293b;
+  border-color: #334155;
+  color: #94a3b8;
+}
+
+.dark-theme .premium-btn.ghost:hover {
+  background: #334155;
+  color: #f1f5f9;
+}
+
+.dark-theme .form-card {
+  background: rgba(30, 41, 59, 0.8);
+  border-color: rgba(51, 65, 85, 0.5);
+}
+
+.dark-theme .selected-badge {
+  background: #1e3a8a;
+  color: #93c5fd;
+}
+
+.dark-theme :deep(.el-input-number__increase),
+.dark-theme :deep(.el-input-number__decrease) {
+  border-left-color: #334155 !important;
+  background: #0f172a !important;
+  color: #94a3b8;
+}
+
+.dark-theme :deep(.el-form-item__label) {
+  color: #94a3b8;
+}

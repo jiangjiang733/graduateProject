@@ -34,28 +34,45 @@
         </div>
         
         <div class="list-content">
-          <div 
-            v-for="sub in filteredSubmissions" 
-            :key="sub.studentReportId" 
-            class="student-item"
-            :class="{ active: currentSubmission?.studentReportId === sub.studentReportId, graded: sub.status === 2 }"
-            @click="selectSubmission(sub)"
-          >
-            <div class="student-avatar">
-              {{ sub.studentName?.charAt(0) || 'S' }}
-            </div>
-            <div class="student-info">
-              <div class="name-row">
-                <span class="name">{{ sub.studentName }}</span>
-                <el-tag v-if="sub.status === 2" type="success" size="small" effect="plain">已批改</el-tag>
-                <el-tag v-else type="warning" size="small" effect="plain">待批改</el-tag>
+          <!-- 有学生提交时显示列表 -->
+          <div v-if="filteredSubmissions.length > 0">
+            <div 
+              v-for="sub in filteredSubmissions" 
+              :key="sub.studentReportId" 
+              class="student-item"
+              :class="{ active: currentSubmission?.studentReportId === sub.studentReportId, graded: sub.status === 2 }"
+              @click="selectSubmission(sub)"
+            >
+              <div class="student-avatar">
+                {{ sub.studentName?.charAt(0) || 'S' }}
               </div>
-              <div class="time-info">{{ formatDate(sub.submitTime) }}</div>
+              <div class="student-info">
+                <div class="name-row">
+                  <span class="name">{{ sub.studentName }}</span>
+                  <el-tag v-if="sub.status === 2" type="success" size="small" effect="plain">已批改</el-tag>
+                  <el-tag v-else type="warning" size="small" effect="plain">待批改</el-tag>
+                </div>
+                <div class="time-info">{{ formatDate(sub.submitTime) }}</div>
+              </div>
+              <div v-if="sub.status === 2" class="score-badge">{{ sub.score }}</div>
             </div>
-            <div v-if="sub.status === 2" class="score-badge">{{ sub.score }}</div>
           </div>
           
-          <el-empty v-if="filteredSubmissions.length === 0" description="没有找到匹配的提交" :image-size="80" />
+          <!-- 搜索无结果时显示 -->
+          <el-empty v-else-if="searchKeyword && submissions.length > 0" description="没有找到匹配的学生" :image-size="80">
+            <template #image>
+              <el-icon :size="60" color="#cbd5e1"><Search /></el-icon>
+            </template>
+            <el-button type="primary" size="small" @click="searchKeyword = ''">清空搜索</el-button>
+          </el-empty>
+          
+          <!-- 完全没有提交时显示 -->
+          <el-empty v-else description="暂无学生提交作业" :image-size="100">
+            <template #image>
+              <el-icon :size="60" color="#cbd5e1"><User /></el-icon>
+            </template>
+            <p class="empty-tip">请等待学生提交作业后再进行批改</p>
+          </el-empty>
         </div>
       </div>
 
@@ -70,36 +87,69 @@
           </div>
 
           <el-tabs v-model="activeTab" class="grade-tabs">
+            <!-- 文本回复标签页 -->
             <el-tab-pane label="文本回复" name="content">
-              <div class="text-content">
-                {{ currentSubmission.content || '未填写文字回复' }}
+              <div v-if="hasContent" class="text-content">
+                {{ currentSubmission.content }}
+              </div>
+              <el-empty v-else description="学生未填写文字回复" :image-size="100">
+                <template #image>
+                  <el-icon :size="60" color="#cbd5e1"><Document /></el-icon>
+                </template>
+              </el-empty>
+            </el-tab-pane>
+
+            <!-- 在线题目标签页 -->
+            <el-tab-pane label="在线题目" name="questions" v-if="hasQuestions">
+              <div class="structured-ans-list">
+                <div v-for="(q, index) in questionList" :key="index" class="q-ans-item">
+                  <!-- 题目头部 -->
+                  <div class="q-title">
+                    <span class="q-num">{{ index + 1 }}</span>
+                    <span class="q-text">{{ q.questionContent || q.content }}</span>
+                    <el-tag size="small" :type="getQuestionTypeTag(q.questionType)">
+                      {{ getQuestionTypeText(q.questionType) }}
+                    </el-tag>
+                    <span class="q-score-tag">{{ q.score || 0 }}分</span>
+                  </div>
+
+                  <!-- 答案对比区域 -->
+                  <div class="ans-comparison">
+                    <!-- 学生作答 -->
+                    <div class="ans-unit student">
+                      <span class="label">学生作答:</span>
+                      <span class="val" :class="{
+                        correct: isCorrect(index, q),
+                        wrong: !isCorrect(index, q) && getStudentAnswer(index, q)
+                      }">
+                        {{ getStudentAnswer(index, q) || '未作答' }}
+                      </span>
+                      <el-icon v-if="isCorrect(index, q)" class="check-icon"><CircleCheck /></el-icon>
+                      <el-icon v-else-if="getStudentAnswer(index, q)" class="wrong-icon"><CircleClose /></el-icon>
+                    </div>
+
+                    <!-- 标准答案 -->
+                    <div class="ans-unit standard">
+                      <span class="label">标准答案:</span>
+                      <span class="val">{{ getCorrectAnswer(q) }}</span>
+                    </div>
+                  </div>
+
+                  <!-- 题目解析 -->
+                  <div v-if="q.analysis" class="q-analysis">
+                    <div class="analysis-label">
+                      <el-icon><InfoFilled /></el-icon>
+                      题目解析
+                    </div>
+                    <div class="analysis-text">{{ q.analysis }}</div>
+                  </div>
+                </div>
               </div>
             </el-tab-pane>
-            <el-tab-pane label="在线题目" name="questions" v-if="questionList.length > 0">
-               <div class="structured-ans-list">
-                  <div v-for="(q, index) in questionList" :key="index" class="q-ans-item">
-                     <div class="q-title">
-                        <span class="q-num">{{ index + 1 }}.</span>
-                        <span class="q-text">{{ q.questionContent }}</span>
-                        <el-tag size="small" style="margin-left: 10px">{{ getQuestionTypeText(q.questionType) }}</el-tag>
-                     </div>
-                     <div class="ans-comparison">
-                        <div class="ans-unit student">
-                           <span class="label">学生作答:</span>
-                           <span class="val" :class="{correct: isCorrect(index, q), wrong: !isCorrect(index, q)}">
-                             {{ getStudentAnswer(index, q) || '未作答' }}
-                           </span>
-                        </div>
-                        <div class="ans-unit standard">
-                           <span class="label">标准答案:</span>
-                           <span class="val">{{ getCorrectAnswer(q) }}</span>
-                        </div>
-                     </div>
-                  </div>
-               </div>
-            </el-tab-pane>
+
+            <!-- 附件预览标签页 -->
             <el-tab-pane label="附件预览" name="attachment">
-              <div v-if="currentSubmission.attachmentUrl" class="attachment-viewer">
+              <div v-if="hasAttachment" class="attachment-viewer">
                 <div class="file-info">
                   <el-icon size="40"><Document /></el-icon>
                   <div class="file-text">
@@ -116,7 +166,11 @@
                   </el-button>
                 </div>
               </div>
-              <el-empty v-else description="该学生未上传附件" />
+              <el-empty v-else description="该学生未上传附件" :image-size="100">
+                <template #image>
+                  <el-icon :size="60" color="#cbd5e1"><Folder /></el-icon>
+                </template>
+              </el-empty>
             </el-tab-pane>
           </el-tabs>
 
@@ -168,7 +222,7 @@
 
 <script setup>
 import { 
-  ArrowLeft, Search, Document, View, Download, CircleCheck 
+  ArrowLeft, Search, Document, View, Download, CircleCheck, CircleClose, InfoFilled, Folder, User
 } from '@element-plus/icons-vue'
 import { useHomeworkGrade } from '@/assets/js/teacher/homework-grade'
 
@@ -180,10 +234,15 @@ const {
   currentSubmission,
   activeTab,
   submitting,
+  autoGrading,
   gradeForm,
   questionList,
   filteredSubmissions,
   gradedCount,
+  hasSubmissions,
+  hasQuestions,
+  hasContent,
+  hasAttachment,
   selectSubmission,
   formatDate,
   downloadFile,
@@ -192,7 +251,8 @@ const {
   getCorrectAnswer,
   isCorrect,
   applyAutoScore,
-  getQuestionTypeText
+  getQuestionTypeText,
+  getQuestionTypeTag
 } = useHomeworkGrade()
 </script>
 

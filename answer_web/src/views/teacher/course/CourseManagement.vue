@@ -73,23 +73,14 @@
             class="course-image"
           />
           <div class="course-info">
-            <div class="course-description">{{ course.courseDescription || course.description || '暂无描述' }}</div>
+            <div class="course-description">简介:{{ course.courseDescription || course.description || '暂无描述' }}</div>
 
             <div class="course-meta-grid">
-              <div class="meta-item">
-                <el-icon><User /></el-icon>
-                <span class="label">教师:</span>
-                <span class="value">{{ course.teacherName }}</span>
-              </div>
+
               <div class="meta-item">
                 <el-icon><Key /></el-icon>
                 <span class="label">课程码:</span>
                 <span class="value">{{ course.courseCode || '-' }}</span>
-              </div>
-              <div class="meta-item">
-                <el-icon><Calendar /></el-icon>
-                <span class="label">创建:</span>
-                <span class="value">{{ formatDate(course.createTime) }}</span>
               </div>
               <div class="meta-item">
                 <el-icon><School /></el-icon>
@@ -136,7 +127,7 @@
       <el-pagination
         v-model:current-page="pagination.currentPage"
         v-model:page-size="pagination.pageSize"
-        :page-sizes="[3, 6, 12, 24]"
+        :page-sizes="[2, 4, 6, 8]"
         :total="pagination.total"
         layout="total, sizes, prev, pager, next, jumper"
         @size-change="handleSizeChange"

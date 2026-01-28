@@ -338,3 +338,113 @@
         flex-wrap: wrap;
     }
 }
+
+/* ========== 暗黑模式完整适配 ========== */
+.dark-theme .student-exam-list-container {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+}
+
+.dark-theme .page-title {
+    color: #f1f5f9;
+}
+
+.dark-theme .page-title::after {
+    background: #3b82f6;
+}
+
+.dark-theme .refined-select :deep(.el-input__wrapper),
+.dark-theme .refined-input :deep(.el-input__wrapper) {
+    background-color: #0f172a !important;
+    border-color: #334155;
+}
+
+.dark-theme .refined-select :deep(.el-input__wrapper).is-focus,
+.dark-theme .refined-input :deep(.el-input__wrapper).is-focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+.dark-theme .refined-select :deep(.el-input__inner),
+.dark-theme .refined-input :deep(.el-input__inner) {
+    color: #f1f5f9;
+}
+
+.dark-theme .exam-card {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+.dark-theme .exam-card:hover {
+    border-color: #3b82f6;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.dark-theme .card-accent-line {
+    background: #334155;
+}
+
+.dark-theme .course-label {
+    background: rgba(59, 130, 246, 0.15);
+}
+
+.dark-theme .exam-name {
+    color: #f1f5f9;
+}
+
+.dark-theme .modern-status-tag {
+    background-color: #0f172a;
+    color: #94a3b8;
+}
+
+.dark-theme .spec-node {
+    background: #0f172a;
+    border-color: transparent;
+}
+
+.dark-theme .exam-card:hover .spec-node {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+.dark-theme .node-icon {
+    color: #64748b;
+}
+
+.dark-theme .node-label {
+    color: #64748b;
+}
+
+.dark-theme .node-value {
+    color: #f1f5f9;
+}
+
+.dark-theme .card-bottom {
+    background: #0f172a;
+    border-top-color: #334155;
+}
+
+.dark-theme .valid-period {
+    background: #1e293b;
+    color: #94a3b8;
+    border-color: #334155;
+}
+
+.dark-theme .custom-pagination :deep(.el-pagination.is-background .el-pager li) {
+    background-color: #1e293b;
+    border-color: #334155;
+    color: #94a3b8;
+}
+
+.dark-theme .custom-pagination :deep(.el-pagination.is-background .el-pager li:hover) {
+    color: #3b82f6;
+    border-color: #3b82f6;
+}
+
+.dark-theme .custom-pagination :deep(.el-pagination.is-background .el-pager li.is-active) {
+    background-color: #3b82f6;
+    color: #fff;
+}
+
+.dark-theme :deep(.el-empty__description) {
+    color: #94a3b8;
+}

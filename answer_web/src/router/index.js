@@ -5,16 +5,40 @@ import { ElMessage } from 'element-plus'
 import Index from '../views/index.vue'
 
 /**
+ * 辅助函数：检查 localStorage 值是否有效
+ * 排除 null, undefined, "null", "undefined", 空字符串等无效值
+ */
+const isValidStorageValue = (value) => {
+  return value !== null &&
+    value !== undefined &&
+    value !== 'null' &&
+    value !== 'undefined' &&
+    value.trim() !== ''
+}
+
+/**
  * 检查用户是否已登录
  * @param {string} role - 用户角色 ('teacher' 或 'student')
  * @returns {boolean} - 是否已登录
  */
 const isAuthenticated = (role) => {
-  // 检查是否登录了任何角色
-  const hasTeacherId = !!(localStorage.getItem('teacherId') || localStorage.getItem('t_id'))
-  const hasTeacherToken = !!(localStorage.getItem('token') || localStorage.getItem('teacherToken') || localStorage.getItem('t_token'))
-  const hasStudentId = !!(localStorage.getItem('s_id'))
-  const hasStudentToken = !!(localStorage.getItem('s_token'))
+  // 获取并验证存储值
+  const teacherIdRaw = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
+  const teacherTokenRaw = localStorage.getItem('token') || localStorage.getItem('teacherToken') || localStorage.getItem('t_token')
+  const studentIdRaw = localStorage.getItem('s_id')
+  const studentTokenRaw = localStorage.getItem('s_token')
+
+  const hasTeacherId = isValidStorageValue(teacherIdRaw)
+  const hasTeacherToken = isValidStorageValue(teacherTokenRaw)
+  const hasStudentId = isValidStorageValue(studentIdRaw)
+  const hasStudentToken = isValidStorageValue(studentTokenRaw)
+
+  // 调试日志 (仅开发环境)
+  if (import.meta.env.DEV) {
+    console.log(`[Router Auth] 检查角色: ${role}`, {
+      hasTeacherId, hasTeacherToken, hasStudentId, hasStudentToken
+    })
+  }
 
   if (role === 'teacher') {
     return hasTeacherId && hasTeacherToken
@@ -27,7 +51,6 @@ const isAuthenticated = (role) => {
 
 // 其他页面使用懒加载优化性能
 const Auth = () => import('../views/auth.vue')
-const Admin = () => import('../components/Admin.vue')
 const ForgotPassword = () => import('../views/ForgotPassword.vue')
 
 // 教师模块 - 使用懒加载
@@ -44,7 +67,7 @@ const TeacherMessageCenter = () => import('../views/teacher/Personal/MessageCent
 // 学生模块 - 使用懒加载
 const sIndex = () => import('../components/s_index.vue')
 const StudentLayout = () => import('../views/student/Layout.vue')
-const StudentDashboard = () => import('../views/student/Dashboard.vue')
+const StudentDashboard = () => import('../views/student/StudentDashboard.vue')
 const StudentHomework = () => import('../views/student/StudentHomework.vue')
 const HomeworkSubmit = () => import('../views/student/HomeworkSubmit.vue')
 const HomeworkDetail = () => import('../views/student/HomeworkDetail.vue')
@@ -82,11 +105,6 @@ const router = createRouter({
       name: 'forgotPassword',
       component: ForgotPassword,
     },
-    {
-      path: '/admin',
-      name: 'admin',
-      component: Admin,
-    },
     // 教师端路由 - 新的清晰结构
     {
       path: '/teacher',
@@ -99,7 +117,7 @@ const router = createRouter({
           path: 'dashboard',
           name: 'teacher_dashboard',
           component: TeacherDashboard,
-          meta: { title: '教师仪表盘', requiresAuth: true, role: 'teacher' }
+          meta: { title: '首页', requiresAuth: true, role: 'teacher' }
         },
         {
           path: 'profile',
@@ -166,6 +184,18 @@ const router = createRouter({
           name: 'teacher_exam_questions',
           component: () => import('../views/teacher/exam/ExamQuestions.vue'),
           meta: { title: '考试试题管理', requiresAuth: true, role: 'teacher' }
+        },
+        {
+          path: 'exam/:id/student/:studentExamId',
+          name: 'teacher_student_answer_detail',
+          component: () => import('../views/teacher/exam/StudentAnswerDetail.vue'),
+          meta: { title: '学生答卷详情', requiresAuth: true, role: 'teacher' }
+        },
+        {
+          path: 'exam/:id/scores',
+          name: 'teacher_exam_scores',
+          component: () => import('../views/teacher/exam/ExamScores.vue'),
+          meta: { title: '考试成绩分析', requiresAuth: true, role: 'teacher' }
         },
         {
           path: 'homework',

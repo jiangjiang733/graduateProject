@@ -1,7 +1,7 @@
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getExamDetail, publishExam as publishExamApi, unpublishExam as unpublishExamApi, deleteExam as deleteExamApi, getStudentExams, returnStudentExam as returnStudentExamApi, getExamStatistics } from '@/api/exam'
+import { getExamDetail, publishExam as publishExamApi, unpublishExam as unpublishExamApi, deleteExam as deleteExamApi, getStudentExams, returnStudentExam, getExamStatistics, updateExam } from '@/api/exam'
 import * as echarts from 'echarts'
 
 export function useExamDetail() {
@@ -15,6 +15,33 @@ export function useExamDetail() {
   const statistics = ref(null)
   const chartRef = ref(null)
   const scoreChart = ref(null)
+
+  // 编辑考试弹窗相关
+  const editDialogVisible = ref(false)
+  const editForm = ref({
+    examTitle: '',
+    courseId: null,
+    startTime: '',
+    endTime: '',
+    duration: 60,
+    totalScore: 100
+  })
+  const editFormRef = ref(null)
+  const submitting = ref(false)
+
+  // 表单校验规则
+  const editRules = {
+    examTitle: [{ required: true, message: '请输入考试标题', trigger: 'blur' }],
+    courseId: [{ required: true, message: '请选择课程', trigger: 'change' }],
+    timeRange: [{ required: true, message: '请选择考试时间', trigger: 'change' }],
+    duration: [{ required: true, message: '请输入考试时长', trigger: 'blur' }],
+    totalScore: [{ required: true, message: '请输入总分', trigger: 'blur' }]
+  }
+
+  // 计算及格分数
+  const calculatedPassScore = computed(() => {
+    return Math.floor((editForm.value.totalScore || 100) * 0.6)
+  })
 
   // 获取考试详情
   const fetchExamDetail = async () => {
@@ -180,9 +207,59 @@ export function useExamDetail() {
     router.back()
   }
 
-  // 编辑考试
+  // 打开编辑考试弹窗
   const editExam = () => {
-    router.push(`/teacher/exam/edit/${route.params.id}`)
+    // 填充表单数据
+    editForm.value = {
+      examTitle: exam.value.examTitle || '',
+      courseId: exam.value.courseId || null,
+      startTime: exam.value.startTime || '',
+      endTime: exam.value.endTime || '',
+      duration: exam.value.duration || 60,
+      totalScore: exam.value.totalScore || 100,
+      timeRange: exam.value.startTime && exam.value.endTime
+        ? [exam.value.startTime, exam.value.endTime]
+        : []
+    }
+    editDialogVisible.value = true
+  }
+
+  // 保存编辑
+  const saveExamEdit = async () => {
+    if (!editFormRef.value) return
+
+    try {
+      await editFormRef.value.validate()
+
+      submitting.value = true
+
+      const examData = {
+        examTitle: editForm.value.examTitle,
+        courseId: editForm.value.courseId,
+        startTime: editForm.value.timeRange[0],
+        endTime: editForm.value.timeRange[1],
+        duration: editForm.value.duration,
+        totalScore: editForm.value.totalScore,
+        passScore: calculatedPassScore.value
+      }
+
+      const res = await updateExam(route.params.id, examData)
+
+      if (res.code === 200) {
+        ElMessage.success('考试信息更新成功')
+        editDialogVisible.value = false
+        fetchExamDetail() // 刷新数据
+      } else {
+        ElMessage.error(res.message || '更新失败')
+      }
+    } catch (error) {
+      if (error !== 'cancel') {
+        console.error('更新考试失败:', error)
+        ElMessage.error('更新失败')
+      }
+    } finally {
+      submitting.value = false
+    }
   }
 
   // 发布考试
@@ -254,8 +331,13 @@ export function useExamDetail() {
 
   // 查看学生答卷
   const viewStudentAnswer = (student) => {
-    // TODO: 跳转到答卷详情页
-    ElMessage.info('查看答卷功能开发中')
+    const studentExamId = student.studentExamId || student.id
+    if (studentExamId) {
+      // 跳转到学生答卷详情页
+      router.push(`/teacher/exam/${route.params.id}/student/${studentExamId}`)
+    } else {
+      ElMessage.warning('无法获取学生答卷ID')
+    }
   }
 
   // 解析选项（支持 JSON 数组和字符串）
@@ -467,6 +549,14 @@ export function useExamDetail() {
     getQuestionTypeName,
     getQuestionTypeColor,
     getExamStatusType,
-    getExamStatusText
+    getExamStatusText,
+    // 编辑考试弹窗相关
+    editDialogVisible,
+    editForm,
+    editFormRef,
+    editRules,
+    calculatedPassScore,
+    saveExamEdit,
+    submitting
   }
 }

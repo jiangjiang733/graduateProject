@@ -9,6 +9,7 @@ import {
 } from '@/api/chat'
 import { addComment, deleteComment } from '@/api/comment'
 import { useUserInfo } from '@/stores/user'
+import { getProfile } from '@/api/student.js'
 
 const DEFAULT_AVATAR = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
 
@@ -134,16 +135,33 @@ export function useMessageCenter() {
 
             // 1. 处理私信/互动消息
             if (messageRes.code === 200 && messageRes.data?.records) {
-                const messages = messageRes.data.records.map(m => {
+                const messagesPromise = messageRes.data.records.map(async m => {
                     const oldItem = interactionList.value.find(oi => oi.id === m.messageId && oi.source === 'MESSAGE')
+
+                    let senderName = m.senderName || '系统'
+                    let senderAvatar = m.senderAvatar || DEFAULT_AVATAR
+
+                    // 实时获取学生头像和昵称
+                    if (m.senderType === 'STUDENT' || (!m.senderType && m.senderId)) { // Assuming STUDENT if system msg allows
+                        try {
+                            const pRes = await getProfile(m.senderId)
+                            if (pRes.success && pRes.data) {
+                                senderName = pRes.data.studentsUsername || pRes.data.studentName || senderName
+                                senderAvatar = pRes.data.studentsHead || pRes.data.studentAvatar || senderAvatar
+                            }
+                        } catch (e) {
+                            // ignore
+                        }
+                    }
+
                     return {
                         id: m.messageId,
                         source: 'MESSAGE',
                         senderId: m.senderId,
                         senderType: m.senderType || 'STUDENT',
                         type: (m.messageType === 'INTERACTION' || m.messageType === 'COMMENT') ? 'COMMENT' : 'SYSTEM',
-                        userName: m.senderName || '系统',
-                        userAvatar: m.senderAvatar || DEFAULT_AVATAR,
+                        userName: senderName,
+                        userAvatar: senderAvatar,
                         content: m.content,
                         time: m.createTime,
                         isRead: m.isRead === 1,
@@ -154,6 +172,7 @@ export function useMessageCenter() {
                         replyContent: oldItem ? oldItem.replyContent : ''
                     }
                 })
+                const messages = await Promise.all(messagesPromise)
                 combinedList.push(...messages)
             }
 

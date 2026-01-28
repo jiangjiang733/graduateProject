@@ -101,7 +101,6 @@
                </div>
                <div class="student-main-info">
                   <div class="student-name">{{ enrollment.studentName }}</div>
-                  <div class="student-id">ID: {{ enrollment.studentId }}</div>
                </div>
             </div>
             

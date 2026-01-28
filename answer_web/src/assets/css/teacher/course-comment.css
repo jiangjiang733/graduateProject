@@ -84,3 +84,68 @@
 .empty-comment {
     margin: 40px 0;
 }
+
+html.dark .comment-filter-header {
+    background-color: #111827;
+    border-color: #1f2937;
+}
+
+html.dark .filter-left .label {
+    color: #e5e7eb;
+}
+
+html.dark .comment-post-card {
+    background-color: #111827;
+    border-color: #1f2937;
+}
+
+html.dark .comment-user-name {
+    color: #f3f4f6;
+}
+
+html.dark .comment-list-container h3 {
+    color: #f3f4f6;
+}
+
+/* 强制覆盖输入框背景 */
+html.dark .comment-post-card .el-textarea__inner,
+html.dark .comment-filter-header .el-input__wrapper,
+html.dark .el-select__wrapper {
+    background-color: #1f2937 !important;
+    box-shadow: 0 0 0 1px #374151 inset !important;
+    color: #ffffff !important;
+}
+
+html.dark .comment-post-card .el-textarea__inner:focus,
+html.dark .comment-filter-header .el-input__wrapper.is-focus {
+    box-shadow: 0 0 0 1px #409eff inset !important;
+}
+
+/* 强制覆盖下拉菜单背景 (如果挂载在 body 上，这个可能不生效，但如果是popper-class可以) */
+html.dark .el-select-dropdown__item {
+    color: #e5e7eb;
+}
+
+html.dark .el-select-dropdown__item.hover,
+html.dark .el-select-dropdown__item:hover {
+    background-color: #374151;
+}
+
+/* 试图覆盖子组件 CommentItem 的文字颜色 */
+html.dark .comment-item,
+html.dark .comment-main,
+html.dark .comment-content,
+html.dark .user-name {
+    color: #e5e7eb !important;
+}
+
+html.dark .comment-info,
+html.dark .comment-time {
+    color: #9ca3af !important;
+}
+
+/* 链接文字 */
+html.dark .reply-btn,
+html.dark .delete-btn {
+    color: #60a5fa !important;
+}

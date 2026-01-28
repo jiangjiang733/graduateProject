@@ -177,3 +177,45 @@ const canDelete = computed(() => {
 <style scoped>
 @import '@/assets/css/teacher/comment-item.css';
 </style>
+
+<style>
+/* 
+ * 强制暗黑模式适配 (Non-scoped to work with html class) 
+ */
+html.dark .comment-author {
+    color: #e5e7eb !important;
+}
+
+html.dark .comment-content {
+    color: #e5e7eb !important;
+}
+
+html.dark .comment-time,
+html.dark .comment-footer,
+html.dark .reply-target-text,
+html.dark .view-more-row {
+    color: #9ca3af !important;
+}
+
+html.dark .target-name {
+    background: rgba(64, 158, 255, 0.2);
+}
+
+html.dark .reply-form-wrapper {
+    background-color: #374151 !important;
+    color: #fff;
+}
+
+html.dark .comment-item-container,
+html.dark .comment-item-wrapper.is-reply .comment-item-container {
+    border-bottom-color: #374151 !important;
+}
+
+html.dark .replies-wrapper {
+    border-left-color: #374151 !important;
+}
+
+html.dark .comment-author:hover {
+    color: #409eff !important;
+}
+</style>

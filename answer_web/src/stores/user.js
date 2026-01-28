@@ -6,16 +6,37 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 
 export const useUserInfo = defineStore('userInfo', () => {
-  // 状态 - 从localStorage恢复用户信息
-  const userId = ref(localStorage.getItem('teacherId') || localStorage.getItem('t_id') || localStorage.getItem('studentId') || '')
-  const userName = ref(localStorage.getItem('teacherName') || localStorage.getItem('studentName') || '')
-  const userType = ref(localStorage.getItem('userType') || (localStorage.getItem('teacherId') ? 'TEACHER' : 'STUDENT'))
-  const avatar = ref(localStorage.getItem('teacherHead') || localStorage.getItem('studentHead') || '')
-  const email = ref(localStorage.getItem('teacherEmail') || localStorage.getItem('studentEmail') || '')
-  
+  // 状态
+  const userType = ref(localStorage.getItem('userRole')?.toUpperCase() || '')
+  const userId = ref('')
+  const userName = ref('')
+  const avatar = ref('')
+  const email = ref('')
+
+  // 同步存储数据
+  const syncWithStorage = () => {
+    const role = localStorage.getItem('userRole')
+    if (role === 'teacher') {
+      userId.value = localStorage.getItem('teacherId') || ''
+      userName.value = localStorage.getItem('teacherName') || ''
+      avatar.value = localStorage.getItem('teacherHead') || ''
+      email.value = localStorage.getItem('teacherEmail') || ''
+      userType.value = 'TEACHER'
+    } else if (role === 'student') {
+      userId.value = localStorage.getItem('studentId') || ''
+      userName.value = localStorage.getItem('studentName') || ''
+      avatar.value = localStorage.getItem('studentHead') || ''
+      email.value = localStorage.getItem('studentEmail') || ''
+      userType.value = 'STUDENT'
+    }
+  }
+
+  // 立即初始化
+  syncWithStorage()
+
   // 计算属性
   const isLoggedIn = computed(() => !!userId.value)
-  
+
   const avatarUrl = computed(() => {
     if (avatar.value && avatar.value.trim() !== '') {
       if (avatar.value.startsWith('http://') || avatar.value.startsWith('https://')) {
@@ -25,96 +46,71 @@ export const useUserInfo = defineStore('userInfo', () => {
     }
     return 'https://cube.elemecdn.com/9/c2/f0ee8a3c7c9636ef921315944d5671d8.png'
   })
-  
+
   // 方法
-  /**
-   * 设置用户信息
-   */
   const setUserInfo = (info) => {
-    if (info.userId || info.teacherId || info.studentId) {
-      const id = info.userId || info.teacherId || info.studentId
-      userId.value = id
-      localStorage.setItem('userId', id)
-    }
-    
-    if (info.userName || info.teacherName || info.studentName) {
-      const name = info.userName || info.teacherName || info.studentName
-      userName.value = name
-      localStorage.setItem('userName', name)
-    }
-    
     if (info.userType) {
       userType.value = info.userType
-      localStorage.setItem('userType', info.userType)
+      localStorage.setItem('userRole', info.userType.toLowerCase())
     }
-    
-    if (info.avatar || info.teacherHead || info.studentHead) {
-      const avatarPath = info.avatar || info.teacherHead || info.studentHead
+
+    // 根据角色保存具体 ID
+    const id = info.userId || info.teacherId || info.studentId
+    if (id) {
+      userId.value = id
+      if (userType.value === 'TEACHER') localStorage.setItem('teacherId', id)
+      else localStorage.setItem('studentId', id)
+    }
+
+    const name = info.userName || info.teacherName || info.studentName
+    if (name) {
+      userName.value = name
+      if (userType.value === 'TEACHER') localStorage.setItem('teacherName', name)
+      else localStorage.setItem('studentName', name)
+    }
+
+    const avatarPath = info.avatar || info.teacherHead || info.studentHead
+    if (avatarPath) {
       avatar.value = avatarPath
-      localStorage.setItem('userAvatar', avatarPath)
+      if (userType.value === 'TEACHER') localStorage.setItem('teacherHead', avatarPath)
+      else localStorage.setItem('studentHead', avatarPath)
     }
-    
-    if (info.email || info.teacherEmail || info.studentEmail) {
-      const userEmail = info.email || info.teacherEmail || info.studentEmail
+
+    const userEmail = info.email || info.teacherEmail || info.studentEmail
+    if (userEmail) {
       email.value = userEmail
-      localStorage.setItem('userEmail', userEmail)
+      if (userType.value === 'TEACHER') localStorage.setItem('teacherEmail', userEmail)
+      else localStorage.setItem('studentEmail', userEmail)
     }
   }
-  
-  /**
-   * 清除用户信息
-   */
+
   const clearUserInfo = () => {
     userId.value = ''
     userName.value = ''
     userType.value = ''
     avatar.value = ''
     email.value = ''
-    
-    localStorage.removeItem('userId')
-    localStorage.removeItem('userName')
-    localStorage.removeItem('userType')
-    localStorage.removeItem('userAvatar')
-    localStorage.removeItem('userEmail')
+
+    const keys = [
+      'teacherId', 'teacherName', 'teacherHead', 'teacherEmail', 'teacherDepartment', 'teacherLevel', 'teacherPhone',
+      'studentId', 'studentName', 'studentHead', 'studentEmail', 'studentMajor', 'studentClass',
+      'userRole', 'token', 'status', 'userId', 'userName', 'userType', 'userAvatar', 'userEmail'
+    ]
+    keys.forEach(k => localStorage.removeItem(k))
   }
-  
-  /**
-   * 初始化用户信息（从localStorage恢复）
-   */
+
   const initUserInfo = () => {
-    // 优先从教师信息恢复
-    if (localStorage.getItem('teacherId')) {
-      setUserInfo({
-        userId: localStorage.getItem('teacherId'),
-        userName: localStorage.getItem('teacherName'),
-        userType: 'TEACHER',
-        avatar: localStorage.getItem('teacherHead'),
-        email: localStorage.getItem('teacherEmail')
-      })
-    }
-    // 其次从学生信息恢复
-    else if (localStorage.getItem('studentId')) {
-      setUserInfo({
-        userId: localStorage.getItem('studentId'),
-        userName: localStorage.getItem('studentName'),
-        userType: 'STUDENT',
-        avatar: localStorage.getItem('studentHead'),
-        email: localStorage.getItem('studentEmail')
-      })
-    }
+    syncWithStorage()
   }
-  
+
   return {
-    // 状态
     userId,
     userName,
     userType,
     avatar,
     email,
-    // 计算属性
     isLoggedIn,
     avatarUrl,
-    // 方法
     setUserInfo,
     clearUserInfo,
     initUserInfo

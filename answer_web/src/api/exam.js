@@ -48,7 +48,10 @@ export const getExamDetail = (examId) => {
  * @returns {Promise}
  */
 export const generateQuestionsWithAi = (params) => {
-  return request.post('/exam/ai/generate', params)
+  // AI生成需要较长时间，设置2分钟超时
+  return request.post('/exam/ai/generate', params, {
+    timeout: 120000 // 120秒 = 2分钟
+  })
 }
 
 /**
@@ -57,7 +60,10 @@ export const generateQuestionsWithAi = (params) => {
  * @returns {Promise}
  */
 export const createExamWithAi = (examData) => {
-  return request.post('/exam/ai', examData)
+  // AI创建考试需要较长时间，设置2分钟超时
+  return request.post('/exam/ai', examData, {
+    timeout: 120000 // 120秒 = 2分钟
+  })
 }
 /**
  * 保存考试试题

@@ -1,16 +1,11 @@
 <template>
-  <div class="tProfile-fullscreen">
-    <!-- 顶部导航栏 -->
-    <div class="tProfile-nav">
-      <RouterLink to="/teacher/dashboard" class="return-btn">
-        <el-icon><Back /></el-icon>
-        返回首页
-      </RouterLink>
-      <h2 class="profile-title">个人中心</h2>
+  <div class="profile-container">
+    <div class="section-title-row">
+      <h2 class="profile-page-title">个人中心</h2>
     </div>
 
     <!-- 主要内容区域 -->
-    <div class="tProfile-content">
+    <div class="profile-content-grid">
       <!-- 个人资料卡片 -->
       <div class="tProfile-card">
         <div class="avatar-section">
@@ -58,12 +53,22 @@
         <div class="tProfile-course-section">
           <h3 class="section-title">我的课程</h3>
           <div class="course-table">
-            <el-table :data="courseData" style="width: 100%" stripe border v-loading="loading">
+            <el-table :data="paginatedCourseData" style="width: 100%" stripe border v-loading="loading">
               <el-table-column prop="courseName" label="课程名称" min-width="180" />
               <el-table-column prop="courseTime" label="上课时间" min-width="180" />
               <el-table-column prop="courseLocation" label="上课地点" min-width="200" />
               <el-table-column prop="courseStudent" label="选课人数" width="100" align="center" />
             </el-table>
+            
+            <div class="pagination-container" v-if="totalCourses > 0">
+              <el-pagination
+                v-model:current-page="currentPage"
+                v-model:page-size="pageSize"
+                :total="totalCourses"
+                layout="total, prev, pager, next"
+                background
+              />
+            </div>
           </div>
         </div>
 

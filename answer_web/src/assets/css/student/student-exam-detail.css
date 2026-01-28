@@ -136,8 +136,7 @@
 }
 
 .nav-item.current {
-    ring: 2px solid #3b82f6;
-    ring-offset: 2px;
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px #3b82f6;
 }
 
 .nav-legend {
@@ -261,4 +260,123 @@
     display: flex;
     align-items: flex-start;
     white-space: normal;
+}
+
+/* ========== 暗黑模式完整适配 ========== */
+.dark-theme .exam-take-page {
+    background: #0f172a;
+}
+
+.dark-theme .exam-header {
+    background: rgba(30, 41, 59, 0.9);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.dark-theme .exam-title {
+    color: #f1f5f9;
+}
+
+.dark-theme .exam-course {
+    color: #64748b;
+}
+
+.dark-theme .timer-box {
+    color: #3b82f6;
+    background: #1e3a8a;
+}
+
+.dark-theme .timer-box.urgent {
+    color: #ef4444;
+    background: #7f1d1d;
+}
+
+.dark-theme .exam-nav {
+    background: #1e293b;
+    border: 1px solid #334155;
+}
+
+.dark-theme .nav-item {
+    background: #0f172a;
+    color: #94a3b8;
+    border-color: #334155;
+}
+
+.dark-theme .nav-item:hover {
+    background: #334155;
+    color: #f1f5f9;
+}
+
+.dark-theme .nav-item.answered {
+    background: #1e3a8a;
+    color: #93c5fd;
+    border-color: #3b82f6;
+}
+
+.dark-theme .nav-legend {
+    color: #64748b;
+}
+
+.dark-theme .dot {
+    background: #334155;
+}
+
+.dark-theme .dot.answered {
+    background: #3b82f6;
+}
+
+.dark-theme .dot.answering {
+    border-color: #3b82f6;
+}
+
+.dark-theme .exam-questions {
+    background: #1e293b;
+    border: 1px solid #334155;
+}
+
+.dark-theme .question-card {
+    border-bottom-color: #334155;
+}
+
+.dark-theme .q-no {
+    color: #3b82f6;
+}
+
+.dark-theme .q-score {
+    color: #64748b;
+}
+
+.dark-theme .q-content {
+    color: #f1f5f9;
+}
+
+.dark-theme .q-options {
+    background: #0f172a;
+}
+
+.dark-theme .option-item {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+.dark-theme .option-item.is-checked {
+    border-color: #3b82f6;
+    background: #1e3a8a;
+}
+
+.dark-theme .option-item:hover {
+    border-color: #64748b;
+    background: #334155;
+}
+
+.dark-theme .opt-prefix {
+    color: #64748b;
+}
+
+.dark-theme .opt-text {
+    color: #f1f5f9;
+}
+
+.dark-theme :deep(.el-radio__label),
+.dark-theme :deep(.el-checkbox__label) {
+    color: #f1f5f9;
 }

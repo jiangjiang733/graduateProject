@@ -158,3 +158,107 @@
         width: 100%;
     }
 }
+
+html.dark .course-detail-page {
+    background-color: #030712 !important;
+    /* almost black */
+    color: #e5e7eb;
+}
+
+html.dark .course-header,
+html.dark .course-main-card,
+html.dark .el-card,
+html.dark .student-card,
+/* 班级成员卡片 */
+html.dark .resource-card,
+html.dark .comment-post-card {
+    background-color: #111827 !important;
+    /* dark-900, darker than before */
+    border-color: #1f2937 !important;
+    color: #e5e7eb !important;
+    box-shadow: none !important;
+}
+
+/* 强制修复所有文字颜色，防止 Tailwind text-gray-xxx 导致的不可见 */
+html.dark .course-detail-page p,
+html.dark .course-detail-page span,
+html.dark .course-detail-page div,
+html.dark .comment-list .comment-content,
+html.dark .comment-user-name,
+html.dark .student-name,
+html.dark .student-id {
+    color: #e5e7eb !important;
+}
+
+/* 专门针对 Tailwind 灰色文本的覆盖 */
+html.dark .text-gray-900,
+html.dark .text-gray-800,
+html.dark .text-gray-700,
+html.dark .text-gray-600 {
+    color: #e5e7eb !important;
+}
+
+html.dark .text-gray-500,
+html.dark .text-gray-400 {
+    color: #9ca3af !important;
+    /*次要信息稍微暗一点*/
+}
+
+/* Tabs */
+html.dark .el-tabs__item {
+    color: #9ca3af !important;
+}
+
+html.dark .el-tabs__item.is-active {
+    color: #409eff !important;
+}
+
+html.dark .el-tabs--border-card {
+    background-color: #1f2937;
+    border-color: #374151;
+}
+
+html.dark .el-tabs--border-card>.el-tabs__header {
+    background-color: #111827;
+    border-bottom-color: #374151;
+}
+
+/* 评论区和输入框 */
+html.dark .el-input__wrapper,
+html.dark .el-textarea__inner {
+    background-color: #374151 !important;
+    box-shadow: 0 0 0 1px #4b5563 inset !important;
+    color: #fff !important;
+}
+
+html.dark .comment-filter-header {
+    background-color: #1f2937 !important;
+    border-bottom: 1px solid #374151;
+}
+
+/* 班级成员卡片修复 */
+html.dark .student-card {
+    background-color: #1f2937 !important;
+}
+
+/* 树形控件 */
+html.dark .el-tree {
+    background: transparent !important;
+    color: #e5e7eb !important;
+}
+
+html.dark .el-tree-node__content:hover,
+html.dark .el-tree-node:focus>.el-tree-node__content {
+    background-color: #374151 !important;
+}
+
+/* 课程封面 */
+html.dark .course-cover {
+    background-color: #374151;
+}
+
+/* 链接文字 */
+html.dark .el-button--link,
+html.dark a {
+    color: #60a5fa !important;
+}

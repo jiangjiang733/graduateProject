@@ -177,7 +177,7 @@ export function useExamManagement() {
 
     const viewScores = (exam) => {
         // 成绩通常在详情页底部，或者跳转到详情页
-        router.push(`/teacher/exam/${exam.examId}`)
+        router.push(`/teacher/exam/${exam.examId}/scores`)
     }
 
     const editExam = (exam) => {

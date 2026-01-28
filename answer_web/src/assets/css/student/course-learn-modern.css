@@ -1,0 +1,396 @@
+/* Modern Course Learning Page Styles - Native Scroll Flow */
+:root {
+    /* Colors - Light Theme */
+    --primary-color: #4f46e5;
+    --bg-page: #f9fafb;
+    --text-main: #111827;
+    --text-secondary: #4b5563;
+    --border-color: #e5e7eb;
+
+    --header-height: 56px;
+    --sidebar-width: 400px;
+}
+
+/* 1. Global: Allow native browser scroll */
+html,
+body {
+    margin: 0;
+    padding: 0;
+    height: auto;
+    overflow-y: auto;
+    /* Restore native scrollbar */
+    background-color: var(--bg-page);
+}
+
+.course-learn-modern {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg-page);
+    font-family: 'Inter', sans-serif;
+    color: var(--text-main);
+}
+
+/* 2. Header (Sticky Top) */
+.modern-header {
+    height: var(--header-height);
+    background-color: #fff;
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    /* Ensure header stays on top */
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+}
+
+.back-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.back-link:hover {
+    background-color: #f3f4f6;
+    color: var(--primary-color);
+}
+
+/* 3. Main Layout Container */
+.learn-layout {
+    display: flex;
+    align-items: flex-start;
+    /* Layout aligns to top */
+    justify-content: center;
+    width: 100%;
+    max-width: 1920px;
+    /* Optional cap for ultra-wide screens */
+    margin: 0 auto;
+}
+
+/* 4. Left Content (Flexible, grows with content) */
+.main-content-area {
+    flex: 1;
+    /* Take remaining width */
+    min-width: 0;
+    /* Prevent flex overflow */
+    display: flex;
+    flex-direction: column;
+    background-color: transparent;
+    padding-bottom: 40px;
+    /* Space at bottom */
+}
+
+/* Mixed Task Bar */
+.mixed-task-bar {
+    background-color: #fff;
+    display: flex;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    /* Keep task tabs visible if needed, or remove if distracting */
+    top: var(--header-height);
+    z-index: 40;
+}
+
+.sub-task-tab {
+    padding: 14px 16px;
+    font-size: 14px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 2px solid transparent;
+}
+
+.sub-task-tab.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+/* Content Viewer */
+.content-viewer-window {
+    width: 100%;
+    background-color: #fff;
+    min-height: 400px;
+}
+
+.renderer-video {
+    width: 100%;
+    aspect-ratio: 16/9;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.renderer-video video {
+    width: 100%;
+    height: 100%;
+}
+
+.renderer-pdf {
+    height: 800px;
+    /* Fixed rough height for PDF in native flow */
+    background: #e5e7eb;
+}
+
+.renderer-pdf iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+.renderer-text {
+    padding: 40px;
+    background: #fff;
+}
+
+/* Navigation */
+.content-navigation {
+    background: #fff;
+    padding: 16px 24px;
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.nav-chapters-btn {
+    padding: 8px 16px;
+    background: #f3f4f6;
+    border-radius: 6px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+/* Tabs */
+.bottom-tabs-section {
+    padding: 24px;
+    background: var(--bg-page);
+}
+
+.bottom-tabs-section .el-tabs__nav-wrap::after {
+    background-color: transparent;
+}
+
+/* 5. Right Sidebar (Sticky Behavior) */
+.course-sidebar {
+    width: var(--sidebar-width);
+    background-color: #ffffff;
+    border-left: 1px solid var(--border-color);
+    flex-shrink: 0;
+    /* Stick to the top under header */
+    position: sticky;
+    top: var(--header-height);
+    /* Height aligns with viewport minus header */
+    height: calc(100vh - var(--header-height));
+    /* Internal scroll for directory if it's too long */
+    overflow-y: auto;
+}
+
+/* Sidebar Styling */
+.course-sidebar,
+.chapter-group {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.chapter-header {
+    padding: 16px 20px;
+    background-color: #fff;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.chapter-header:hover {
+    background-color: #f9fafb;
+}
+
+.lesson-item {
+    display: flex;
+    padding: 12px 20px 12px 16px;
+    cursor: pointer;
+    gap: 10px;
+    border-left: 3px solid transparent;
+}
+
+.lesson-item:hover {
+    background-color: #f9fafb;
+}
+
+.lesson-item.active {
+    background-color: #eff6ff;
+    border-left-color: var(--primary-color);
+}
+
+.type-tag {
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #f3f4f6;
+    color: #666;
+    font-weight: 600;
+}
+
+.lesson-title {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.status-icon {
+    margin-top: 3px;
+    color: #d1d5db;
+}
+
+.status-icon.active {
+    color: var(--primary-color);
+}
+
+/* Hide Sidebar on Mobile */
+@media (max-width: 1024px) {
+    .course-sidebar {
+        display: none;
+    }
+}
+
+/* =========================================
+   DARK MODE SUPPORT
+   ========================================= */
+html.dark {
+    --bg-page: #111827;
+    --text-main: #f9fafb;
+    --text-secondary: #9ca3af;
+    --border-color: #374151;
+}
+
+html.dark body {
+    background-color: var(--bg-page);
+    color: var(--text-main);
+}
+
+html.dark .modern-header,
+html.dark .mixed-task-bar,
+html.dark .content-viewer-window,
+html.dark .renderer-text,
+html.dark .content-navigation,
+html.dark .course-sidebar,
+html.dark .chapter-header,
+html.dark .p-4.bg-white,
+/* 修复内联 bg-white 的卡片 */
+html.dark .resource-item {
+    background-color: #1f2937 !important;
+    /* dark-800 */
+    border-color: var(--border-color);
+    color: var(--text-main);
+}
+
+/* Inputs & Textareas */
+html.dark .el-textarea__inner,
+html.dark .el-input__wrapper {
+    background-color: #374151;
+    box-shadow: none;
+    color: white;
+}
+
+html.dark .el-textarea__inner::placeholder {
+    color: #9ca3af;
+}
+
+/* Sidebar hover states */
+html.dark .chapter-header:hover,
+html.dark .lesson-item:hover {
+    background-color: #374151;
+}
+
+html.dark .lesson-item.active {
+    background-color: #1e1b4b;
+    /* dark indigo 900 */
+    border-left-color: #6366f1;
+}
+
+html.dark .back-link:hover {
+    background-color: #374151;
+}
+
+html.dark .type-tag {
+    background-color: #374151;
+    color: #d1d5db;
+}
+
+/* 修复底部的白色卡片 */
+html.dark .bg-white {
+    background-color: #1f2937 !important;
+    border-color: #374151 !important;
+}
+
+html.dark .text-gray-800 {
+    color: #f3f4f6 !important;
+}
+
+html.dark .text-gray-600,
+html.dark .text-gray-400 {
+    color: #9ca3af !important;
+}
+
+/* 修复资料下载卡片 */
+html.dark .bg-gray-50 {
+    background-color: #111827 !important;
+    border-color: #374151 !important;
+}
+
+html.dark .resource-card .bg-white {
+    background-color: #374151 !important;
+    /* 图标背景 */
+}
+
+/* 评论区 */
+html.dark .discussion-container .bg-gray-50 {
+    background-color: #1f2937 !important;
+}
+
+/* 评论区 文字颜色强制修复 */
+html.dark .comments-list {
+    color: #e5e7eb !important;
+}
+
+html.dark .comments-list p,
+html.dark .comments-list div {
+    color: #e5e7eb !important;
+}
+
+html.dark .comments-list .text-gray-900,
+html.dark .comments-list .text-gray-800,
+html.dark .comments-list .text-gray-700,
+html.dark .comments-list .text-gray-600 {
+    color: #e5e7eb !important;
+}
+
+html.dark .comments-list .text-gray-500,
+html.dark .comments-list .text-gray-400 {
+    color: #9ca3af !important;
+    /* 次要文字稍微暗一点，但也要能看清 */
+}
+
+/* 评论操作按钮 (回复/删除) */
+html.dark .comments-list .el-button--text,
+html.dark .comments-list .cursor-pointer {
+    color: #818cf8 !important;
+    /* 靛蓝偏亮 */
+}
+
+html.dark .comments-list .el-button--text:hover {
+    color: #a5b4fc !important;
+}

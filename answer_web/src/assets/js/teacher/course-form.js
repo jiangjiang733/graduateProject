@@ -471,6 +471,8 @@ export function useCourseForm() {
             order: chapter.chapterOrder || chapter.order || 1,
             video: null,
             pdf: null,
+            videoUrl: chapter.videoUrl,
+            pdfUrl: chapter.pdfUrl,
             content: chapter.textContent || ''
         }
         if (videoUploadRef.value) {

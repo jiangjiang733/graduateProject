@@ -22,28 +22,25 @@
       <el-empty v-if="pagedStudents.length === 0 && !loading" :description="searchQuery ? '未找到相关学生' : '暂无学生加入本课程'" />
       
       <div v-else class="students-content">
-        <div class="students-grid">
-          <div v-for="student in pagedStudents" :key="student.id" class="student-card glass-panel animate-slide-up">
-            <div class="student-header">
-              <el-avatar :size="48" :src="getStudentAvatar(student)" class="student-avatar">
+        <div class="students-grid custom-grid">
+          <div v-for="student in pagedStudents" :key="student.id" class="student-item-card">
+            
+            <div class="student-info-view">
+              <el-avatar :size="64" :src="getStudentAvatar(student)" class="student-avatar-lg">
                 {{ getStudentInitial(student) }}
               </el-avatar>
-              <div class="activity-badge"></div>
-            </div>
-            
-            <div class="student-body">
-              <h4 class="student-name">{{ student.studentName || '未知学生' }}</h4>
-              <div class="enroll-time">
-                <el-icon><Calendar /></el-icon>
-                {{ formatDate(student.applyTime) }} 加入
-              </div>
+              <h4 class="student-name-lg">{{ student.studentName || '未知学生' }}</h4>
             </div>
 
-            <div class="student-footer">
-               <el-button type="danger" plain size="small" class="remove-btn" @click="handleRemove(student)">
-                 <el-icon><Delete /></el-icon> 移除
-               </el-button>
+            <!-- Hover Overlay -->
+            <div class="hover-overlay">
+               <div class="overlay-actions">
+                 <el-button type="danger" circle @click="handleRemove(student)" title="移除学生">
+                   <el-icon><Delete /></el-icon>
+                 </el-button>
+               </div>
             </div>
+
           </div>
         </div>
         
@@ -52,10 +49,8 @@
             v-model:current-page="currentPage"
             v-model:page-size="pageSize"
             :page-sizes="[12, 24, 36, 48]"
-            layout="total, sizes, prev, pager, next, jumper"
+            layout="prev, pager, next"
             :total="filteredStudents.length"
-            @size-change="handleSizeChange"
-            @current-change="handleCurrentChange"
             background
           />
         </div>

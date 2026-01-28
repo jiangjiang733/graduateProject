@@ -499,3 +499,233 @@
         padding: 40px 25px 60px 25px;
     }
 }
+
+/* ========== 暗黑模式完整适配 ========== */
+.dark-theme .exam-report-container {
+    background-color: #0f172a;
+}
+
+.dark-theme .report-navbar {
+    background: #1e293b;
+    border-bottom-color: #334155;
+}
+
+.dark-theme .report-logo {
+    color: #f1f5f9;
+}
+
+.dark-theme .report-logo small {
+    color: #64748b;
+}
+
+.dark-theme .paper-sheet {
+    background: #1e293b;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    border-color: #334155;
+}
+
+.dark-theme .exam-main-title {
+    color: #f1f5f9;
+}
+
+.dark-theme .student-info-form {
+    color: #94a3b8;
+}
+
+.dark-theme .student-info-form u {
+    border-bottom-color: #64748b;
+    color: #f1f5f9;
+}
+
+.dark-theme .score-u {
+    color: #f87171;
+}
+
+.dark-theme .score-summary-table table {
+    border-color: #475569;
+}
+
+.dark-theme .score-summary-table th,
+.dark-theme .score-summary-table td {
+    border-color: #475569;
+    color: #f1f5f9;
+}
+
+.dark-theme .score-summary-table th {
+    background-color: #0f172a;
+}
+
+.dark-theme .total,
+.dark-theme .total-val {
+    background-color: #334155;
+}
+
+.dark-theme .sign {
+    color: #94a3b8;
+}
+
+.dark-theme .q-num {
+    color: #f1f5f9;
+}
+
+.dark-theme .q-type {
+    color: #94a3b8;
+}
+
+.dark-theme .q-score {
+    color: #64748b;
+}
+
+.dark-theme .correct-stamp {
+    color: #34d399;
+    border-color: #34d399;
+}
+
+.dark-theme .wrong-stamp {
+    color: #f87171;
+    border-color: #f87171;
+}
+
+.dark-theme .actual-val {
+    color: #f1f5f9;
+}
+
+.dark-theme .q-stem {
+    color: #f1f5f9;
+}
+
+.dark-theme .opt-row {
+    border-color: #334155;
+    background: #0f172a;
+}
+
+.dark-theme .opt-row.is-selected {
+    background-color: #1e293b;
+    border-color: #475569;
+}
+
+.dark-theme .opt-row.is-correct {
+    background-color: #064e3b;
+    border-color: #059669;
+}
+
+.dark-theme .opt-row.is-correct .opt-val {
+    color: #6ee7b7;
+}
+
+.dark-theme .opt-row.is-wrong {
+    background-color: #7f1d1d;
+    border-color: #991b1b;
+}
+
+.dark-theme .opt-row.is-wrong .opt-val {
+    color: #fca5a5;
+}
+
+.dark-theme .opt-key {
+    color: #94a3b8;
+}
+
+.dark-theme .opt-val {
+    color: #f1f5f9;
+}
+
+.dark-theme .i-ok {
+    color: #34d399;
+}
+
+.dark-theme .i-no {
+    color: #f87171;
+}
+
+.dark-theme .short-answer-display {
+    background: #0f172a;
+    border-color: #475569;
+}
+
+.dark-theme .ans-label {
+    color: #64748b;
+}
+
+.dark-theme .standard .ans-label {
+    color: #34d399;
+}
+
+.dark-theme .standard .ans-text {
+    color: #6ee7b7;
+}
+
+.dark-theme .ans-text {
+    color: #f1f5f9;
+}
+
+.dark-theme .commentary-box {
+    background-color: #78350f;
+    border-left-color: #fbbf24;
+}
+
+.dark-theme .com-head {
+    color: #fcd34d;
+}
+
+.dark-theme .com-content {
+    color: #fde68a;
+}
+
+.dark-theme .footer-seal {
+    color: #64748b;
+}
+
+.dark-theme .navigation-card {
+    background: #1e293b;
+    border-color: #334155;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.dark-theme .navigation-head {
+    border-bottom-color: #475569;
+    color: #f1f5f9;
+}
+
+.dark-theme .green {
+    color: #34d399;
+}
+
+.dark-theme .red {
+    color: #f87171;
+}
+
+.dark-theme .nav-item-box {
+    background: #0f172a;
+    color: #94a3b8;
+    border-color: #334155;
+}
+
+.dark-theme .nav-item-box:hover {
+    border-color: #64748b;
+    background: #334155;
+}
+
+.dark-theme .nav-item-box.success {
+    background: #059669;
+    border-color: #059669;
+}
+
+.dark-theme .nav-item-box.danger {
+    background: #7f1d1d;
+    color: #fca5a5;
+    border-color: #991b1b;
+}
+
+.dark-theme .legend {
+    color: #64748b;
+}
+
+.dark-theme .b-ok {
+    background: #059669;
+}
+
+.dark-theme .b-no {
+    background: #7f1d1d;
+    border-color: #991b1b;
+}

@@ -19,9 +19,14 @@ export const getUnreadCount = (receiverId, receiverType = 'TEACHER') => {
   return request.get(`/message/${receiverType}/${receiverId}/unread-count`)
 }
 
+export const sendSystemMessage = (data) => {
+  return request.post('/message/system', data)
+}
+
 export default {
   getMessageList,
   markAsRead,
   deleteMessage,
-  getUnreadCount
+  getUnreadCount,
+  sendSystemMessage
 }

@@ -33,10 +33,22 @@ export function useCourseManagement() {
         totalStudents: 0
     })
 
+    // 存储键，用于记忆分页设置
+    const PAGE_SIZE_STORAGE_KEY = 'teacher_course_page_size'
+
+    // 从localStorage获取保存的每页条数，默认为2
+    const getSavedPageSize = () => {
+        const saved = localStorage.getItem(PAGE_SIZE_STORAGE_KEY)
+        if (saved && [2, 4, 6, 8].includes(parseInt(saved))) {
+            return parseInt(saved)
+        }
+        return 2 // 默认每页2条
+    }
+
     // 分页配置
     const pagination = ref({
         currentPage: 1,
-        pageSize: 3, // 默认每页显示3条
+        pageSize: getSavedPageSize(),
         total: 0
     })
 
@@ -136,6 +148,8 @@ export function useCourseManagement() {
     const handleSizeChange = (size) => {
         pagination.value.pageSize = size
         pagination.value.currentPage = 1
+        // 保存用户选择到localStorage
+        localStorage.setItem(PAGE_SIZE_STORAGE_KEY, size.toString())
         applyFilterAndPagination()
     }
 

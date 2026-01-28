@@ -15,6 +15,7 @@ export function useExamQuestions(examId) {
     const bankPage = ref(1)
     const bankTotal = ref(0)
     const selectedBankQuestions = ref([])
+    const loadingBank = ref(false)
 
     // Create/Edit Dialog
     const createDialogVisible = ref(false)
@@ -41,14 +42,87 @@ export function useExamQuestions(examId) {
     const totalScore = computed(() => questions.value.reduce((sum, q) => sum + (q.score || 0), 0))
 
     const loadExamData = async () => {
+        console.log('Start loading exam data. ID:', examId)
         try {
             const res = await getExamDetail(examId)
-            if (res.success && res.data) {
-                exam.value = res.data.exam || {}
-                questions.value = (res.data.questions || []).map(q => ({ ...q }))
+            console.log('getExamDetail Response:', res)
+
+            // 尝试多种可能的成功状态判断
+            const isSuccess = res.success === true || res.code === 200 || res.code === '200' || res.status === 200
+
+            if (isSuccess && res.data) {
+                // 兼容不同的后端返回结构
+                let rawQuestions = []
+                let examData = {}
+
+                // 情况1: data.exam + data.questions
+                if (res.data.exam) {
+                    examData = res.data.exam
+                    rawQuestions = res.data.questions || res.data.exam.questions || []
+                }
+                // 情况2: data 直接就是 exam 对象
+                else {
+                    examData = res.data
+                    // 尝试多种可能的字段名
+                    rawQuestions = res.data.questions ||
+                        res.data.questionList ||
+                        res.data.examQuestions ||
+                        res.data.question ||
+                        []
+                }
+
+                exam.value = examData
+                console.log('Parsed Exam Data:', exam.value)
+                console.log('Raw Questions:', rawQuestions)
+
+                // 确保 rawQuestions 是数组
+                if (!Array.isArray(rawQuestions)) {
+                    console.warn('rawQuestions is not an array:', rawQuestions)
+                    rawQuestions = []
+                }
+
+                // 标准化题目字段
+                questions.value = rawQuestions.map(q => {
+                    const standardized = {
+                        ...q,
+                        questionContent: q.questionContent || q.content || q.questionText || '',
+                        questionType: q.questionType || q.type || 'SINGLE',
+                        questionOptions: q.questionOptions || q.options || null,
+                        score: Number(q.score) || 5,
+                        answer: q.answer || q.correctAnswer,
+                        analysis: q.analysis || q.explanation || ''
+                    }
+                    console.log('Standardized question:', standardized)
+                    return standardized
+                })
+                console.log('Parsed Questions Count:', questions.value.length)
+                console.log('Parsed Questions:', questions.value)
+
+                // 确保有 courseId 后再加载题库
+                if (exam.value.courseId) {
+                    console.log('Found courseId:', exam.value.courseId, ' - searching bank...')
+                    await searchBank()
+                } else {
+                    console.warn('No courseId found in exam data, cannot load bank.')
+                    console.warn('Exam data:', exam.value)
+                    ElMessage.warning('考试未关联课程，无法加载题库')
+                }
+            } else {
+                console.error('API returned failure or no data', res)
+                console.error('Response structure:', {
+                    success: res.success,
+                    code: res.code,
+                    status: res.status,
+                    message: res.message,
+                    hasData: !!res.data
+                })
+                ElMessage.error(res.message || '获取考试详情失败')
             }
         } catch (e) {
-            ElMessage.error('加载失败')
+            console.error('Failed to load exam - Full Error:', e)
+            console.error('Error message:', e.message)
+            console.error('Error stack:', e.stack)
+            ElMessage.error('加载失败：' + (e.message || '请检查网络或重试'))
         }
     }
 
@@ -74,20 +148,68 @@ export function useExamQuestions(examId) {
     }
 
     const searchBank = async () => {
+        if (!exam.value.courseId) {
+            console.warn('Cannot search bank: courseId is missing from exam data')
+            return
+        }
+        loadingBank.value = true
+        console.log('Searching bank with params:', {
+            courseId: exam.value.courseId,
+            keyword: bankFilter.value.keyword
+        })
         try {
             const params = {
                 pageNum: bankPage.value,
-                pageSize: 10,
+                pageSize: 50, // 增加加载数量
                 courseId: exam.value.courseId,
                 type: bankFilter.value.type,
                 keyword: bankFilter.value.keyword
             }
             const res = await getQuestionList(params)
-            if (res.success) {
-                bankQuestions.value = res.data.records
-                bankTotal.value = res.data.total
+            console.log('Bank Search Response:', res)
+            if (res.success && res.data) {
+                bankQuestions.value = res.data.records || []
+                bankTotal.value = res.data.total || 0
             }
-        } catch (e) { }
+        } catch (e) {
+            console.error('Search Bank Error:', e)
+        } finally {
+            loadingBank.value = false
+        }
+    }
+
+    const addFromBank = (bq) => {
+        let opts = bq.options
+        if (typeof opts === 'object' && opts !== null) opts = JSON.stringify(opts)
+
+        const newQ = {
+            examId: examId,
+            questionId: bq.id,
+            questionType: bq.type,
+            questionContent: bq.content,
+            questionOptions: opts,
+            correctAnswer: bq.answer,
+            score: 5,
+            analysis: bq.analysis
+        }
+
+        // 检查是否已存在
+        if (questions.value.some(q => (q.questionId === bq.id) || (q.questionContent === bq.content))) {
+            return ElMessage.warning('该试题已在卷中')
+        }
+
+        questions.value.push(newQ)
+        ElMessage.success('已添加到试卷')
+    }
+
+    const formatOptionsPreview = (optsJson) => {
+        try {
+            const opts = typeof optsJson === 'string' ? JSON.parse(optsJson) : optsJson
+            if (!Array.isArray(opts)) return ''
+            return opts.map((o, i) => `${String.fromCharCode(65 + i)}: ${o.text}`).join(' | ')
+        } catch (e) {
+            return ''
+        }
     }
 
     const openBankDialog = () => {
@@ -253,6 +375,12 @@ export function useExamQuestions(examId) {
         if (aiForm.value.selectedTypes.length === 0) return ElMessage.warning('请选择至少一种题型')
 
         aiLoading.value = true
+        console.log('开始AI生成题目，参数:', {
+            courseName: aiForm.value.courseName,
+            questionCount: aiForm.value.questionCount,
+            selectedTypes: aiForm.value.selectedTypes
+        })
+
         try {
             const params = {
                 courseName: aiForm.value.courseName,
@@ -263,25 +391,71 @@ export function useExamQuestions(examId) {
             }
 
             const res = await generateQuestionsWithAi(params)
-            if (res.success && res.data) {
-                const aiQs = res.data.map(q => ({
-                    examId: examId,
-                    questionType: q.questionType,
-                    questionContent: q.questionContent,
-                    questionOptions: q.questionOptions,
-                    correctAnswer: q.correctAnswer,
-                    score: q.score || 5,
-                    analysis: q.analysis
-                }))
+            console.log('AI生成响应:', res)
+
+            // 检查多种可能的成功状态
+            const isSuccess = res.success === true || res.code === 200 || res.code === '200'
+
+            if (isSuccess && res.data) {
+                // 确保 res.data 是数组
+                let aiQuestions = Array.isArray(res.data) ? res.data : [res.data]
+                console.log('AI生成的题目数组:', aiQuestions)
+
+                // 标准化AI生成的题目格式
+                const aiQs = aiQuestions.map((q, index) => {
+                    console.log(`标准化第 ${index + 1} 题:`, q)
+
+                    // 处理选项 - 确保是字符串
+                    let optionsStr = null
+                    if (q.questionOptions || q.options) {
+                        const opts = q.questionOptions || q.options
+                        optionsStr = typeof opts === 'string' ? opts : JSON.stringify(opts)
+                    }
+
+                    const standardized = {
+                        examId: examId,
+                        questionType: q.questionType || q.type || 'SINGLE',
+                        questionContent: q.questionContent || q.content || q.questionText || '',
+                        questionOptions: optionsStr,
+                        answer: q.answer || q.correctAnswer || '',
+                        score: Number(q.score) || 5,
+                        analysis: q.analysis || q.explanation || ''
+                    }
+
+                    console.log(`标准化后的题目 ${index + 1}:`, standardized)
+                    return standardized
+                })
+
+                // 添加到现有题目列表（不是替换）
+                const beforeCount = questions.value.length
                 questions.value.push(...aiQs)
-                ElMessage.success(`AI 已成功生成 ${aiQs.length} 道题目`)
+                const afterCount = questions.value.length
+
+                console.log(`添加前题目数: ${beforeCount}, 添加后题目数: ${afterCount}`)
+                console.log('当前所有题目:', questions.value)
+
+                ElMessage.success(`AI 已成功生成并添加 ${aiQs.length} 道题目到试卷`)
                 aiDialogVisible.value = false
             } else {
+                console.error('AI生成失败，响应:', res)
                 ElMessage.error(res.message || 'AI 生成失败')
             }
         } catch (e) {
-            console.error(e)
-            ElMessage.error('AI 服务暂时不可用，请稍后再试')
+            console.error('AI生成异常:', e)
+            console.error('错误详情:', e.message, e.stack)
+
+            // 特殊处理超时错误
+            if (e.code === 'ECONNABORTED' || e.message.includes('timeout')) {
+                ElMessage.warning({
+                    message: 'AI生成超时，但题目可能已在后台生成完成，请点击"刷新"按钮或稍后刷新页面查看',
+                    duration: 5000,
+                    showClose: true
+                })
+            } else if (e.message.includes('Network Error')) {
+                ElMessage.error('网络连接失败，请检查网络连接或后端服务是否正常')
+            } else {
+                ElMessage.error('AI 服务暂时不可用：' + (e.message || '请稍后再试'))
+            }
         } finally {
             aiLoading.value = false
         }
@@ -316,9 +490,20 @@ export function useExamQuestions(examId) {
         return false
     }
 
-    onMounted(() => {
-        if (examId) loadExamData()
+    onMounted(async () => {
+        if (examId) {
+            await loadExamData()
+        }
     })
+
+    const toggleCorrect = (idx) => {
+        if (form.value.questionType === 'SINGLE') {
+            form.value.options.forEach((o, i) => o.isCorrect = (i === idx))
+            form.value.correctIndex = idx
+        } else if (form.value.questionType === 'MULTIPLE') {
+            form.value.options[idx].isCorrect = !form.value.options[idx].isCorrect
+        }
+    }
 
     return {
         exam,
@@ -354,6 +539,10 @@ export function useExamQuestions(examId) {
         getTypeLabel,
         getDiffLabel,
         parseOptions,
-        isCorrect
+        isCorrect,
+        loadingBank,
+        addFromBank,
+        formatOptionsPreview,
+        toggleCorrect
     }
 }

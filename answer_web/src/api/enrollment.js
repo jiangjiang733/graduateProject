@@ -38,20 +38,37 @@ export const getTeacherEnrollments = (teacherId) => {
 }
 
 /**
- * 教师审核报名申请
+ * 审核报名申请（教师或学生）
  * @param {number} enrollmentId - 报名ID
- * @param {string} teacherId - 教师ID
- * @param {string} status - 状态 (approved/rejected)
+ * @param {string} statusOrTeacherId - 状态或教师ID
+ * @param {string} statusOrReason - 状态或原因
  * @param {string} reason - 原因（拒绝时需要）
  * @returns {Promise}
  */
-export const reviewEnrollment = (enrollmentId, teacherId, status, reason = '') => {
+export const reviewEnrollment = (enrollmentId, statusOrTeacherId, statusOrReason = '', reason = '') => {
+  // Flexible parameter handling
+  // If called with 2-3 params: (enrollmentId, status, reason?) - Student review
+  // If called with 4 params: (enrollmentId, teacherId, status, reason) - Teacher review
+
+  let teacherId = null
+  let status = statusOrTeacherId
+  let finalReason = statusOrReason
+
+  // Check if second parameter looks like a status (approved/rejected) or teacherId (number/string ID)
+  if (statusOrReason && (statusOrReason === 'approved' || statusOrReason === 'rejected' || statusOrReason === 'pending')) {
+    // 4 parameter call: (enrollmentId, teacherId, status, reason)
+    teacherId = statusOrTeacherId
+    status = statusOrReason
+    finalReason = reason
+  }
+  // else: 2-3 parameter call, statusOrTeacherId is already the status
+
+  const config = teacherId ? { params: { teacherId } } : {}
+
   return request.put(`/enrollment/${enrollmentId}/review`, {
     status,
-    reason
-  }, {
-    params: { teacherId }
-  })
+    reason: finalReason
+  }, config)
 }
 
 /**
@@ -84,6 +101,20 @@ export const directEnroll = (studentId, courseId) => {
   })
 }
 
+/**
+ * 学生审核报名邀请（接受/拒绝教师邀请）
+ * @param {number} enrollmentId - 报名ID
+ * @param {string} status - 状态 (approved/rejected)
+ * @param {string} reason - 原因（拒绝时需要）
+ * @returns {Promise}
+ */
+export const studentReviewEnrollment = (enrollmentId, status, reason = '') => {
+  return request.put(`/enrollment/${enrollmentId}/student-review`, {
+    status,
+    reason
+  })
+}
+
 export default {
   applyEnrollment,
   getStudentEnrollments,
@@ -92,5 +123,6 @@ export default {
   reviewEnrollment,
   cancelEnrollment,
   checkEnrollmentStatus,
-  directEnroll
+  directEnroll,
+  studentReviewEnrollment
 }

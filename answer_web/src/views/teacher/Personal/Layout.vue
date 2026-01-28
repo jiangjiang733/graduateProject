@@ -1,77 +1,61 @@
 <template>
   <div class="modern-layout">
-    <el-container class="layout-container">
-      <el-header class="top-header glass-panel">
-        <div class="header-inner">
-          <div class="brand" @click="$router.push('/teacher/dashboard')">
-            <div class="logo-box">
-              <el-icon :size="20"><Reading /></el-icon>
-            </div>
-            <h1 class="brand-text">智慧课堂</h1>
-          </div>
-          <nav class="top-nav">
-            <div 
-              v-for="item in menuItems" 
-              :key="item.path"
-              class="nav-item"
-              :class="{ active: isActive(item.path) }"
-              @click="navigate(item.path)"
-            >
-              <el-icon :size="16" class="nav-icon"><component :is="item.icon" /></el-icon>
-              <span class="nav-label">{{ item.label }}</span>
-            </div>
-          </nav>
-
-          <!-- 右侧操作区 -->
-          <div class="header-actions">
-            <!-- 搜索框 -->
-            <div class="search-box glass-input">
-              <el-icon class="search-icon"><Search /></el-icon>
-              <input type="text" placeholder="快速查找..." class="search-input" />
-            </div>
-
-            <!-- 通知 / 答疑入口 -->
-            <div class="action-btn" @click="$router.push('/teacher/messages')" title="消息与答疑">
-              <el-badge :value="teacherStore.unreadCount" :hidden="teacherStore.unreadCount === 0" class="notification-badge">
-                <el-icon :size="20"><Bell /></el-icon>
-              </el-badge>
-            </div>
-
-            <!-- 用户下拉 -->
-            <el-dropdown trigger="click" @command="handleUserCommand">
-              <div class="user-profile">
-                <el-avatar :size="36" :src="teacherStore.avatarUrl" class="user-avatar">
-                   {{ teacherStore.teacherName?.charAt(0) || '教' }}
-                </el-avatar>
-                <div class="user-info">
-                  <span class="user-name">{{ teacherStore.teacherName }}</span>
-                  <el-icon class="el-icon--right"><ArrowDown /></el-icon>
-                </div>
-              </div>
-              <template #dropdown>
-                <el-dropdown-menu class="modern-dropdown">
-                  <el-dropdown-item command="profile">
-                    <el-icon><User /></el-icon>个人中心
-                  </el-dropdown-item>
-                  <el-dropdown-item command="settings">
-                    <el-icon><Setting /></el-icon>系统设置
-                  </el-dropdown-item>
-                  <el-dropdown-item divided command="logout">
-                    <el-icon><SwitchButton /></el-icon>退出登录
-                  </el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
+    <div class="layout-wrapper">
+      <!-- 侧边栏 -->
+      <aside class="sidebar">
+        <div class="sidebar-header cursor-pointer" @click="navigate('/teacher/profile')">
+          <el-avatar :size="64" :src="teacherStore.avatarUrl" class="user-avatar transition-all">
+            {{ teacherStore.teacherName?.charAt(0) || '教' }}
+          </el-avatar>
+          <div class="user-meta">
+            <h2 class="user-name">{{ teacherStore.teacherName }}</h2>
+            <span class="user-role">教师</span>
           </div>
         </div>
-      </el-header>
 
-      <!-- 主内容区域 -->
-      <el-main class="main-content">
-        <!-- 页面标题/面包屑 -->
+        <nav class="side-nav">
+          <div 
+            v-for="item in menuItems" 
+            :key="item.path"
+            class="nav-item"
+            :class="{ active: isActive(item.path) }"
+            @click="navigate(item.path)"
+          >
+            <div class="nav-item-content">
+              <el-badge 
+                v-if="item.label === '消息中心'" 
+                :value="teacherStore.unreadCount" 
+                :hidden="teacherStore.unreadCount <= 0"
+                class="menu-badge"
+              >
+                <el-icon :size="20" class="nav-icon"><component :is="item.icon" /></el-icon>
+              </el-badge>
+              <el-icon v-else :size="20" class="nav-icon"><component :is="item.icon" /></el-icon>
+              <span class="nav-label">{{ item.label }}</span>
+            </div>
+          </div>
+        </nav>
 
+        <div class="sidebar-footer">
+          <div class="nav-item logout" @click="handleUserCommand('logout')">
+            <el-icon :size="20"><SwitchButton /></el-icon>
+            <span class="nav-label">退出系统</span>
+          </div>
+        </div>
+      </aside>
 
-        <!-- 路由视图 -->
+      <!-- 全局主题切换按钮 (右上角固定) -->
+      <div class="global-theme-toggle" @click="settingsStore.theme = settingsStore.theme === 'dark' ? 'light' : 'dark'">
+        <el-tooltip :content="settingsStore.theme === 'dark' ? '切换浅色模式' : '切换深色模式'" placement="left">
+          <div class="toggle-btn">
+            <el-icon v-if="settingsStore.theme === 'dark'"><Sunny /></el-icon>
+            <el-icon v-else><Moon /></el-icon>
+          </div>
+        </el-tooltip>
+      </div>
+
+      <!-- 主内容区 -->
+      <main class="main-wrapper">
         <div class="content-view animate-slide-up">
           <router-view v-slot="{ Component }">
             <transition name="fade-slide" mode="out-in">
@@ -79,11 +63,11 @@
             </transition>
           </router-view>
         </div>
-      </el-main>
+      </main>
+    </div>
 
-      <!-- 联系工作人员 -->
-      <CustomerService userType="TEACHER" :userId="teacherStore.teacherId" />
-    </el-container>
+    <!-- 联系工作人员 -->
+    <CustomerService userType="TEACHER" :userId="teacherStore.teacherId" />
   </div>
 </template>
 
@@ -91,14 +75,14 @@
 import {
   Reading, Odometer, User, EditPen, ChatDotRound, 
   Setting, ArrowRight, Search, Bell, Plus, ArrowDown, SwitchButton,
-  Collection, List, Folder
+  Collection, List, Folder, UserFilled, Checked, Sunny, Moon
 } from '@element-plus/icons-vue'
 import { useTeacherLayout } from '@/assets/js/teacher/layout.js'
-import '@/assets/css/teacher/modern-theme.css'
 import CustomerService from '@/components/CustomerService.vue'
 
 const {
   teacherStore,
+  settingsStore,
   menuItems,
   isActive,
   navigate,

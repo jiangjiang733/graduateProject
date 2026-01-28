@@ -2,6 +2,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getCourseList } from '@/api/course.js'
 import { getCourseEnrollments, reviewEnrollment, getTeacherEnrollments, cancelEnrollment, directEnroll } from '@/api/enrollment.js'
+import { getProfile } from '@/api/student.js'
 
 export function useEnrollmentManagement() {
     const loading = ref(false)
@@ -113,11 +114,29 @@ export function useEnrollmentManagement() {
             }
 
             if (response.success) {
-                enrollments.value = (response.data || []).map(item => ({
-                    ...item,
-                    approving: false,
-                    rejecting: false
+                const rawEnrollments = (response.data || [])
+
+                // 并行获取学生详细信息以修正名称和头像显示
+                const detailedEnrollments = await Promise.all(rawEnrollments.map(async (item) => {
+                    let enrichedItem = {
+                        ...item,
+                        approving: false,
+                        rejecting: false
+                    }
+                    try {
+                        const profileRes = await getProfile(item.studentId)
+                        if (profileRes.success && profileRes.data) {
+                            const profile = profileRes.data
+                            enrichedItem.studentName = profile.studentsUsername || profile.studentName || item.studentName
+                            enrichedItem.studentAvatar = profile.studentsHead || profile.studentAvatar || item.studentAvatar
+                        }
+                    } catch (e) {
+                        console.warn('Failed to fetch profile for student ' + item.studentId)
+                    }
+                    return enrichedItem
                 }))
+
+                enrollments.value = detailedEnrollments
             } else {
                 enrollments.value = []
             }

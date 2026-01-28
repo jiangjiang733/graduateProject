@@ -299,7 +299,6 @@ export function useCourseLearn() {
     const handleChapterClick = async (data) => {
         // 如果是文件夹类型，不加载内容
         if (data.chapterType === 'FOLDER') {
-            ElMessage.info('请选择具体的章节内容')
             return
         }
 
@@ -313,7 +312,6 @@ export function useCourseLearn() {
         try {
             chapterLoading.value = true
             currentChapter.value = data
-
             // 更新路由参数，不保留历史记录（以免后退时死循环）
             router.replace({
                 query: { ...route.query, chapterId: data.chapterId }

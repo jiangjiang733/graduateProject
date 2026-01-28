@@ -11,6 +11,7 @@ export function useQuestionBank() {
     const dialogVisible = ref(false)
     const isEdit = ref(false)
     const pagination = ref({ current: 1, size: 6, total: 0 })
+    const currentDate = ref(new Date().toLocaleDateString())
 
     const form = ref({
         courseId: '',
@@ -151,6 +152,15 @@ export function useQuestionBank() {
         loadQuestions()
     })
 
+    const toggleCorrect = (idx) => {
+        if (form.value.type === 'SINGLE') {
+            form.value.options.forEach((o, i) => o.isCorrect = (i === idx))
+            form.value.correctIndex = idx
+        } else if (form.value.type === 'MULTIPLE') {
+            form.value.options[idx].isCorrect = !form.value.options[idx].isCorrect
+        }
+    }
+
     return {
         filter,
         questions,
@@ -171,6 +181,8 @@ export function useQuestionBank() {
         removeOption,
         getTypeLabel,
         getCourseName,
-        handleBatchImport
+        handleBatchImport,
+        currentDate,
+        toggleCorrect
     }
 }

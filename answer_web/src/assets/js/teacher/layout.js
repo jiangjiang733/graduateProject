@@ -1,6 +1,7 @@
 import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useTeacherStore } from '@/stores/teacher.js'
+import { useSettingsStore } from '@/stores/settings.js'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getUnreadCount } from '@/api/message.js'
 import { getProfile } from '@/api/teacher.js'
@@ -9,6 +10,7 @@ export function useTeacherLayout() {
     const route = useRoute()
     const router = useRouter()
     const teacherStore = useTeacherStore()
+    const settingsStore = useSettingsStore()
 
     const currentRouteName = computed(() => route.meta.title || '主页')
     const showQuickCreate = computed(() => route.path === '/teacher/dashboard' || route.path === '/teacher/courses')
@@ -19,7 +21,9 @@ export function useTeacherLayout() {
         { path: '/teacher/exams', label: '考试管理', icon: 'Collection' },
         { path: '/teacher/homework', label: '作业管理', icon: 'EditPen' },
         { path: '/teacher/questions', label: '题库', icon: 'List' },
-        { path: '/teacher/enrollments', label: '报名管理', icon: 'User' },
+        { path: '/teacher/enrollments', label: '报名中心', icon: 'Checked' },
+        { path: '/teacher/messages', label: '消息中心', icon: 'Bell' },
+        { path: '/teacher/profile', label: '个人中心', icon: 'UserFilled' },
     ]
 
     const isActive = (path) => {
@@ -37,6 +41,8 @@ export function useTeacherLayout() {
                 cancelButtonText: '取消',
                 type: 'warning'
             }).then(() => {
+                // 重置主题为默认亮色
+                settingsStore.resetToDefault()
                 teacherStore.clearTeacherInfo()
                 ElMessage.success('已退出登录')
                 router.push('/')
@@ -75,15 +81,27 @@ export function useTeacherLayout() {
         }
     }
 
-    onMounted(() => {
-        // 初始拉取未读消息数
+    onMounted(async () => {
+        // 注意: initSettings() 已由 App.vue 在 onMounted 中调用
+        // 这里只刷新当前用户的设置，避免重复初始化
+        settingsStore.refreshForCurrentUser()
+
+        // 初始化时加载必要数据，避免需要多次刷新
         if (teacherStore.teacherId) {
-            fetchUnreadCount()
+            console.log('[TeacherLayout] 加载教师数据，ID:', teacherStore.teacherId)
+            // 并行加载教师信息和未读消息，提高加载效率
+            await Promise.all([
+                fetchProfile(),
+                fetchUnreadCount()
+            ])
+        } else {
+            console.warn('[TeacherLayout] teacherId 不存在，跳过数据加载')
         }
     })
 
     return {
         teacherStore,
+        settingsStore,
         menuItems,
         isActive,
         navigate,

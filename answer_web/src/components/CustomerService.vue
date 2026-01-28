@@ -233,7 +233,8 @@ watch(() => props.userId, (newVal) => {
 
 onMounted(() => {
   loadUnread()
-  pollTimer.value = setInterval(loadUnread, 5000)
+  // 优化轮询间隔为10秒，减少不必要的请求
+  pollTimer.value = setInterval(loadUnread, 10000)
 })
 
 onUnmounted(() => {

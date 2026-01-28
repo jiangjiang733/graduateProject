@@ -28,7 +28,14 @@
 
           <!-- 右侧操作区 -->
           <div class="header-actions">
-            <!-- 搜索框 -->
+            <!-- 主题切换按钮 -->
+            <div class="action-btn theme-toggle" @click="toggleTheme" :title="settingsStore.theme === 'dark' ? '切换浅色模式' : '切换深色模式'">
+              <el-icon :size="20">
+                <Sunny v-if="settingsStore.theme === 'dark'" />
+                <Moon v-else />
+              </el-icon>
+            </div>
+            
             <!-- 通知 / 答疑入口 -->
             <div class="action-btn" @click="$router.push('/student/messages')" title="我的消息">
               <el-badge :value="2" class="notification-badge" is-dot>
@@ -93,15 +100,21 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import '@/assets/css/teacher/modern-theme.css' // Reuse general modern styles
 import {
   School, HomeFilled, Reading, EditPen, Collection, ChatDotRound,
-  Search, ArrowDown, User, Setting, SwitchButton, ArrowRight, Bell
+  Search, ArrowDown, User, Setting, SwitchButton, ArrowRight, Bell,
+  Sunny, Moon
 } from '@element-plus/icons-vue'
 
 import { useUserInfo } from '@/stores/user.js'
+import { useSettingsStore } from '@/stores/settings.js'
 import CustomerService from '@/components/CustomerService.vue'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserInfo()
+const settingsStore = useSettingsStore()
+
+// 注意: initSettings() 已由 App.vue 在 onMounted 中调用
+// 这里不再重复调用，避免竞态条件
 
 const currentRouteName = computed(() => route.meta.title || '学生中心')
 
@@ -120,6 +133,11 @@ const navigate = (path) => {
   router.push(path)
 }
 
+// 切换主题
+const toggleTheme = () => {
+  settingsStore.theme = settingsStore.theme === 'dark' ? 'light' : 'dark'
+}
+
 const handleCommand = (command) => {
   if (command === 'logout') {
     ElMessageBox.confirm('确定要退出登录吗？', '提示', {
@@ -127,6 +145,8 @@ const handleCommand = (command) => {
       cancelButtonText: '取消',
       type: 'warning'
     }).then(() => {
+      // 重置主题为默认亮色
+      settingsStore.resetToDefault()
       localStorage.clear()
       router.push('/')
       ElMessage.success('已退出登录')
