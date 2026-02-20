@@ -1,5 +1,5 @@
 .course-form-page {
-    padding: 32px;
+    padding: 20px 32px;
     background-color: #f4f7fa;
     min-height: 100vh;
 }
@@ -8,7 +8,7 @@
     display: flex;
     align-items: center;
     gap: 20px;
-    margin-bottom: 32px;
+    margin-bottom: 20px;
 }
 
 .page-title {
@@ -53,6 +53,235 @@
 .basic-info-container {
     max-width: 900px;
     margin: 0 auto;
+}
+
+/* 步骤指示器容器 - 水平布局 */
+.steps-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 24px 0;
+    gap: 0;
+}
+
+.steps-indicator {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px 0;
+    position: relative;
+}
+
+.step-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    flex: 0 0 auto;
+    min-width: 140px;
+}
+
+.step-circle {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #e2e8f0;
+    border: 3px solid #cbd5e1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    color: #64748b;
+    z-index: 2;
+    position: relative;
+    transition: all 0.3s;
+}
+
+.step-item.active .step-circle {
+    background: #10b981;
+    border-color: #10b981;
+    color: white;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
+}
+
+.step-item.completed .step-circle {
+    background: #10b981;
+    border-color: #10b981;
+    color: white;
+}
+
+.step-label {
+    margin-top: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #94a3b8;
+    text-align: center;
+    transition: color 0.3s;
+}
+
+.step-item.active .step-label {
+    color: #10b981;
+}
+
+.step-item.completed .step-label {
+    color: #10b981;
+}
+
+.step-line {
+    position: absolute;
+    top: 24px;
+    left: calc(50% + 24px);
+    width: 140px;
+    height: 3px;
+    background: #e2e8f0;
+    z-index: 1;
+    transform: translateX(0);
+}
+
+.step-item.completed .step-line {
+    background: #10b981;
+}
+
+/* 步骤内容区域 */
+.course-form-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px;
+}
+
+.step-panel {
+    min-height: 400px;
+}
+
+/* 可点击的步骤项 */
+.step-item.clickable {
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.step-item.clickable:hover .step-circle {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.step-item.clickable:hover .step-label {
+    color: #10b981;
+}
+
+.panel-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 32px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #f1f5f9;
+}
+
+.panel-header h3 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.textarea-tip {
+    font-size: 13px;
+    color: #64748b;
+    margin-bottom: 8px;
+}
+
+/* 上传器容器 */
+.uploader-container {
+    margin-top: 8px;
+}
+
+.uploader-container .cover-uploader {
+    width: 100%;
+    max-width: 600px;
+    height: 200px;
+    border: 2px dashed #cbd5e1;
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s;
+    background: #f8fafc;
+}
+
+.uploader-container .cover-uploader:hover {
+    border-color: #10b981;
+    background: #f0fdf4;
+}
+
+.uploader-container .uploader-placeholder {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #94a3b8;
+}
+
+.upload-icon {
+    font-size: 40px;
+    margin-bottom: 12px;
+    color: #cbd5e1;
+}
+
+.upload-text {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #64748b;
+}
+
+.upload-hint {
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+/* 底部操作区 */
+.step-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 32px 48px;
+    border-top: 1px solid #e2e8f0;
+    margin-top: 40px;
+}
+
+.footer-btns-right {
+    display: flex;
+    gap: 12px;
+}
+
+.footer-btn-cancel {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #64748b;
+    border-color: #cbd5e1;
+}
+
+.footer-btn-prev {
+    padding: 0 24px;
+    height: 40px;
+}
+
+.footer-btn-next,
+.footer-btn-submit {
+    padding: 0 32px;
+    height: 40px;
+    background: #10b981;
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.footer-btn-next:hover,
+.footer-btn-submit:hover {
+    background: #059669;
 }
 
 .form-row {
@@ -321,9 +550,159 @@
     width: 100%;
 }
 
+.schedule-management {
+    padding: 24px;
+}
+
+.schedule-management .section-header {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 24px;
+}
+
+.schedule-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.schedule-item-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: #f9fafb;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    transition: all 0.2s;
+}
+
+.schedule-item-card:hover {
+    border-color: #10b981;
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
+}
+
+.schedule-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.schedule-time {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+}
+
+.time-range {
+    font-weight: 500;
+    color: #374151;
+}
+
+.week-range {
+    color: #6b7280;
+    font-size: 13px;
+}
+
+.schedule-location {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #6b7280;
+    font-size: 13px;
+}
+
+.schedule-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* Chapter Management Section (Step 5) */
+.chapter-management {
+    padding: 24px;
+}
+
+.chapter-management .section-header {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 24px;
+}
+
+.chapter-tree-container {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 20px;
+    min-height: 300px;
+}
+
+.custom-tree-node {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 14px;
+    padding: 4px 8px;
+    width: 100%;
+}
+
+.node-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.node-title {
+    font-weight: 500;
+    color: #1f2937;
+}
+
+.node-tag {
+    margin-left: 8px;
+    transform: scale(0.9);
+}
+
+.node-icon {
+    font-size: 16px;
+}
+
+.node-icon.folder {
+    color: #f59e0b;
+}
+
+.node-icon.video {
+    color: #10b981;
+}
+
+.node-icon.pdf {
+    color: #ef4444;
+}
+
+.node-icon.mixed {
+    color: #3b82f6;
+}
+
+.node-actions {
+    display: flex;
+    gap: 4px;
+}
+
 /* Media (Video/PDF) */
 .media-section {
     margin-bottom: 32px;
+}
+
+.premium-form .el-form-item {
+    margin-bottom: 24px;
+}
+
+.form-hint {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #6b7280;
+    line-height: 1.5;
 }
 
 .media-wrapper {
@@ -586,4 +965,102 @@ html.dark .sidebar-search {
 html.dark .pdf-header {
     background-color: #1f2937 !important;
     border-color: #374151 !important;
+}
+
+/* 暗黑模式 - 步骤指示器 */
+html.dark .step-circle {
+    background: #374151;
+    border-color: #4b5563;
+    color: #9ca3af;
+}
+
+html.dark .step-item.active .step-circle {
+    background: #10b981;
+    border-color: #10b981;
+    color: white;
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.3);
+}
+
+html.dark .step-item.completed .step-circle {
+    background: #10b981;
+    border-color: #10b981;
+}
+
+html.dark .step-label {
+    color: #6b7280;
+}
+
+html.dark .step-item.active .step-label {
+    color: #10b981;
+}
+
+html.dark .step-item.completed .step-label {
+    color: #10b981;
+}
+
+html.dark .step-line {
+    background: #374151;
+}
+
+html.dark .step-item.completed .step-line {
+    background: #10b981;
+}
+
+/* 暗黑模式 - 步骤内容 */
+html.dark .panel-header {
+    border-bottom-color: #374151;
+}
+
+html.dark .panel-header h3 {
+    color: #f3f4f6;
+}
+
+html.dark .textarea-tip {
+    color: #9ca3af;
+}
+
+/* 暗黑模式 - 上传器 */
+html.dark .uploader-container .cover-uploader {
+    background: #1f2937;
+    border-color: #374151;
+}
+
+html.dark .uploader-container .cover-uploader:hover {
+    border-color: #10b981;
+    background: #111827;
+}
+
+html.dark .upload-text,
+html.dark .upload-hint {
+    color: #9ca3af;
+}
+
+html.dark .upload-icon {
+    color: #4b5563;
+}
+
+/* 暗黑模式 - 底部按钮 */
+html.dark .step-footer {
+    border-top-color: #374151;
+}
+
+html.dark .footer-btn-cancel {
+    color: #9ca3af;
+    border-color: #4b5563;
+    background-color: #111827;
+}
+
+html.dark .footer-btn-cancel:hover {
+    background-color: #1f2937;
+    border-color: #6b7280;
+}
+
+html.dark .footer-btn-prev {
+    background-color: #374151;
+    border-color: #4b5563;
+    color: #e5e7eb;
+}
+
+html.dark .footer-btn-prev:hover {
+    background-color: #4b5563;
 }

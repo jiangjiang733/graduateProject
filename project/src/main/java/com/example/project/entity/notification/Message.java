@@ -45,4 +45,7 @@ public class Message implements Serializable {
 
     @TableField(exist = false)
     private String courseId;
+
+    @TableField(exist = false)
+    private String invitationStatus;
 }

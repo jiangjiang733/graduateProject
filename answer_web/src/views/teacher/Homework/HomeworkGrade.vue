@@ -43,9 +43,9 @@
               :class="{ active: currentSubmission?.studentReportId === sub.studentReportId, graded: sub.status === 2 }"
               @click="selectSubmission(sub)"
             >
-              <div class="student-avatar">
+              <el-avatar :size="40" :src="getStudentAvatarUrl(sub)" class="student-avatar">
                 {{ sub.studentName?.charAt(0) || 'S' }}
-              </div>
+              </el-avatar>
               <div class="student-info">
                 <div class="name-row">
                   <span class="name">{{ sub.studentName }}</span>
@@ -252,7 +252,8 @@ const {
   isCorrect,
   applyAutoScore,
   getQuestionTypeText,
-  getQuestionTypeTag
+  getQuestionTypeTag,
+  getStudentAvatarUrl
 } = useHomeworkGrade()
 </script>
 

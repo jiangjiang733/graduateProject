@@ -231,6 +231,45 @@
     margin-top: 4px;
 }
 
+.q-answer-preview {
+    margin-top: 10px;
+    font-size: 12px;
+    padding: 6px 10px;
+    background: #f0fdf4;
+    /* Emerald-50 light background */
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid #dcfce7;
+}
+
+.q-answer-preview .label {
+    color: #166534;
+    /* Emerald-800 */
+    font-weight: 600;
+    margin-right: 6px;
+}
+
+.q-answer-preview .value {
+    color: #059669;
+    /* Emerald-600 */
+    font-weight: 700;
+}
+
+/* 暗黑模式适配 */
+.dark-theme .q-answer-preview {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: rgba(16, 185, 129, 0.2);
+}
+
+.dark-theme .q-answer-preview .label {
+    color: #6ee7b7;
+}
+
+.dark-theme .q-answer-preview .value {
+    color: #10b981;
+}
+
 /* 右侧列表序号 */
 .q-num {
     width: 20px;

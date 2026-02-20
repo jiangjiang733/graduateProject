@@ -53,26 +53,20 @@ public class StudentUserServiceImpl implements StudentUserService {
             throw new RuntimeException("学生不存在");
         }
 
-        org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder passwordEncoder = new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
-
         String storedPassword = student.getStudentsPassword();
         boolean match = false;
         if (storedPassword != null) {
-            // 1. BCrypt
-            if (storedPassword.startsWith("$2a$")) {
-                match = passwordEncoder.matches(oldPassword, storedPassword);
-            }
-            // 2. AES
-            if (!match) {
-                try {
-                    String decrypted = AESUtil.decrypt(storedPassword);
-                    if (oldPassword.equals(decrypted)) {
-                        match = true;
-                    }
-                } catch (Exception e) {
+            // 1. 尝试AES解密验证
+            try {
+                String decrypted = AESUtil.decrypt(storedPassword);
+                if (oldPassword.equals(decrypted)) {
+                    match = true;
                 }
+            } catch (Exception e) {
+                // AES解密失败
             }
-            // 3. Plain text
+
+            // 2. 明文比对（兼容旧数据）
             if (!match && oldPassword.equals(storedPassword)) {
                 match = true;
             }
@@ -82,6 +76,7 @@ public class StudentUserServiceImpl implements StudentUserService {
             throw new RuntimeException("原密码错误");
         }
 
+        // 使用AES加密新密码
         student.setStudentsPassword(AESUtil.encrypt(newPassword));
         studentUserMapper.updateById(student);
     }

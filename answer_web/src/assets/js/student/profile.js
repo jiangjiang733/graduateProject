@@ -154,10 +154,14 @@ export function useStudentProfile() {
       const response = await uploadAvatarAPI(userStore.userId, options.file)
       if (response && response.data) {
         const newAvatarUrl = response.data
+        // Append timestamp to force update if the URL is the same (cache busting)
+        const updatedAvatar = `${newAvatarUrl}?t=${Date.now()}`
+
         userStore.setUserInfo({
-          studentHead: newAvatarUrl
+          studentHead: updatedAvatar
         })
-        studentInfo.value.studentsHead = newAvatarUrl
+        // Also update local ref
+        studentInfo.value.studentsHead = updatedAvatar
         ElMessage.success('头像更新成功')
       }
     } catch (error) {

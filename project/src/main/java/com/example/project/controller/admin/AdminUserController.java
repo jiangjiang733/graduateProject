@@ -50,9 +50,31 @@ public class AdminUserController {
         Page<Student> studentPage = studentUserMapper.selectPage(page, queryWrapper);
 
         List<Student> students = studentPage.getRecords();
+        // 处理密码显示：BCrypt无法解密，AES可以解密
         for (Student s : students) {
             if (StringUtils.hasText(s.getStudentsPassword())) {
-                s.setStudentsPassword(AESUtil.decrypt(s.getStudentsPassword()));
+                String pwd = s.getStudentsPassword();
+                // 判断是否是BCrypt加密（以$2a$、$2b$或$2y$开头）
+                if (pwd.startsWith("$2a$") || pwd.startsWith("$2b$") || pwd.startsWith("$2y$")) {
+                    s.setStudentsPassword("[BCrypt加密-无法查看]");
+                } else {
+                    // AES加密可以解密
+                    try {
+                        String decrypted = AESUtil.decrypt(pwd);
+                        if (decrypted != null && !decrypted.isEmpty()) {
+                            s.setStudentsPassword(decrypted);
+                        } else {
+                            // 显示原始密码的前几个字符以便诊断
+                            String preview = pwd.length() > 10 ? pwd.substring(0, 10) + "..." : pwd;
+                            s.setStudentsPassword("[解密失败: " + preview + "]");
+                        }
+                    } catch (Exception e) {
+                        String preview = pwd.length() > 10 ? pwd.substring(0, 10) + "..." : pwd;
+                        s.setStudentsPassword("[异常: " + preview + "]");
+                    }
+                }
+            } else {
+                s.setStudentsPassword("[空密码]");
             }
         }
 
@@ -72,7 +94,20 @@ public class AdminUserController {
     public Result<Student> getStudentDetail(@PathVariable Integer id) {
         Student student = studentUserMapper.selectById(id);
         if (student != null && StringUtils.hasText(student.getStudentsPassword())) {
-            student.setStudentsPassword(AESUtil.decrypt(student.getStudentsPassword()));
+            // 判断是否是BCrypt加密
+            if (student.getStudentsPassword().startsWith("$2a$") ||
+                    student.getStudentsPassword().startsWith("$2b$") ||
+                    student.getStudentsPassword().startsWith("$2y$")) {
+                student.setStudentsPassword("[BCrypt加密-无法查看]");
+            } else {
+                // AES加密可以解密
+                try {
+                    String decrypted = AESUtil.decrypt(student.getStudentsPassword());
+                    student.setStudentsPassword(decrypted != null ? decrypted : "[解密失败]");
+                } catch (Exception e) {
+                    student.setStudentsPassword("[解密失败]");
+                }
+            }
         }
         if (student == null) {
             return Result.error("学生不存在");
@@ -130,15 +165,14 @@ public class AdminUserController {
      * Reset student password
      */
     @PutMapping("/students/{id}/reset-password")
-    public Result<Void> resetStudentPassword(@PathVariable Integer id) {
+    public Result<String> resetStudentPassword(@PathVariable Integer id) {
         Student student = new Student();
         student.setStudentsId(id);
         student.setStudentsPassword(AESUtil.encrypt("123456")); // Default password encrypted
         studentUserMapper.updateById(student);
-        return Result.success();
+        // 返回新密码，让前端可以立即更新显示
+        return Result.success("密码已重置为: 123456", "123456");
     }
-
-    // ==================== Teacher Management ====================
 
     /**
      * Get teacher list
@@ -162,9 +196,31 @@ public class AdminUserController {
         Page<Teacher> teacherPage = teacherUserMapper.selectPage(page, queryWrapper);
 
         List<Teacher> teachers = teacherPage.getRecords();
+        // 处理密码显示：BCrypt无法解密，AES可以解密
         for (Teacher t : teachers) {
             if (StringUtils.hasText(t.getTeacherPassword())) {
-                t.setTeacherPassword(AESUtil.decrypt(t.getTeacherPassword()));
+                String pwd = t.getTeacherPassword();
+                // 判断是否是BCrypt加密（以$2a$、$2b$或$2y$开头）
+                if (pwd.startsWith("$2a$") || pwd.startsWith("$2b$") || pwd.startsWith("$2y$")) {
+                    t.setTeacherPassword("[BCrypt加密-无法查看]");
+                } else {
+                    // AES加密可以解密
+                    try {
+                        String decrypted = AESUtil.decrypt(pwd);
+                        if (decrypted != null && !decrypted.isEmpty()) {
+                            t.setTeacherPassword(decrypted);
+                        } else {
+                            // 显示原始密码的前几个字符以便诊断
+                            String preview = pwd.length() > 10 ? pwd.substring(0, 10) + "..." : pwd;
+                            t.setTeacherPassword("[解密失败: " + preview + "]");
+                        }
+                    } catch (Exception e) {
+                        String preview = pwd.length() > 10 ? pwd.substring(0, 10) + "..." : pwd;
+                        t.setTeacherPassword("[异常: " + preview + "]");
+                    }
+                }
+            } else {
+                t.setTeacherPassword("[空密码]");
             }
         }
 
@@ -184,7 +240,20 @@ public class AdminUserController {
     public Result<Teacher> getTeacherDetail(@PathVariable Integer id) {
         Teacher teacher = teacherUserMapper.selectById(id);
         if (teacher != null && StringUtils.hasText(teacher.getTeacherPassword())) {
-            teacher.setTeacherPassword(AESUtil.decrypt(teacher.getTeacherPassword()));
+            // 判断是否是BCrypt加密
+            if (teacher.getTeacherPassword().startsWith("$2a$") ||
+                    teacher.getTeacherPassword().startsWith("$2b$") ||
+                    teacher.getTeacherPassword().startsWith("$2y$")) {
+                teacher.setTeacherPassword("[BCrypt加密-无法查看]");
+            } else {
+                // AES加密可以解密
+                try {
+                    String decrypted = AESUtil.decrypt(teacher.getTeacherPassword());
+                    teacher.setTeacherPassword(decrypted != null ? decrypted : "[解密失败]");
+                } catch (Exception e) {
+                    teacher.setTeacherPassword("[解密失败]");
+                }
+            }
         }
         if (teacher == null) {
             return Result.error("教师不存在");
@@ -242,11 +311,12 @@ public class AdminUserController {
      * Reset teacher password
      */
     @PutMapping("/teachers/{id}/reset-password")
-    public Result<Void> resetTeacherPassword(@PathVariable Integer id) {
+    public Result<String> resetTeacherPassword(@PathVariable Integer id) {
         Teacher teacher = new Teacher();
         teacher.setTeacherId(id);
         teacher.setTeacherPassword(AESUtil.encrypt("123456")); // Default password encrypted
         teacherUserMapper.updateById(teacher);
-        return Result.success();
+        // 返回新密码，让前端可以立即更新显示
+        return Result.success("密码已重置为: 123456", "123456");
     }
 }

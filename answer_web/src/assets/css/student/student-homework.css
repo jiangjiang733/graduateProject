@@ -5,14 +5,51 @@
 /* 变量定义 */
 .homework-page-container {
     --primary-color: #4f46e5;
-    --bg-color: #f8fafc;
-    --text-main: #0f172a;
-    --text-sub: #64748b;
-    --border-color: #e2e8f0;
+    --bg-color: var(--bg-page, #f8fafc);
+    --text-main: var(--text-primary, #0f172a);
+    --text-sub: var(--text-secondary, #64748b);
+    --border-color: var(--border-color, #e2e8f0);
 
     background-color: var(--bg-color);
     min-height: 100vh;
     font-family: 'Inter', -apple-system, sans-serif;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+html.dark .page-header {
+    background-color: #1e293b;
+    border-bottom-color: #334155;
+}
+
+html.dark .modern-search :deep(.el-input__wrapper) {
+    background: #0f172a;
+}
+
+html.dark .filter-tab {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+html.dark .filter-tab span {
+    background: #0f172a;
+}
+
+html.dark .filter-tab.active {
+    background: var(--primary-color);
+}
+
+html.dark .homework-card {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+html.dark .card-mid {
+    background: #0f172a;
+}
+
+html.dark .comment-tip {
+    background: rgba(3, 105, 161, 0.15);
+    color: #7dd3fc;
 }
 
 /* Header 部分 */

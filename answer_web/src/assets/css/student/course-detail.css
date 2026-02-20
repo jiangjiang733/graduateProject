@@ -1,8 +1,47 @@
 /* 课程详情页样式 */
 .course-detail-page {
-    background-color: #f8fafc;
+    background-color: var(--bg-page, #f8fafc);
     min-height: 100vh;
     padding-bottom: 60px;
+}
+
+html.dark .content-wrapper {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+html.dark .custom-tabs .el-tabs__nav-wrap::after {
+    background-color: #334155;
+}
+
+html.dark .custom-tabs .el-tabs__item {
+    color: #94a3b8;
+}
+
+html.dark .chapter-header {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+html.dark .chapter-name {
+    color: #f1f5f9;
+}
+
+html.dark .title-text {
+    color: #cbd5e1;
+}
+
+html.dark .sub-chapter-item:hover {
+    background-color: #334155;
+    border-color: #475569;
+}
+
+html.dark .intro-section h3 {
+    color: #f1f5f9;
+}
+
+html.dark .rich-text-content {
+    color: #94a3b8;
 }
 
 /* Banner 视觉区域 */
@@ -140,10 +179,10 @@
 /* 主容器布局 */
 .main-container {
     max-width: 1240px;
-    margin: -40px auto 0;
+    margin: 20px auto 0;
     padding: 0 40px;
     display: grid;
-    grid-template-columns: 1fr 360px;
+    grid-template-columns: 1fr;
     gap: 32px;
     position: relative;
     z-index: 2;

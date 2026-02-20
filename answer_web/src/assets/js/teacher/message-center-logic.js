@@ -1,7 +1,7 @@
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getMessageList, markAsRead, getUnreadCount } from '@/api/message.js'
+import { getMessageList, markAsRead, getUnreadCount, deleteMessage } from '@/api/message.js'
 import { getTeacherNotifications } from '@/api/notification.js'
 import {
     sendChatMessage, getChatHistory, getChatContacts,
@@ -395,26 +395,21 @@ export function useMessageCenter() {
         }
     }
 
-    // 删除评论（同时会删除关联的消息通知）
-    const handleDeleteComment = async (item) => {
-        if (!item.relatedId) {
-            ElMessage.warning('无法获取评论ID')
-            return
-        }
-
+    // 删除通知消息
+    const handleDeleteMessage = async (item) => {
         try {
-            // 确认删除
+            // 确认删除通知
             await ElMessageBox.confirm(
-                '确定要删除这条评论吗？删除后相关的消息通知也会被清除。',
+                '确定要删除这条通知消息吗？',
                 '删除确认',
                 {
-                    confirmButtonText: '确定删除',
+                    confirmButtonText: '确定',
                     cancelButtonText: '取消',
                     type: 'warning'
                 }
             )
 
-            const res = await deleteComment(item.relatedId)
+            const res = await deleteMessage(item.id, userStore.userId, 'TEACHER')
             if (res.code === 200) {
                 ElMessage.success('删除成功')
                 // 从列表中移除该项
@@ -429,7 +424,7 @@ export function useMessageCenter() {
         } catch (error) {
             if (error !== 'cancel') {
                 console.error(error)
-                ElMessage.error('删除失败')
+                ElMessage.error('网络错误，删除失败')
             }
         }
     }
@@ -580,7 +575,7 @@ export function useMessageCenter() {
         handleInteractionDetail,
         toggleQuickReply,
         handleQuickReply,
-        handleDeleteComment,
+        handleDeleteMessage,
         markAllRead,
         scrollToBottom,
         formatTime,

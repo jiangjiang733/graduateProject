@@ -7,16 +7,16 @@
           <div class="breadcrumb-nav">
             <span class="root">学习中心</span>
             <el-icon><ArrowRight /></el-icon>
-            <span class="current">课程探索</span>
+            <span class="current">我的课程</span>
           </div>
-          <h1 class="main-title">发现属于你的新领域</h1>
+          <h1 class="main-title">开启你的知识之旅</h1>
         </div>
 
         <div class="header-right">
           <div class="modern-search-box">
             <el-input
                 v-model="searchQuery"
-                placeholder="搜索感兴趣的课程、教师..."
+                placeholder="搜索已加入的课程..."
                 @keyup.enter="handleSearch"
                 clearable
             >
@@ -36,14 +36,14 @@
       <!-- 现代化筛选控制台 -->
       <aside class="filter-panel">
         <div class="filter-section">
-          <h3 class="filter-title">专业分类</h3>
+          <h3 class="filter-title">专业筛选</h3>
           <div class="chip-group">
             <div
                 v-for="item in categories"
                 :key="item.value"
                 class="tag-chip"
-                :class="{ active: filters.category === item.value }"
-                @click="filters.category = item.value; handleFilterChange()"
+                :class="{ active: filters.major === item.value }"
+                @click="filters.major = item.value; handleFilterChange()"
             >
               {{ item.label }}
             </div>
@@ -51,6 +51,21 @@
         </div>
 
         <div class="filter-divider"></div>
+
+        <div class="filter-section">
+          <h3 class="filter-title">课程类型</h3>
+          <div class="chip-group">
+            <div
+                v-for="item in classifications"
+                :key="item.value"
+                class="tag-chip"
+                :class="{ active: filters.classification === item.value }"
+                @click="filters.classification = item.value; handleFilterChange()"
+            >
+              {{ item.label }}
+            </div>
+          </div>
+        </div>
 
       </aside>
 
@@ -69,7 +84,7 @@
         </div>
 
         <div v-else-if="courses.length === 0" class="empty-state">
-          <el-empty description="暂时没有符合条件的课程" />
+          <el-empty description="暂无已加入的课程" />
         </div>
 
         <div v-else class="course-grid">
@@ -77,7 +92,7 @@
               v-for="course in courses"
               :key="course.id"
               class="course-card-premium"
-              @click="goToCourseDetail(course.id)"
+              @click="goToLearn(course.id)"
           >
             <div class="card-cover-wrapper">
               <img :src="getCourseImage(course.image)" :alt="course.courseName" />
@@ -97,20 +112,18 @@
                 <span>{{ course.teacherName || '主讲教师' }}</span>
               </div>
 
-              <p class="course-desc">
-                {{ course.courseDescription || course.description || '探索核心知识点，通过实战案例快速掌握专业技能。' }}
-              </p>
+              <div class="course-meta">
+                <span class="major-label"><el-icon><Collection /></el-icon> {{ course.major }}</span>
+              </div>
 
 
               <div class="card-footer">
                 <el-button
                     type="primary"
                     class="action-btn"
-                    :loading="course.enrolling"
-                    :disabled="isEnrollButtonDisabled(course)"
-                    @click.stop="handleEnroll(course)"
+                    @click.stop="goToLearn(course.id)"
                 >
-                  {{ getEnrollButtonText(course) }}
+                  进入学习
                 </el-button>
                 <el-button link class="more-btn" @click.stop="goToCourseDetail(course.id)">
                   详情 <el-icon><ArrowRight /></el-icon>
@@ -154,15 +167,13 @@ const {
   total,
   filters,
   categories,
-  difficulties,
+  classifications,
   sortOptions,
   handleSearch,
   handleFilterChange,
   handlePageChange,
   goToCourseDetail,
-  handleEnroll,
-  getEnrollButtonText,
-  isEnrollButtonDisabled,
+  goToLearn,
   getCourseImage,
   getTeacherAvatar,
   formatDate

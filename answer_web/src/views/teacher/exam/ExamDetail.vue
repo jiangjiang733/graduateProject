@@ -22,19 +22,18 @@
         </el-tag>
       </template>
       
-      <el-descriptions :column="2" border>
-        <el-descriptions-item label="考试标题">{{ exam.examTitle }}</el-descriptions-item>
-        <el-descriptions-item label="所属课程">{{ exam.courseName }}</el-descriptions-item>
+      <el-descriptions :column="3" border>
+        <el-descriptions-item label="所属课程">{{ exam.courseName || '未分配课程' }}</el-descriptions-item>
+        <el-descriptions-item label="考试标题" :span="2">{{ exam.examTitle || '-' }}</el-descriptions-item>
         <el-descriptions-item label="考试时长">{{ exam.duration }} 分钟</el-descriptions-item>
-        <el-descriptions-item label="总分">{{ exam.totalScore }} 分</el-descriptions-item>
-        <el-descriptions-item label="及格分">{{ exam.passScore }} 分</el-descriptions-item>
-        <el-descriptions-item label="开始时间">{{ formatDate(exam.startTime) }}</el-descriptions-item>
-        <el-descriptions-item label="结束时间">{{ formatDate(exam.endTime) }}</el-descriptions-item>
-        <el-descriptions-item label="参考人数">
-          {{ exam.submittedCount || 0 }} / {{ exam.totalStudents || 0 }}
+        <el-descriptions-item label="分值设定" :span="2">
+          总分 {{ exam.totalScore }} 分 <el-tag size="small" type="info">及格 {{ Math.floor(exam.totalScore * 0.6) }} 分</el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="考试说明" :span="2">
-          {{ exam.examDescription || '暂无说明' }}
+        <el-descriptions-item label="有效时间" :span="2">
+          {{ formatDate(exam.startTime) }} 至 {{ formatDate(exam.endTime) }}
+        </el-descriptions-item>
+        <el-descriptions-item label="提交进度">
+          {{ exam.submittedCount }} / {{ exam.totalStudents }} 人
         </el-descriptions-item>
       </el-descriptions>
     </el-card>
@@ -55,40 +54,48 @@
       </div>
       
       <div v-else class="questions-list">
-        <div 
-          v-for="(question, index) in questions" 
-          :key="question.questionId"
-          class="question-item"
-        >
-          <div class="question-header">
-            <span class="question-number">第 {{ index + 1 }} 题</span>
-            <el-tag :type="getQuestionTypeColor(question.questionType)" size="small">
-              {{ getQuestionTypeName(question.questionType) }}
-            </el-tag>
-            <span class="question-score">{{ question.score }} 分</span>
+        <!-- 按题型分组显示 -->
+        <div v-for="(group, typeKey) in groupedQuestions" :key="typeKey" class="question-type-group">
+          <div class="type-group-header">
+            <h3>{{ group.typeName }}（{{ group.questions.length }}题）</h3>
           </div>
           
-          <div class="question-content">
-            <p class="question-text">{{ formatQuestionContent(question) }}</p>
+          <div 
+            v-for="(question, index) in group.questions" 
+            :key="question.questionId"
+            class="question-item"
+          >
+            <div class="question-header">
+              <span class="question-number">第 {{ question.globalIndex }} 题</span>
+              <el-tag :type="getQuestionTypeColor(question.questionType)" size="small">
+                {{ getQuestionTypeName(question.questionType) }}
+              </el-tag>
+              <span class="question-score">{{ question.score }} 分</span>
+            </div>
             
-            <div v-if="question.questionOptions" class="question-options">
-              <div 
-                v-for="(option, optIndex) in parseOptions(question.questionOptions)" 
-                :key="optIndex"
-                class="option-item"
-              >
-                <span class="opt-prefix">{{ String.fromCharCode(65 + optIndex) }}.</span>
-                {{ typeof option === 'object' ? option.text : option }}
+            <div class="question-content">
+              <p class="question-text">{{ formatQuestionContent(question) }}</p>
+              
+              <!-- 选项显示：普通题目或判断题 -->
+              <div v-if="question.questionOptions || question.questionType === 'JUDGE'" class="question-options">
+                <div 
+                  v-for="(option, optIndex) in getQuestionOptions(question)" 
+                  :key="optIndex"
+                  class="option-item"
+                >
+                  <span class="opt-prefix">{{ String.fromCharCode(65 + optIndex) }}</span>
+                  {{ typeof option === 'object' ? option.text : option }}
+                </div>
               </div>
-            </div>
-            
-            <div class="question-answer" :class="{ 'is-multi': ['SINGLE', 'MULTIPLE'].includes(question.questionType) }">
-              <strong>正确答案：</strong>
-              <span class="correct-answer">{{ formatAnswer(question) }}</span>
-            </div>
-            
-            <div v-if="question.analysis" class="question-analysis">
-              <strong>解析：</strong>{{ question.analysis }}
+              
+              <div class="question-answer" :class="{ 'is-multi': ['SINGLE', 'MULTIPLE'].includes(question.questionType) }">
+                <strong>正确答案：</strong>
+                <span class="correct-answer">{{ formatAnswer(question) }}</span>
+              </div>
+              
+              <div v-if="question.analysis" class="question-analysis">
+                <strong>解析：</strong>{{ question.analysis }}
+              </div>
             </div>
           </div>
         </div>
@@ -156,12 +163,14 @@ const {
   loading,
   exam,
   questions,
+  groupedQuestions,
   unpublishExam,
   goBack,
   editExam,
   publishExam,
   deleteExam,
   parseOptions,
+  getQuestionOptions,
   formatQuestionContent,
   formatAnswer,
   formatDate,
@@ -191,7 +200,7 @@ const manageQuestions = () => {
 </script>
 
 <style scoped>
-@import '@/assets/css/teacher/exam-detail.css';
+ @import'@/assets/css/teacher/exam-detail.css';
 
 .card-header {
   display: flex;

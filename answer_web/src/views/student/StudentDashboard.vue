@@ -194,8 +194,18 @@ const loadData = async () => {
      const hwRes = await getStudentLabReports(sid)
      if (hwRes.success) {
         const list = hwRes.data || []
-        pendingHomeworks.value = list.filter(h => h.status === 0).slice(0, 3)
-        stats.value.homeworkCount = list.filter(h => h.status === 0).length
+        const now = new Date()
+        // Filter: status === 0 (未提交) AND deadline not passed
+        const validHomework = list.filter(h => {
+            if (h.status !== 0) return false // Already submitted or graded
+            if (h.deadline) {
+                const deadline = new Date(h.deadline)
+                return deadline > now // Not expired
+            }
+            return true // No deadline, include it
+        })
+        pendingHomeworks.value = validHomework.slice(0, 3)
+        stats.value.homeworkCount = validHomework.length
      }
   } catch(e) { console.error(e) }
 
@@ -204,8 +214,29 @@ const loadData = async () => {
      const examRes = await getStudentExamList(sid, 'ONGOING') 
      if (examRes.success || examRes.code === 200) {
          const list = examRes.data || []
-         upcomingExams.value = list.slice(0, 3)
-         stats.value.examCount = list.length
+         const now = new Date()
+         // Filter: NOT submitted AND NOT ended
+         const validExams = list.filter(e => {
+             // Skip if already submitted
+             if (e.isSubmitted) return false
+             
+             // Check if exam has ended
+             const end = e.endTime ? new Date(e.endTime) : null
+             if (end && end <= now) return false // Ended
+             
+             // Check if exam has started (optional: only show ongoing/upcoming)
+             const start = e.startTime ? new Date(e.startTime) : null
+             if (start && start > now) {
+                 // Future exam, include it
+                 return true
+             }
+             
+             // Ongoing exam
+             return end ? end > now : true
+         })
+
+         upcomingExams.value = validExams.slice(0, 3)
+         stats.value.examCount = validExams.length
      }
   } catch(e) { console.error(e) }
 }

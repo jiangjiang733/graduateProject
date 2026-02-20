@@ -1,5 +1,5 @@
 <template>
-  <div class="message-container">run dev
+  <div class="message-container">
     <div class="chat-wrapper-box">
       <!-- Sidebar -->
       <aside class="chat-sidebar">
@@ -203,7 +203,7 @@
                     {{ item.showReply ? '取消回复' : '快捷回复' }}
                   </el-button>
                   <el-button link size="small" @click="handleInteractionDetail(item)">查看详情</el-button>
-                  <el-button link type="danger" size="small" @click="handleDeleteComment(item)">删除</el-button>
+                  <el-button link type="danger" size="small" @click="handleDeleteMessage(item)">删除</el-button>
                 </div>
 
                 <el-collapse-transition>
@@ -271,7 +271,7 @@ const {
   handleInteractionDetail,
   toggleQuickReply,
   handleQuickReply,
-  handleDeleteComment,
+  handleDeleteMessage,
   markAllRead,
   formatTime,
   formatDetailedTime,

@@ -131,8 +131,30 @@ export function useQuestionBank() {
         })
     }
 
-    const handleTypeChange = (v) => {
-        if (v === 'JUDGE') form.value.answer = 'A'
+    const handleTypeChange = (newType, oldType) => {
+        // 当切换题目类型时，初始化相应的选项和答案
+        if (newType === 'JUDGE') {
+            // 判断题默认选择"正确"
+            form.value.answer = 'A'
+            form.value.options = [
+                { text: '正确', isCorrect: true },
+                { text: '错误', isCorrect: false }
+            ]
+        } else if (newType === 'SINGLE' || newType === 'MULTIPLE') {
+            // 如果之前不是选择题，需要初始化选项
+            if (oldType === 'JUDGE' || oldType === 'ESSAY') {
+                form.value.options = [
+                    { text: '', isCorrect: false },
+                    { text: '', isCorrect: false }
+                ]
+                form.value.correctIndex = 0
+                form.value.answer = ''
+            }
+        } else if (newType === 'ESSAY') {
+            // 简答题清空选项
+            form.value.options = []
+            form.value.answer = ''
+        }
     }
 
     const addOption = () => form.value.options.push({ text: '', isCorrect: false })

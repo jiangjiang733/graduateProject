@@ -288,15 +288,16 @@
   }
 }
 
-/* ========== 暗黑模式支持 ========== */
 .dark-theme .top-header {
   background-color: rgba(30, 41, 59, 0.85);
   border-color: rgba(71, 85, 105, 0.3);
 }
 
 .dark-theme .brand-text {
-  color: #f1f5f9;
   background: linear-gradient(90deg, #f1f5f9, #94a3b8);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .dark-theme .top-nav {

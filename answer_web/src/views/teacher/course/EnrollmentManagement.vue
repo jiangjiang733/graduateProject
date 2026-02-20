@@ -94,7 +94,7 @@
          >
             <div class="card-header">
                <div class="student-avatar-box">
-                  <el-avatar :size="48" :src="enrollment.studentAvatar" class="student-avatar">
+                  <el-avatar :size="48" :src="getStudentAvatar(enrollment)" class="student-avatar">
                      {{ enrollment.studentName?.charAt(0) || 'S' }}
                   </el-avatar>
                   <div class="status-dot" :class="enrollment.status"></div>
@@ -153,11 +153,11 @@
       </div>
 
       <!-- 分页 -->
-      <div v-if="filteredEnrollments.length > pageSize" class="pagination-container">
+      <div v-if="filteredEnrollments.length > 0" class="pagination-container">
         <el-pagination
           v-model:current-page="currentPage"
           v-model:page-size="pageSize"
-          :page-sizes="[10, 20, 50]"
+          :page-sizes="[12, 24, 48, 96]"
           :total="filteredEnrollments.length"
           background
           layout="total, sizes, prev, pager, next, jumper"

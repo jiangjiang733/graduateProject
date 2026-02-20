@@ -83,13 +83,30 @@ export function useExamQuestions(examId) {
 
                 // 标准化题目字段
                 questions.value = rawQuestions.map(q => {
+                    const opts = q.questionOptions || q.options || null;
+                    let ans = q.answer || q.correctAnswer || q.correct_answer;
+
+                    // 兜底：如果答案字段为空但有选项，从选项中提取
+                    if (!ans && opts) {
+                        try {
+                            const parsedOpts = typeof opts === 'string' ? JSON.parse(opts) : opts;
+                            if (Array.isArray(parsedOpts)) {
+                                const correctIndices = parsedOpts.map((o, i) => (o.isCorrect || o.correct) ? i : -1).filter(i => i !== -1);
+                                if (correctIndices.length > 0) {
+                                    ans = correctIndices.map(i => String.fromCharCode(65 + i)).join('');
+                                }
+                            }
+                        } catch (e) { }
+                    }
+
                     const standardized = {
                         ...q,
+                        questionId: q.questionId || q.id,
                         questionContent: q.questionContent || q.content || q.questionText || '',
                         questionType: q.questionType || q.type || 'SINGLE',
-                        questionOptions: q.questionOptions || q.options || null,
+                        questionOptions: opts,
                         score: Number(q.score) || 5,
-                        answer: q.answer || q.correctAnswer,
+                        answer: ans,
                         analysis: q.analysis || q.explanation || ''
                     }
                     console.log('Standardized question:', standardized)
@@ -188,7 +205,7 @@ export function useExamQuestions(examId) {
             questionType: bq.type,
             questionContent: bq.content,
             questionOptions: opts,
-            correctAnswer: bq.answer,
+            answer: bq.answer, // 统一使用 answer
             score: 5,
             analysis: bq.analysis
         }
@@ -229,10 +246,11 @@ export function useExamQuestions(examId) {
 
             return {
                 examId: examId,
+                questionId: bq.id, // 增加 ID 关联
                 questionType: bq.type,
                 questionContent: bq.content,
                 questionOptions: opts,
-                correctAnswer: bq.answer,
+                answer: bq.answer, // 统一使用 answer
                 score: 5,
                 analysis: bq.analysis
             }

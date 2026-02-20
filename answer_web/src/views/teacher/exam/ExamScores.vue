@@ -155,6 +155,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, Search } from '@element-plus/icons-vue'
 import { getExamDetail, getStudentExams, getExamStatistics, returnStudentExam as returnStudentExamApi } from '@/api/exam'
+import { getCourseDetail } from '@/api/course'
 import * as echarts from 'echarts'
 
 const route = useRoute()
@@ -273,37 +274,73 @@ const fetchExamInfo = async () => {
     console.log('API响应:', res)
     
     if (res.code === 200 && res.data) {
-      // 提取考试数据
-      let examData = res.data.exam || res.data
-      console.log('原始考试数据:', examData)
-      console.log('原始 totalScore:', examData.totalScore)
-      console.log('原始 passScore:', examData.passScore)
+      // 提取原始数据
+      const rawData = res.data.exam || res.data
+      console.log('原始考试数据:', rawData)
       
-      // 确保总分存在
-      if (!examData.totalScore && examData.total_score) {
-        examData.totalScore = examData.total_score
-      }
-      
-      // 强制重新计算及格分数为总分的60%（覆盖后端可能错误的值）
-      const totalScore = examData.totalScore || 100
+      // 强制重新计算及格分数为总分的60%
+      // 注意：必须处理 total_score 和 totalScore 字段
+      const totalScore = rawData.totalScore || rawData.total_score || 100
       const calculatedPassScore = Math.floor(totalScore * 0.6)
       
       console.log('计算的及格分数:', calculatedPassScore, '= ', totalScore, '× 0.6')
       
-      // 强制使用计算值
-      examData.passScore = calculatedPassScore
+      // 数据字段映射和构建最终对象
+      const mappedExam = {
+        ...rawData,
+        examId: rawData.examId || rawData.exam_id || rawData.id,
+        examTitle: rawData.examTitle || rawData.exam_title || rawData.title,
+        
+        // 课程信息：支持 course 对象、courseId 字段
+        courseId: rawData.courseId || rawData.course_id || (rawData.course && rawData.course.id) || (rawData.course && rawData.course.courseId),
+        
+        // 优先使用映射后的 courseName，如果为空则保留原始值（作为备选）
+        courseName: rawData.courseName || rawData.course_name || rawData.courseTitle || rawData.course_title || 
+                    (rawData.course && (rawData.course.courseName || rawData.course.course_name || rawData.course.title || rawData.course.courseTitle)),
+        
+        totalScore: totalScore,
+        passScore: calculatedPassScore // 强制使用计算值
+      }
       
-      exam.value = examData
+      // 最终赋值给响应式变量
+      exam.value = mappedExam
+      
       console.log('=== 最终考试数据 ===')
       console.log('总分:', exam.value.totalScore)
       console.log('及格分:', exam.value.passScore)
+      console.log('课程ID:', exam.value.courseId)
       console.log('====================')
+
+      // 尝试获取课程信息（如果还是没有名称）
+      if (exam.value.courseId) {
+        // 只要有 ID 就尝试获取，以防名称显示错误
+        fetchCourseName(exam.value.courseId)
+      }
     }
   } catch (error) {
     console.error('获取考试信息失败:', error)
     ElMessage.error('获取考试信息失败')
   } finally {
     loading.value = false
+  }
+}
+
+// 获取课程名称
+const fetchCourseName = async (courseId) => {
+  if (!courseId) return
+
+  try {
+    const res = await getCourseDetail(courseId)
+    // 兼容性判断：处理 code:200 或 success:true
+    if ((res.code === 200 || res.success) && res.data) {
+      const name = res.data.courseName || res.data.course_name || res.data.title || res.data.courseTitle
+      if (name) {
+        exam.value.courseName = name
+        console.log('已补充课程名称:', name)
+      }
+    }
+  } catch (error) {
+    console.warn('获取课程名称失败:', error)
   }
 }
 

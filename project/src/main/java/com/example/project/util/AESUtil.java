@@ -42,7 +42,13 @@ public class AESUtil {
      */
     public static String decrypt(String encryptedContent) {
         try {
-            if (encryptedContent == null) {
+            if (encryptedContent == null || encryptedContent.trim().isEmpty()) {
+                return null;
+            }
+            // 如果是BCrypt格式，直接返回null表示无法解密
+            if (encryptedContent.startsWith("$2a$") ||
+                    encryptedContent.startsWith("$2b$") ||
+                    encryptedContent.startsWith("$2y$")) {
                 return null;
             }
             SecretKeySpec keySpec = new SecretKeySpec(KEY.getBytes(StandardCharsets.UTF_8), ALGORITHM);
@@ -52,7 +58,8 @@ public class AESUtil {
             byte[] original = cipher.doFinal(decoded);
             return new String(original, StandardCharsets.UTF_8);
         } catch (Exception e) {
-            return encryptedContent;
+            // 解密失败返回null
+            return null;
         }
     }
 }

@@ -252,9 +252,8 @@ public class CourseCommentServiceImpl implements CourseCommentService {
                 }
             }
 
-            // 3. 批量删除关联的消息通知
             if (!relatedIds.isEmpty()) {
-                messageMapper.deleteByRelatedIds(relatedIds);
+                messageMapper.updateContentByRelatedIds(relatedIds, "[该评论已删除]");
             }
 
             // 4. 删除子评论
@@ -283,8 +282,9 @@ public class CourseCommentServiceImpl implements CourseCommentService {
             for (CourseComment reply : replies)
                 deleteCommentRecursively(reply.getCommentId());
         }
-        // 删除关联的消息通知
-        messageMapper.deleteByRelatedId(commentId.toString());
+        // 将关联的消息通知内容更新为已删除
+        java.util.List<String> relatedIds = java.util.Arrays.asList(commentId.toString());
+        messageMapper.updateContentByRelatedIds(relatedIds, "[该评论已删除]");
         // 删除评论本身
         courseCommentMapper.deleteById(commentId);
     }

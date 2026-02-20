@@ -105,6 +105,10 @@
                 <div class="q-options-preview" v-if="q.questionOptions">
                    {{ formatOptionsPreview(q.questionOptions) }}
                 </div>
+                <div class="q-answer-preview">
+                   <span class="label">正确答案:</span>
+                   <span class="value">{{ q.answer || q.correctAnswer || '未设置' }}</span>
+                </div>
              </div>
              <el-empty v-if="questions.length === 0" description="试卷尚无题目，请从左侧添加" />
           </div>

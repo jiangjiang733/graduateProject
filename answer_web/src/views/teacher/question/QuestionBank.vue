@@ -101,8 +101,7 @@
               </div>
           </div>
 
-          <!-- Type Tabs -->
-          <div class="custom-tabs" v-if="!isEdit">
+          <div class="custom-tabs">
                <div class="tab-item" :class="{ active: form.type === 'SINGLE' }" @click="form.type = 'SINGLE'">单选题</div>
                <div class="tab-item" :class="{ active: form.type === 'MULTIPLE' }" @click="form.type = 'MULTIPLE'">多选题</div>
                <div class="tab-item" :class="{ active: form.type === 'JUDGE' }" @click="form.type = 'JUDGE'">判断题</div>
@@ -192,6 +191,7 @@
 </template>
 
 <script setup>
+import { watch } from 'vue'
 import {
   Plus, Upload, Search, Check, Delete, MoreFilled,
   Notebook, DocumentDelete, CircleClose, Clock
@@ -218,10 +218,21 @@ const {
   removeOption,
   getTypeLabel,
   getCourseName,
-  handleBatchImport
+  handleBatchImport,
+  toggleCorrect,
+  currentDate
 } = useQuestionBank()
+
+// 监听题目类型变化，自动初始化选项
+let previousType = form.value.type
+watch(() => form.value.type, (newType) => {
+  if (dialogVisible.value) {
+    handleTypeChange(newType, previousType)
+    previousType = newType
+  }
+})
 </script>
 
-<style scoped>
+<style>
 @import '@/assets/css/teacher/question-bank.css';
 </style>

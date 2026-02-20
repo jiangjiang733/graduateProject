@@ -4,10 +4,6 @@ import { ElMessage } from 'element-plus'
 // 公共页面 - 首页保持直接导入以加快首屏加载
 import Index from '../views/index.vue'
 
-/**
- * 辅助函数：检查 localStorage 值是否有效
- * 排除 null, undefined, "null", "undefined", 空字符串等无效值
- */
 const isValidStorageValue = (value) => {
   return value !== null &&
     value !== undefined &&
@@ -16,11 +12,6 @@ const isValidStorageValue = (value) => {
     value.trim() !== ''
 }
 
-/**
- * 检查用户是否已登录
- * @param {string} role - 用户角色 ('teacher' 或 'student')
- * @returns {boolean} - 是否已登录
- */
 const isAuthenticated = (role) => {
   // 获取并验证存储值
   const teacherIdRaw = localStorage.getItem('teacherId') || localStorage.getItem('t_id')

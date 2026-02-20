@@ -1,6 +1,7 @@
 import { ref, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import axios from "axios";
+import request from '@/api/request'
 // 注册相关的状态管理
 export function useRegisterStore() {
   // 这里是选择注册人物，默认的注册人物为教师
@@ -34,26 +35,32 @@ export function useRegisterStore() {
       return
     }
     isSending.value = true
-    countdown.value = 60
     try {
-      // 模拟发送验证码请求
-      console.log('发送验证码到:', forms.email)
-      // 异步验证码邮箱
-      // await sendVerificationCode(forms.email)
+      // 调用后端API发送验证码
+      const response = await request.post('/email/send-register-code', {
+        email: forms.email,
+        userType: activeTab.value // student 或 teacher
+      })
 
-      ElMessage.success('验证码已发送到您的邮箱')
+      if (response.code === 200) {
+        ElMessage.success(response.message || '验证码已发送到您的邮箱')
+        countdown.value = 60
 
-      // 开始倒计时
-      const timer = setInterval(() => {
-        countdown.value--
-        if (countdown.value <= 0) {
-          clearInterval(timer)
-          isSending.value = false
-        }
-      }, 1000)
-
+        // 开始倒计时
+        const timer = setInterval(() => {
+          countdown.value--
+          if (countdown.value <= 0) {
+            clearInterval(timer)
+            isSending.value = false
+          }
+        }, 1000)
+      } else {
+        ElMessage.error(response.message || '验证码发送失败，请重试')
+        isSending.value = false
+      }
     } catch (error) {
-      ElMessage.error('验证码发送失败，请重试')
+      console.error('发送验证码失败:', error)
+      ElMessage.error(error.response?.data?.message || error.message || '验证码发送失败，请重试')
       isSending.value = false
       countdown.value = 0
     }
@@ -88,6 +95,12 @@ export function useRegisterStore() {
       return
     }
 
+    // 验证邮箱验证码
+    if (!forms.confirm_code?.trim()) {
+      ElMessage.warning("请输入邮箱验证码")
+      return
+    }
+
     // 教师特殊字段验证
     if (activeTab.value === 'teacher') {
       if (!forms.department?.trim()) {
@@ -108,6 +121,18 @@ export function useRegisterStore() {
     loading.value = true
 
     try {
+      // 先验证邮箱验证码
+      const verifyResponse = await request.post('/email/verify-register-code', {
+        email: forms.email.trim(),
+        code: forms.confirm_code.trim()
+      })
+
+      if (verifyResponse.code !== 200) {
+        ElMessage.error(verifyResponse.message || '验证码错误或已过期')
+        loading.value = false
+        return
+      }
+
       if (activeTab.value === 'student') {
         // 发送学生注册请求
         const studentData = {

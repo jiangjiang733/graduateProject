@@ -73,6 +73,7 @@ public class CourseEnrollmentServiceImpl implements CourseEnrollmentService {
         enrollment.setCourseName(applyDTO.getCourseName());
         enrollment.setTeacherId(applyDTO.getTeacherId());
         enrollment.setStatus("pending");
+        enrollment.setEnrollmentType("APPLY"); // 学生申请类型
         enrollment.setApplyTime(new Date());
 
         enrollmentMapper.insert(enrollment);
@@ -97,8 +98,22 @@ public class CourseEnrollmentServiceImpl implements CourseEnrollmentService {
             result.put("reviewTime", enrollment.getReviewTime());
             result.put("rejectReason", enrollment.getRejectReason());
         } else {
-            result.put("enrolled", false);
-            result.put("status", null);
+            // 兜底：检查是否已在学生课程关联表中（针对直接导入或特殊加入的学生）
+            QueryWrapper<com.example.project.entity.course.StudentCourse> scWrapper = new QueryWrapper<>();
+            try {
+                scWrapper.eq("student_id", Integer.parseInt(studentId)).eq("course_id", courseId);
+                com.example.project.entity.course.StudentCourse sc = studentCourseMapper.selectOne(scWrapper);
+                if (sc != null) {
+                    result.put("enrolled", true);
+                    result.put("status", "approved");
+                } else {
+                    result.put("enrolled", false);
+                    result.put("status", null);
+                }
+            } catch (Exception e) {
+                result.put("enrolled", false);
+                result.put("status", null);
+            }
         }
 
         return result;
@@ -151,6 +166,8 @@ public class CourseEnrollmentServiceImpl implements CourseEnrollmentService {
     public List<Map<String, Object>> getTeacherEnrollments(String teacherId) {
         QueryWrapper<CourseEnrollment> wrapper = new QueryWrapper<>();
         wrapper.eq("teacher_id", teacherId);
+        // 只显示学生申请的记录，不显示教师邀请的记录
+        wrapper.and(w -> w.eq("enrollment_type", "APPLY").or().isNull("enrollment_type"));
         wrapper.orderByDesc("apply_time");
 
         List<CourseEnrollment> enrollments = enrollmentMapper.selectList(wrapper);
@@ -308,6 +325,7 @@ public class CourseEnrollmentServiceImpl implements CourseEnrollmentService {
         enrollment.setCourseName(course.getCourseName());
         enrollment.setTeacherId(course.getTeacherId());
         enrollment.setStatus("pending"); // 设置为待处理状态
+        enrollment.setEnrollmentType("INVITE"); // 教师邀请类型
         enrollment.setApplyTime(new Date());
 
         if (existing != null) {
@@ -339,5 +357,124 @@ public class CourseEnrollmentServiceImpl implements CourseEnrollmentService {
         }
 
         return enrollment;
+    }
+
+    @Override
+    @Transactional
+    public CourseEnrollment inviteStudent(String studentId, String courseId) {
+        // 邀请学生功能与 directEnroll 相同：创建待学生确认的邀请记录
+        return directEnroll(studentId, courseId);
+    }
+
+    @Override
+    @Transactional
+    public void studentReviewEnrollment(Long enrollmentId, String status, String reason) {
+        CourseEnrollment enrollment = enrollmentMapper.selectById(enrollmentId);
+        if (enrollment == null) {
+            throw new RuntimeException("邀请记录不存在");
+        }
+
+        if (!"pending".equals(enrollment.getStatus())) {
+            throw new RuntimeException("该邀请已经处理过了");
+        }
+
+        if (!"approved".equals(status) && !"rejected".equals(status)) {
+            throw new RuntimeException("无效的处理状态");
+        }
+
+        enrollment.setStatus(status);
+        enrollment.setReviewTime(new Date());
+
+        if ("rejected".equals(status)) {
+            enrollment.setRejectReason(reason != null ? reason : "学生拒绝了邀请");
+        } else if ("approved".equals(status)) {
+            // 学生接受邀请，将学生加入课程
+            com.example.project.entity.course.StudentCourse sc = new com.example.project.entity.course.StudentCourse();
+            try {
+                sc.setStudentId(Integer.parseInt(enrollment.getStudentId()));
+            } catch (NumberFormatException e) {
+                Student student = studentUserMapper.selectById(enrollment.getStudentId());
+                if (student != null) {
+                    sc.setStudentId(student.getStudentsId());
+                } else {
+                    throw new RuntimeException("无法获取有效的学生ID: " + enrollment.getStudentId());
+                }
+            }
+            sc.setCourseId(enrollment.getCourseId());
+            sc.setStudentName(enrollment.getStudentName());
+            sc.setCourseName(enrollment.getCourseName());
+            sc.setTeacherId(enrollment.getTeacherId());
+            sc.setStatus(1); // 1-学习中
+            sc.setProgress(0);
+            sc.setTotalStudyTime(0);
+            sc.setJoinTime(new Date());
+            sc.setCreateTime(new Date());
+            sc.setUpdateTime(new Date());
+
+            // 检查是否已存在（避免重复插入）
+            QueryWrapper<com.example.project.entity.course.StudentCourse> query = new QueryWrapper<>();
+            query.eq("student_id", sc.getStudentId());
+            query.eq("course_id", sc.getCourseId());
+            if (studentCourseMapper.selectCount(query) == 0) {
+                studentCourseMapper.insert(sc);
+            }
+        }
+
+        enrollmentMapper.updateById(enrollment);
+
+        // 发送通知给教师 (系统消息类型)
+        try {
+            com.example.project.entity.notification.Message notifyTeacherMsg = new com.example.project.entity.notification.Message();
+            notifyTeacherMsg.setReceiverId(enrollment.getTeacherId());
+            notifyTeacherMsg.setReceiverType("TEACHER");
+            notifyTeacherMsg.setSenderId(enrollment.getStudentId());
+            notifyTeacherMsg.setSenderType("STUDENT");
+            notifyTeacherMsg.setSenderName(enrollment.getStudentName() != null ? enrollment.getStudentName() : "学生");
+            notifyTeacherMsg.setMessageType("SYSTEM"); // 统一为系统消息类型
+
+            if ("approved".equals(status)) {
+                notifyTeacherMsg.setTitle("学生已接受课程邀请");
+                notifyTeacherMsg.setContent(
+                        "学生 " + enrollment.getStudentName() + " 已接受您的课程邀请，加入了课程：" + enrollment.getCourseName());
+            } else {
+                notifyTeacherMsg.setTitle("学生已拒绝课程邀请");
+                notifyTeacherMsg.setContent("学生 " + enrollment.getStudentName() + " 拒绝了您的课程邀请："
+                        + enrollment.getCourseName() + (reason != null ? "\n原因：" + reason : ""));
+            }
+
+            notifyTeacherMsg.setRelatedId(String.valueOf(enrollment.getId()));
+            notifyTeacherMsg.setIsRead(0);
+            notifyTeacherMsg.setCreateTime(new Date());
+
+            messageService.saveMessage(notifyTeacherMsg);
+        } catch (Exception e) {
+            System.err.println("发送通知给教师失败: " + e.getMessage());
+        }
+
+        // 发送通知给学生 (系统消息类型)
+        try {
+            com.example.project.entity.notification.Message notifyStudentMsg = new com.example.project.entity.notification.Message();
+            notifyStudentMsg.setReceiverId(enrollment.getStudentId());
+            notifyStudentMsg.setReceiverType("STUDENT");
+            notifyStudentMsg.setSenderId(enrollment.getTeacherId());
+            notifyStudentMsg.setSenderType("TEACHER");
+            notifyStudentMsg.setMessageType("SYSTEM"); // 系统通知
+
+            if ("approved".equals(status)) {
+                notifyStudentMsg.setTitle("已成功加入课程");
+                notifyStudentMsg.setContent("您已接受邀请，成功加入课程：" + enrollment.getCourseName());
+            } else {
+                notifyStudentMsg.setTitle("已拒绝课程邀请");
+                notifyStudentMsg.setContent("您已拒绝加入课程：" + enrollment.getCourseName());
+            }
+
+            notifyStudentMsg.setRelatedId(String.valueOf(enrollment.getId()));
+            notifyStudentMsg.setIsRead(0);
+            notifyStudentMsg.setCreateTime(new Date());
+
+            messageService.saveMessage(notifyStudentMsg);
+        } catch (Exception e) {
+            System.err.println("发送通知给学生失败: " + e.getMessage());
+        }
     }
 }

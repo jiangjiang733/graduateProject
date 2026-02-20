@@ -93,7 +93,18 @@ export const checkEnrollmentStatus = (studentId, courseId) => {
 }
 
 /**
- * 教师直接添加学生
+ * 教师邀请学生加入课程（创建 pending 状态的邀请记录）
+ * 学生需要在学生端接受邀请后才能加入课程
+ */
+export const inviteStudent = (studentId, courseId) => {
+  return request.post('/enrollment/invite', null, {
+    params: { studentId, courseId }
+  })
+}
+
+/**
+ * 教师直接添加学生（已弃用，请使用 inviteStudent）
+ * @deprecated 请使用 inviteStudent，让学生先接受邀请
  */
 export const directEnroll = (studentId, courseId) => {
   return request.post('/enrollment/direct-enroll', null, {
@@ -124,5 +135,6 @@ export default {
   cancelEnrollment,
   checkEnrollmentStatus,
   directEnroll,
+  inviteStudent,
   studentReviewEnrollment
 }

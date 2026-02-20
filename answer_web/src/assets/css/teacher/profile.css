@@ -221,3 +221,33 @@
   --el-table-border-color: #334155;
   --el-table-text-color: #e2e8f0;
 }
+
+.dark-theme :deep(.el-table th.el-table__cell) {
+  background-color: #0f172a;
+  color: #94a3b8;
+}
+
+.dark-theme :deep(.el-table td.el-table__cell) {
+  background-color: #1e293b;
+}
+
+.dark-theme .section-title-row {
+  border-bottom-color: #334155;
+}
+
+.dark-theme .info-section {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+.dark-theme .info-item {
+  background: #1e293b;
+}
+
+.dark-theme .info-item:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.dark-theme .edit-btn {
+  border-top-color: #334155;
+}

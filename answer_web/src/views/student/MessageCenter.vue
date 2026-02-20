@@ -164,7 +164,7 @@
           </template>
           
           <div v-else class="empty-state">
-            <el-icon size="64" color="#d1d5db"><ChatDotRound /></el-icon>
+            <el-icon size="64" color="var(--text-sub)"><ChatDotRound /></el-icon>
             <h3>我的老师</h3>
             <p>从左侧选择一位授课老师开始提问</p>
           </div>
@@ -191,29 +191,44 @@
                        <span class="action-text">{{ item.actionText }}</span>
                        <span class="time">{{ formatExtendedTime(item.time) }}</span>
                     </div>
-                    <div class="reply-content" v-if="item.content">{{ item.content }}</div>
-                    
-                    <!-- Course Invitation Actions -->
-                    <div v-if="item.type === 'COURSE_INVITATION' && item.invitationStatus === 'pending'" class="invitation-actions">
-                      <el-button type="success" size="small" @click="handleAcceptInvitation(item)" :loading="item.accepting">
-                        <el-icon><Check /></el-icon> 接受邀请
-                      </el-button>
-                      <el-button type="danger" size="small" plain @click="handleRejectInvitation(item)" :loading="item.rejecting">
-                        <el-icon><Close /></el-icon> 拒绝
-                      </el-button>
+                    <div class="reply-content" v-if="item.content">
+                      <span v-if="item.content.includes('已删除')" style="color: #94a3b8; font-style: italic;">该评论已被删除</span>
+                      <span v-else>{{ item.content }}</span>
                     </div>
-                    <div v-else-if="item.type === 'COURSE_INVITATION' && item.invitationStatus" class="invitation-status">
-                      <el-tag :type="item.invitationStatus === 'approved' ? 'success' : 'danger'" size="small">
-                        {{ item.invitationStatus === 'approved' ? '已加入' : '已拒绝' }}
-                      </el-tag>
+
+                    <div v-if="item.type === 'COURSE_INVITATION'" class="invitation-card-modern">
+                      <div class="invitation-body">
+                        <div class="invitation-main-text">
+                          <el-icon class="book-icon"><School /></el-icon>
+                          <span>邀请您加入课程：<strong class="course-highlight">{{ item.content.split('：')[1] || item.content }}</strong></span>
+                        </div>
+                        
+                        <div v-if="item.invitationStatus === 'pending'" class="invitation-op-btns">
+                          <el-button type="success" size="small" rounded @click="handleAcceptInvitation(item)" :loading="item.accepting">
+                            <el-icon><Check /></el-icon> 接受
+                          </el-button>
+                          <el-button type="danger" size="small" plain rounded @click="handleRejectInvitation(item)" :loading="item.rejecting">
+                            <el-icon><Close /></el-icon> 拒绝
+                          </el-button>
+                        </div>
+                        <div v-else class="invitation-status-box">
+                          <div :class="['status-pill', item.invitationStatus === 'approved' ? 'is-approved' : 'is-rejected']">
+                            <el-icon><CircleCheck v-if="item.invitationStatus === 'approved'" /><CircleClose v-else /></el-icon>
+                            <span>{{ item.invitationStatus === 'approved' ? '已接受' : '已拒绝' }}</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                     
                     <!-- Regular Interaction Actions -->
                     <div class="item-actions">
-                       <el-button v-if="item.type !== 'SYSTEM' && item.type !== 'COURSE_INVITATION'" link type="primary" size="small" @click="toggleQuickReply(item)">
+                       <el-button v-if="item.type !== 'SYSTEM' && item.type !== 'COURSE_INVITATION' && !item.content?.includes('已删除')" link type="primary" size="small" @click="toggleQuickReply(item)">
                          {{ item.showReply ? '取消回复' : '快捷回复' }}
                        </el-button>
-                       <el-button v-if="item.type !== 'COURSE_INVITATION'" link size="small" @click="handleInteractionDetail(item)">查看详情</el-button>
+                       <el-button v-if="item.type !== 'COURSE_INVITATION' && !item.content?.includes('已删除')" link size="small" @click="handleInteractionDetail(item)">查看详情</el-button>
+                       <el-button link type="danger" size="small" class="delete-btn" @click="handleDeleteMessage(item)">
+                         <el-icon><Delete /></el-icon> 删除
+                       </el-button>
                     </div>
                     <div v-if="item.showReply" class="quick-reply-box">
                        <el-input 
@@ -244,16 +259,16 @@ import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { 
   ChatLineRound, Search, MoreFilled, Picture, Folder, Microphone, ChatDotRound, Comment, Bell, BellFilled, ArrowRight, Document,
-  Check, Close, Message as MessageIcon
+  Check, Close, Message as MessageIcon, School, CircleCheck, CircleClose, Delete
 } from '@element-plus/icons-vue'
 import '@/assets/css/teacher/modern-theme.css'
 import { 
   sendChatMessage, getChatHistory, getChatContacts, 
   getActiveContacts, markChatRead, getChatUnreadCount 
 } from '@/api/chat'
-import { getMessageList, markAsRead, getUnreadCount, sendSystemMessage } from '@/api/message'
+import { getMessageList, markAsRead, getUnreadCount, deleteMessage } from '@/api/message'
 import { getTeacherComments, addComment } from '@/api/comment'
-import { reviewEnrollment } from '@/api/enrollment'
+import { studentReviewEnrollment } from '@/api/enrollment'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useUserInfo } from '@/stores/user'
 
@@ -381,7 +396,7 @@ const loadInteractions = async () => {
                 // Course invitation specific fields
                 enrollmentId: m.relatedId,
                 courseName: m.courseName || extractCourseName(m.content),
-                invitationStatus: m.invitationStatus || m.status || 'pending',
+                invitationStatus: m.invitationStatus || m.invitation_status || m.status || 'pending',
                 accepting: false,
                 rejecting: false
             }))
@@ -548,7 +563,8 @@ const handleAcceptInvitation = async (item) => {
         )
         
         item.accepting = true
-        const response = await reviewEnrollment(item.enrollmentId, item.senderId, 'approved')
+        // 使用学生专用的审核API
+        const response = await studentReviewEnrollment(item.enrollmentId, 'approved')
         if (response.success || response.code === 200) {
             ElMessage.success('已接受邀请')
     
@@ -561,19 +577,7 @@ const handleAcceptInvitation = async (item) => {
                 }
             }
             
-            try {
-                await sendSystemMessage({
-                    receiverId: item.senderId,
-                    receiverType: 'TEACHER',
-                    title: '学生已接受课程邀请',
-                    content: `学生 ${userStore.userName} 已接受您的课程邀请：${item.courseName || '课程'}`,
-                    messageType: 'COURSE_INVITATION_RESPONSE'
-                })
-            } catch (e) {
-                console.error('发送通知失败:', e)
-            }
-            
-            // Reload interactions to get updated status from backend
+            // 重新加载互动列表以获取最新状态
             setTimeout(() => loadInteractions(), 500)
         } else {
             ElMessage.error(response.message || '操作失败')
@@ -605,8 +609,8 @@ const handleRejectInvitation = async (item) => {
         )
         
         item.rejecting = true
-        // Use senderId as teacherId since the invitation comes from the teacher
-        const response = await reviewEnrollment(item.enrollmentId, item.senderId, 'rejected', reason || '学生拒绝了邀请')
+        // 使用学生专用的审核API
+        const response = await studentReviewEnrollment(item.enrollmentId, 'rejected', reason || '学生拒绝了邀请')
         
         if (response.success || response.code === 200) {
             ElMessage.success('已拒绝邀请')
@@ -621,19 +625,7 @@ const handleRejectInvitation = async (item) => {
                 }
             }
             
-            try {
-                await sendSystemMessage({
-                    receiverId: item.senderId,
-                    receiverType: 'TEACHER',
-                    title: '学生已拒绝课程邀请',
-                    content: `学生 ${userStore.userName} 拒绝了您的课程邀请：${item.courseName || '课程'}${reason ? `\n原因：${reason}` : ''}`,
-                    messageType: 'COURSE_INVITATION_RESPONSE'
-                })
-            } catch (e) {
-                console.error('发送通知失败:', e)
-            }
-            
-            // Reload interactions to get updated status from backend
+            // 重新加载互动列表以获取最新状态
             setTimeout(() => loadInteractions(), 500)
         } else {
             ElMessage.error(response.message || '操作失败')
@@ -658,6 +650,38 @@ const markAllRead = async () => {
         ElMessage.success('已清空未读')
     } catch (error) {
         ElMessage.error('操作失败')
+    }
+}
+
+// 删除通知消息
+const handleDeleteMessage = async (item) => {
+    try {
+        await ElMessageBox.confirm(
+            '确定要删除这条通知消息吗？',
+            '删除确认',
+            {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }
+        )
+
+        const res = await deleteMessage(item.id, studentId.value, userType.value)
+        if (res.code === 200) {
+            ElMessage.success('删除成功')
+            // 从列表中移除
+            const index = interactionList.value.findIndex(i => i.id === item.id)
+            if (index > -1) {
+                interactionList.value.splice(index, 1)
+            }
+        } else {
+            ElMessage.error(res.message || '删除失败')
+        }
+    } catch (error) {
+        if (error !== 'cancel') {
+            console.error(error)
+            ElMessage.error('网络错误，删除失败')
+        }
     }
 }
 
@@ -763,13 +787,13 @@ onUnmounted(() => {
 
 <style scoped>
 .message-center { height: calc(100vh - 120px); overflow: hidden; padding-bottom: 20px; }
-.chat-container { display: flex; height: 100%; border-radius: 16px; background: #fff; border: 1px solid rgba(0,0,0,0.05); }
+.chat-container { display: flex; height: 100%; border-radius: 16px; background: var(--bg-card, #fff); border: 1px solid var(--border-color, rgba(0,0,0,0.05)); }
 
 /* Sidebar Tabs */
-.chat-sidebar { width: 320px; display: flex; flex-direction: column; background: #f9fafb; border-right: 1px solid #eee; border-radius: 16px 0 0 16px; }
-.sidebar-tabs { display: flex; border-bottom: 1px solid #e5e7eb; background: #fff; border-radius: 16px 0 0 0; }
-.tab-item { flex: 1; height: 56px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 15px; color: #6b7280; cursor: pointer; position: relative; }
-.tab-item.active { color: #10b981; font-weight: 600; background: #fff; border-bottom: 2px solid #10b981; }
+.chat-sidebar { width: 320px; display: flex; flex-direction: column; background: var(--bg-page, #f9fafb); border-right: 1px solid var(--border-color, #eee); border-radius: 16px 0 0 16px; }
+.sidebar-tabs { display: flex; border-bottom: 1px solid var(--border-color, #e5e7eb); background: var(--bg-card, #fff); border-radius: 16px 0 0 0; }
+.tab-item { flex: 1; height: 56px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 15px; color: var(--text-sub, #6b7280); cursor: pointer; position: relative; }
+.tab-item.active { color: #10b981; font-weight: 600; background: var(--bg-card, #fff); border-bottom: 2px solid #10b981; }
 
 .tab-badge { 
   position: absolute; top: 10px; right: 15%; background: #ef4444; color: white; font-size: 10px; height: 16px; min-width: 16px; 
@@ -782,26 +806,26 @@ onUnmounted(() => {
 /* User List */
 .user-list { flex: 1; overflow-y: auto; padding: 0 10px; }
 .user-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 10px; cursor: pointer; transition: all 0.2s; margin-bottom: 4px; }
-.user-item:hover { background-color: #f3f4f6; }
-.user-item.active { background-color: #ecfdf5; }
+.user-item:hover { background-color: var(--bg-page, #f3f4f6); }
+.user-item.active { background-color: rgba(16, 185, 129, 0.1); }
 .user-avatar-wrap { position: relative; }
 .unread-dot { position: absolute; top: -2px; right: -2px; background: #ef4444; color: white; font-size: 10px; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid white; }
 
 .user-info { flex: 1; min-width: 0; }
 .info-top { display: flex; justify-content: space-between; margin-bottom: 4px; align-items: center; }
 .course-tag { font-size: 10px; background: rgba(139, 92, 246, 0.1); color: #8b5cf6; padding: 2px 6px; border-radius: 4px; }
-.last-msg { margin: 0; font-size: 12px; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.time { font-size: 10px; color: #9ca3af; }
+.last-msg { margin: 0; font-size: 12px; color: var(--text-sub, #6b7280); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.time { font-size: 10px; color: var(--text-sub, #9ca3af); }
 
 /* Main Area */
-.chat-main { flex: 1; display: flex; flex-direction: column; background: #fff; border-radius: 0 16px 16px 0; overflow: hidden; position: relative; }
-.window-header { height: 70px; padding: 0 24px; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center; background: #fff; }
+.chat-main { flex: 1; display: flex; flex-direction: column; background: var(--bg-card, #fff); border-radius: 0 16px 16px 0; overflow: hidden; position: relative; }
+.window-header { height: 70px; padding: 0 24px; border-bottom: 1px solid var(--border-color, #f3f4f6); display: flex; justify-content: space-between; align-items: center; background: var(--bg-card, #fff); }
 .user-title { display: flex; align-items: center; gap: 12px; }
 .user-info-text { display: flex; flex-direction: column; justify-content: center; }
-.user-info-text .name { font-size: 16px; font-weight: 600; color: #1f2937; line-height: 1.2; }
-.user-info-text .sub-text { font-size: 12px; color: #6b7280; margin-top: 2px; }
+.user-info-text .name { font-size: 16px; font-weight: 600; color: var(--text-main, #1f2937); line-height: 1.2; }
+.user-info-text .sub-text { font-size: 12px; color: var(--text-sub, #6b7280); margin-top: 2px; }
 
-.message-area { flex: 1; background-color: #f9fafb; padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+.message-area { flex: 1; background-color: var(--bg-page, #f9fafb); padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
 .message-row { display: flex; gap: 12px; max-width: 80%; width: fit-content; }
 .message-row.me { align-self: flex-end; flex-direction: row-reverse; }
 
@@ -810,57 +834,139 @@ onUnmounted(() => {
 .msg-name { font-weight: 500; }
 .msg-time-label { font-size: 11px; }
 
-.bubble { padding: 12px 16px; border-radius: 12px; background: white; color: #374151; font-size: 15px; line-height: 1.5; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border-top-left-radius: 2px; position: relative; }
-.me .bubble { background: #3b82f6; color: white; border-top-left-radius: 12px; border-top-right-radius: 2px; }
+.bubble { padding: 12px 16px; border-radius: 12px; background: var(--bg-card, white); color: var(--text-main, #374151); font-size: 15px; line-height: 1.5; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border-top-left-radius: 2px; border: 1px solid var(--border-color, transparent); position: relative; }
+.me .bubble { background: #3b82f6; color: white; border-top-left-radius: 12px; border-top-right-radius: 2px; border: none; }
 
 .msg-body { display: flex; flex-direction: column; }
 
-.input-area { padding: 16px 24px; background: #fff; border-top: 1px solid #f3f4f6; }
+.input-area { padding: 16px 24px; background: var(--bg-card, #fff); border-top: 1px solid var(--border-color, #f3f4f6); }
 .toolbar { display: flex; gap: 16px; margin-bottom: 12px; color: #6b7280; font-size: 18px; }
 .toolbar .el-icon { cursor: pointer; transition: color 0.2s; }
 .toolbar .el-icon:hover { color: #3b82f6; }
 
 .input-wrapper { display: flex; flex-direction: column; gap: 12px; }
-.chat-input { width: 100%; min-height: 80px; border: none; resize: none; font-size: 15px; color: #374151; outline: none; background: transparent; }
-.chat-input::placeholder { color: #9ca3af; }
+.chat-input { width: 100%; min-height: 80px; border: none; resize: none; font-size: 15px; color: var(--text-main, #374151); outline: none; background: transparent; }
+.chat-input::placeholder { color: var(--text-sub, #9ca3af); }
 
 .send-btn-wrap { display: flex; justify-content: flex-end; }
 .send-btn-wrap .el-button { padding: 8px 24px; border-radius: 8px; font-weight: 500; }
 
 /* Interaction Menu */
 .interaction-menu { padding: 16px; gap: 8px; }
-.menu-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px; cursor: pointer; font-weight: 500; }
-.menu-item:hover { background: #f1f5f9; }
-.menu-item.active { background: #ecfdf5; color: #059669; }
+.menu-item { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px; cursor: pointer; font-weight: 500; color: var(--text-main, #1f2937); }
+.menu-item:hover { background: var(--bg-page, #f1f5f9); }
+.menu-item.active { background: rgba(16, 185, 129, 0.1); color: #059669; }
 .icon-box { width: 36px; height: 36px; border-radius: 10px; color: white; display: flex; align-items: center; justify-content: center; font-size: 18px; }
 .bg-green { background: linear-gradient(135deg, #34d399, #10b981); }
 .bg-blue { background: linear-gradient(135deg, #60a5fa, #3b82f6); }
 .bg-purple { background: linear-gradient(135deg, #a78bfa, #8b5cf6); }
-.arrow { margin-left: auto; color: #cbd5e1; }
+.arrow { margin-left: auto; color: var(--text-sub, #cbd5e1); }
 
 .interaction-list { flex: 1; overflow-y: auto; }
-.interaction-item { display: flex; padding: 16px 24px; border-bottom: 1px solid #f1f5f9; gap: 16px; }
+.interaction-item { display: flex; padding: 16px 24px; border-bottom: 1px solid var(--border-color, #f1f5f9); gap: 16px; }
 .item-content { flex: 1; display: flex; flex-direction: column; gap: 4px; }
 .item-top { display: flex; gap: 8px; align-items: center; font-size: 13px; }
-.user-name { font-weight: 700; }
-.action-text { color: #64748b; }
-.time { font-size: 11px; color: #9ca3af; }
-.reply-content { font-size: 14px; color: #1e293b; margin: 4px 0; }
-.unread-badge { position: absolute; top: 0; right: 0; width: 10px; height: 10px; background: #ef4444; border-radius: 50%; border: 2px solid #fff; }
+.user-name { font-weight: 700; color: var(--text-main, #1f2937); }
+.action-text { color: var(--text-sub, #64748b); }
+.time { font-size: 11px; color: var(--text-sub, #9ca3af); }
+.reply-content { font-size: 14px; color: var(--text-main, #1e293b); margin: 4px 0; }
+.unread-badge { position: absolute; top: 0; right: 0; width: 10px; height: 10px; background: #ef4444; border-radius: 50%; border: 2px solid var(--bg-card, #fff); }
 
 .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; gap: 16px; }
 .custom-scrollbar::-webkit-scrollbar { width: 6px; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 3px; }
 .quick-reply-box { margin-top: 12px; }
 
-/* Course Invitation Styles */
-.invitation-actions {
-  margin-top: 12px;
-  display: flex;
-  gap: 8px;
+/* Course Invitation Modern Card */
+.invitation-card-modern {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 10px 0;
+  transition: all 0.3s ease;
 }
 
-.invitation-status {
-  margin-top: 8px;
+.invitation-card-modern:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.invitation-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.invitation-main-text {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  color: #1e293b;
+}
+
+.book-icon {
+  color: #3b82f6;
+  font-size: 18px;
+}
+
+.course-highlight {
+  color: #3b82f6;
+  font-weight: 700;
+}
+
+.invitation-op-btns {
+  display: flex;
+  gap: 10px;
+}
+
+.invitation-status-box {
+  display: flex;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.status-pill.is-approved {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.status-pill.is-rejected {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.delete-btn {
+  color: #94a3b8 !important;
+}
+
+.delete-btn:hover {
+  color: #ef4444 !important;
+}
+
+:global(.dark-theme) .invitation-card-modern {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+:global(.dark-theme) .invitation-main-text {
+  color: #f1f5f9;
+}
+
+:global(.dark-theme) .status-pill.is-approved {
+  background: rgba(16, 185, 129, 0.2);
+}
+
+:global(.dark-theme) .status-pill.is-rejected {
+  background: rgba(239, 68, 68, 0.2);
 }
 </style>

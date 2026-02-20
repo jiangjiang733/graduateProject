@@ -81,6 +81,8 @@ export function useExamManagement() {
                 return
             }
 
+            let examsData = []
+
             // 如果有筛选条件，使用搜索接口
             if (filterForm.courseId || filterForm.status || filterForm.keyword) {
                 const searchParams = {
@@ -90,20 +92,47 @@ export function useExamManagement() {
                     keyword: filterForm.keyword || undefined
                 }
                 const res = await request.get('/exam/search', { params: searchParams })
-                if (res.success && res.data) {
-                    exams.value = res.data
-                } else if (res.data) {
-                    exams.value = res.data
+                if ((res.success || res.code === 200) && res.data) {
+                    examsData = res.data
                 }
             } else {
                 // 没有筛选条件，获取教师所有考试
                 const res = await request.get(`/exam/teacher/${teacherId}`)
-                if (res.success && res.data) {
-                    exams.value = res.data
-                } else if (res.data) {
-                    exams.value = res.data
+                if ((res.success || res.code === 200) && res.data) {
+                    examsData = res.data
                 }
             }
+
+            // 数据映射处理
+            exams.value = examsData.map(exam => {
+                // 基础映射
+                let mappedExam = {
+                    ...exam,
+                    examId: exam.examId || exam.exam_id || exam.id,
+                    examTitle: exam.examTitle || exam.exam_title || exam.title,
+                    courseId: exam.courseId || exam.course_id || (exam.course && (exam.course.id || exam.course.courseId)),
+                    courseName: exam.courseName || exam.course_name || exam.courseTitle ||
+                        (exam.course && (exam.course.courseName || exam.course.course_name || exam.course.title))
+                }
+
+                // 如果没有课程名称，尝试从已加载的课程列表中查找绑定
+                if (!mappedExam.courseName && mappedExam.courseId && courses.value.length > 0) {
+                    const course = courses.value.find(c =>
+                        String(c.id) === String(mappedExam.courseId) ||
+                        String(c.courseId) === String(mappedExam.courseId)
+                    )
+                    if (course) {
+                        mappedExam.courseName = course.courseName || course.name || course.title || course.courseTitle
+                        console.log('已补充列表课程名:', mappedExam.courseName)
+                    }
+                }
+
+                // 如果还是没有，显示未分配
+                if (!mappedExam.courseName) mappedExam.courseName = '未分配课程'
+
+                return mappedExam
+            })
+
         } catch (e) {
             console.error('加载考试列表失败', e)
             ElMessage.error('加载考试列表失败')
@@ -242,9 +271,9 @@ export function useExamManagement() {
         })
     }
 
-    onMounted(() => {
-        loadCourses()
-        loadExams()
+    onMounted(async () => {
+        await loadCourses()
+        await loadExams()
     })
 
     return {

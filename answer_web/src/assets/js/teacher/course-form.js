@@ -1,7 +1,6 @@
-import { ref, reactive, onMounted, computed, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import axios from 'axios'
 import {
     createCourse,
     getCourseDetail,
@@ -18,9 +17,9 @@ import {
 } from '@/api/course.js'
 import {
     addSchedule,
-    getCourseSchedules,
     updateSchedule,
-    deleteSchedule
+    deleteSchedule,
+    getCourseSchedules
 } from '@/api/schedule.js'
 import { API_BASE_URL } from '@/api/request.js'
 
@@ -53,7 +52,10 @@ export function useCourseForm() {
         courseName: '',
         courseDescription: '',
         major: '',
-        classification: '',
+        classification: '公开课程',
+        state: 1, // 0=草稿, 1=已发布
+        num: 0, // 招生人数限制，0表示不限制
+        remark: '', // 备注说明
         image: null
     })
 
@@ -63,6 +65,34 @@ export function useCourseForm() {
     // 封面预览
     const coverPreview = ref('')
     const coverFile = ref(null)
+
+    // 步骤定义和导航
+    const steps = ref([
+        { label: '基本信息', value: 'basic' },
+        { label: '课程详情', value: 'details' },
+        { label: '课程状态', value: 'students' },
+        { label: '课程时间', value: 'schedule' },
+        { label: '课程大纲', value: 'chapters' }
+    ])
+    const currentStep = ref(0)
+
+    const nextStep = () => {
+        if (currentStep.value < steps.value.length - 1) {
+            currentStep.value++
+        }
+    }
+
+    const prevStep = () => {
+        if (currentStep.value > 0) {
+            currentStep.value--
+        }
+    }
+
+    const goToStep = (index) => {
+        if (isEdit.value) {
+            currentStep.value = index
+        }
+    }
 
     // 提交状态
     const submitting = ref(false)
@@ -184,6 +214,25 @@ export function useCourseForm() {
             return
         }
 
+        // 如果是创建课程模式，仅在本地操作
+        if (!isEdit.value) {
+            const tempSchedule = { ...scheduleForm }
+            if (isEditSchedule.value) {
+                // 编辑现有项
+                const index = schedules.value.findIndex(item => item.scheduleId === tempSchedule.scheduleId)
+                if (index !== -1) {
+                    schedules.value[index] = tempSchedule
+                }
+            } else {
+                // 添加新项 (生成临时ID)
+                tempSchedule.scheduleId = 'temp_' + Date.now()
+                schedules.value.push(tempSchedule)
+            }
+            ElMessage.success('已添加到列表')
+            scheduleDialogVisible.value = false
+            return
+        }
+
         scheduleLoading.value = true
         try {
             if (isEditSchedule.value) {
@@ -221,6 +270,16 @@ export function useCourseForm() {
                     type: 'warning'
                 }
             )
+
+            // 如果是创建课程模式，仅在本地操作
+            if (!isEdit.value) {
+                const index = schedules.value.findIndex(item => item.scheduleId === schedule.scheduleId)
+                if (index !== -1) {
+                    schedules.value.splice(index, 1)
+                    ElMessage.success('删除成功')
+                }
+                return
+            }
 
             scheduleLoading.value = true
             const response = await deleteSchedule(schedule.scheduleId)
@@ -269,7 +328,10 @@ export function useCourseForm() {
                 formData.courseName = course.courseName || ''
                 formData.courseDescription = course.courseDescription || ''
                 formData.major = course.major || ''
-                formData.classification = course.classification || ''
+                formData.classification = course.classification || '公开课程'
+                formData.state = course.state !== undefined ? course.state : 1
+                formData.num = course.num || 0
+                formData.remark = course.remark || ''
 
                 console.log('表单数据已设置:', formData)
 
@@ -284,6 +346,9 @@ export function useCourseForm() {
                     coverPreview.value = getCourseImage(course.image)
                     console.log('封面预览已设置:', coverPreview.value)
                 }
+
+                // 加载章节数据
+                await loadChapters()
             } else {
                 console.error('响应数据无效:', response)
                 ElMessage.error('加载课程详情失败：数据无效')
@@ -294,13 +359,26 @@ export function useCourseForm() {
         }
     }
 
+    // 加载章节数据
+    const loadChapters = async () => {
+        try {
+            const response = await getCourseChapters(courseId.value)
+            if (response.success && response.data) {
+                treeData.value = response.data
+                console.log('章节数据已加载:', treeData.value)
+            }
+        } catch (error) {
+            console.error('加载章节失败:', error)
+        }
+    }
+
     // 获取课程图片URL
     const getCourseImage = (image) => {
         if (!image) return ''
         if (image.startsWith('http://') || image.startsWith('https://')) {
             return image
         }
-        return `${BASE_URL}${image}`
+        return `${BASE_URL}${image} `
     }
 
     // 封面上传前验证
@@ -357,6 +435,9 @@ export function useCourseForm() {
                 courseDescription: formData.courseDescription,
                 major: formData.major,
                 classification: formData.classification,
+                state: formData.state,
+                num: formData.num || 0,
+                remark: formData.remark || '',
                 creatorUsername: teacherName
             }
 
@@ -381,6 +462,37 @@ export function useCourseForm() {
             }
 
             if (response.success) {
+                // 成功
+                const newCourseId = response.data.id || response.data // 获取新课程ID
+
+                // 如果是创建模式，且有预设的时间表，则批量提交时间表
+                if (!isEdit.value && schedules.value.length > 0 && newCourseId) {
+                    try {
+                        for (const schedule of schedules.value) {
+                            schedule.courseId = newCourseId
+                            // 删除临时ID
+                            if (schedule.scheduleId && String(schedule.scheduleId).startsWith('temp_')) {
+                                delete schedule.scheduleId
+                            }
+                            await addSchedule(schedule)
+                        }
+                    } catch (schedError) {
+                        console.error('保存时间表失败:', schedError)
+                        ElMessage.warning('课程创建成功，但部分时间表保存失败')
+                    }
+                }
+
+                // 如果是创建模式，且有预设的章节，则批量提交章节
+                if (!isEdit.value && treeData.value.length > 0 && newCourseId) {
+                    try {
+                        ElMessage.info('正在保存课程章节及文件，请稍候...')
+                        await submitLocalChapters(newCourseId, treeData.value)
+                    } catch (chapError) {
+                        console.error('保存章节失败:', chapError)
+                        ElMessage.warning('课程创建成功，但部分章节保存失败')
+                    }
+                }
+
                 ElMessage.success(isEdit.value ? '课程更新成功' : '课程创建成功')
                 router.push('/teacher/courses')
             } else {
@@ -459,22 +571,44 @@ export function useCourseForm() {
         }
         addDialogVisible.value = true
     }
-
     // 编辑章节
     const editChapter = (chapter) => {
         isEditChapter.value = true
         currentParent.value = null
-        chapterForm.value = {
+
+        // 初始化基础数据
+        const form = {
             chapterId: chapter.chapterId,
             type: chapter.chapterType,
             title: chapter.chapterTitle,
             order: chapter.chapterOrder || chapter.order || 1,
             video: null,
             pdf: null,
-            videoUrl: chapter.videoUrl,
-            pdfUrl: chapter.pdfUrl,
+            videoUrl: '',
+            pdfUrl: '',
             content: chapter.textContent || ''
         }
+
+        // 本地章节特殊处理
+        if (chapter.chapterId && String(chapter.chapterId).startsWith('temp_')) {
+            form.video = chapter.video
+            form.pdf = chapter.pdf
+
+            // Generate visual feedback URLs if needed
+            if (chapter.video instanceof File) {
+                form.videoUrl = URL.createObjectURL(chapter.video)
+            }
+            if (chapter.pdf instanceof File) {
+                form.pdfUrl = URL.createObjectURL(chapter.pdf)
+            }
+        } else {
+            // normal remote chapter
+            form.videoUrl = chapter.videoUrl
+            form.pdfUrl = chapter.pdfUrl
+        }
+
+        chapterForm.value = form
+
         if (videoUploadRef.value) {
             videoUploadRef.value.clearFiles()
         }
@@ -519,11 +653,6 @@ export function useCourseForm() {
                 ElMessage.warning('视频章节必须上传视频文件')
                 return
             }
-            console.log('视频文件已选择:', {
-                name: chapterForm.value.video.name,
-                size: chapterForm.value.video.size,
-                type: chapterForm.value.video.type
-            })
         }
 
         if (chapterForm.value.type === 'MIXED') {
@@ -535,14 +664,68 @@ export function useCourseForm() {
                 ElMessage.warning('混合内容至少需要上传一种内容(视频/PDF/文本)')
                 return
             }
-
-            console.log('混合内容验证:', {
-                视频: hasVideo ? chapterForm.value.video.name : '无',
-                PDF: hasPdf ? chapterForm.value.pdf.name : '无',
-                文本: hasContent ? '有' : '无'
-            })
         }
 
+        if (!isEdit.value) {
+            // ========== 创建课程模式：本地暂存 ==========
+            const tempId = chapterForm.value.chapterId || `temp_chap_${Date.now()} `
+            const newChapter = {
+                chapterId: tempId,
+                parentId: currentParent.value ? currentParent.value.chapterId : null,
+                chapterTitle: chapterForm.value.title,
+                chapterType: chapterForm.value.type,
+                chapterOrder: chapterForm.value.order,
+                video: chapterForm.value.video, // Store File objects
+                pdf: chapterForm.value.pdf,     // Store File objects
+                textContent: chapterForm.value.content,
+                children: []
+            }
+
+            if (isEditChapter.value) {
+                // 编辑现有本地章节
+                const updateNode = (nodes) => {
+                    for (let node of nodes) {
+                        if (node.chapterId === tempId) {
+                            // 仅更新变更的字段，保留原有File对象如果不为空
+                            // 如果用户没选新文件(chapterForm.video为null)，但原node有文件(node.video)，则保留node.video
+                            // 反之，如果用户选了新文件，chapterForm.video有值，newChapter.video也有值，覆盖原node.video
+
+                            const mergedChapter = { ...newChapter }
+
+                            // 视频处理
+                            if (!mergedChapter.video && node.video) {
+                                mergedChapter.video = node.video // 保留原文件
+                            }
+
+                            // PDF处理
+                            if (!mergedChapter.pdf && node.pdf) {
+                                mergedChapter.pdf = node.pdf // 保留原文件
+                            }
+
+                            Object.assign(node, mergedChapter)
+                            return true
+                        }
+                        if (node.children && updateNode(node.children)) return true
+                    }
+                    return false
+                }
+                updateNode(treeData.value)
+                ElMessage.success('已更新本地章节')
+            } else {
+                // 新增本地章节
+                if (currentParent.value) {
+                    if (!currentParent.value.children) currentParent.value.children = []
+                    currentParent.value.children.push(newChapter)
+                } else {
+                    treeData.value.push(newChapter)
+                }
+                ElMessage.success('已添加到大纲')
+            }
+            addDialogVisible.value = false
+            return
+        }
+
+        // ========== 编辑课程模式：直接提交到后端 ==========
         chaptersLoading.value = true
         try {
             const data = {
@@ -552,15 +735,8 @@ export function useCourseForm() {
                 order: chapterForm.value.order
             }
 
-            // ========== 详细日志 ==========
-            console.log('\n=== 前端提交章节 ===')
-            console.log('章节类型:', chapterForm.value.type)
-            console.log('章节标题:', chapterForm.value.title)
-            console.log('课程ID:', data.courseId)
-
             let response
             if (isEditChapter.value) {
-                // ========== 编辑模式 (使用 JSON 避免 Content-Type 报错) ==========
                 const userId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
                 const updateData = {
                     chapterTitle: chapterForm.value.title,
@@ -568,11 +744,7 @@ export function useCourseForm() {
                     chapterType: chapterForm.value.type,
                     textContent: chapterForm.value.content || ''
                 }
-
-                console.log('正在更新章节 (JSON):', chapterForm.value.chapterId, updateData)
                 response = await updateChapter(chapterForm.value.chapterId, userId, updateData)
-
-                // 处理通过 request 实例返回的数据 (拦截器已处理 .data)
                 const result = response
                 if (result.success || result.code === 200) {
                     ElMessage.success('章节更新成功')
@@ -583,37 +755,23 @@ export function useCourseForm() {
                 }
                 return
             } else {
-                // ========== 创建模式 ==========
                 switch (chapterForm.value.type) {
-                    case 'FOLDER':
-                        console.log('创建文件夹章节')
-                        response = await createFolderChapter(data)
-                        break
+                    case 'FOLDER': response = await createFolderChapter(data); break;
                     case 'VIDEO':
-                        data.video = chapterForm.value.video
-                        console.log('创建视频章节')
-                        response = await createVideoChapter(data)
-                        break
+                        data.video = chapterForm.value.video;
+                        response = await createVideoChapter(data); break;
                     case 'PDF':
-                        data.pdf = chapterForm.value.pdf
-                        console.log('创建PDF章节')
-                        response = await createPdfChapter(data)
-                        break
+                        data.pdf = chapterForm.value.pdf;
+                        response = await createPdfChapter(data); break;
                     case 'TEXT':
-                        data.content = chapterForm.value.content
-                        console.log('创建文本章节')
-                        response = await createTextChapter(data)
-                        break
+                        data.content = chapterForm.value.content;
+                        response = await createTextChapter(data); break;
                     case 'MIXED':
-                        data.video = chapterForm.value.video
-                        data.pdf = chapterForm.value.pdf
-                        data.content = chapterForm.value.content
-                        console.log('创建混合章节')
-                        response = await createMixedChapter(data)
-                        break
+                        data.video = chapterForm.value.video;
+                        data.pdf = chapterForm.value.pdf;
+                        data.content = chapterForm.value.content;
+                        response = await createMixedChapter(data); break;
                 }
-
-                // 处理直接用 axios 返回的数据
                 const result = response.data
                 if (result.success || result.code === 200) {
                     ElMessage.success('章节创建成功')
@@ -623,21 +781,77 @@ export function useCourseForm() {
                     ElMessage.error(result.message || '创建失败')
                 }
             }
-
-            console.log('服务器响应:', response)
-            console.log('=== 请求完成 ===\n')
-
         } catch (error) {
             console.error('创建失败:', error)
-            console.error('错误详情:', error.response?.data || error.message)
             ElMessage.error('创建失败: ' + (error.response?.data?.message || error.message))
         } finally {
             chaptersLoading.value = false
         }
     }
 
+    // 递归提交本地章节
+    const submitLocalChapters = async (courseId, chapters, parentId = null) => {
+        for (const chapter of chapters) {
+            try {
+                const data = {
+                    courseId: courseId,
+                    parentId: parentId,
+                    title: chapter.chapterTitle,
+                    order: chapter.chapterOrder
+                }
+
+                let response
+                switch (chapter.chapterType) {
+                    case 'FOLDER': response = await createFolderChapter(data); break;
+                    case 'VIDEO':
+                        data.video = chapter.video;
+                        response = await createVideoChapter(data); break;
+                    case 'PDF':
+                        data.pdf = chapter.pdf;
+                        response = await createPdfChapter(data); break;
+                    case 'TEXT':
+                        data.content = chapter.textContent;
+                        response = await createTextChapter(data); break;
+                    case 'MIXED':
+                        data.video = chapter.video;
+                        data.pdf = chapter.pdf;
+                        data.content = chapter.textContent;
+                        response = await createMixedChapter(data); break;
+                }
+
+                const result = response.data || response // createFolderChapter returns axios response, handle generically if needed
+                if (result.success || result.code === 200) {
+                    const newChapterId = (result.data && result.data.chapterId) ? result.data.chapterId : result.data
+
+                    // 如果有子章节，递归提交
+                    if (chapter.children && chapter.children.length > 0 && newChapterId) {
+                        await submitLocalChapters(courseId, chapter.children, newChapterId)
+                    }
+                }
+            } catch (error) {
+                console.error(`提交章节 ${chapter.chapterTitle} 失败: `, error)
+                // Continue with siblings
+            }
+        }
+    }
+
     // 查看章节
     const viewChapter = async (chapter) => {
+        if (chapter.chapterId && String(chapter.chapterId).startsWith('temp_')) {
+            // 本地章节预览
+            const temp = { ...chapter }
+            // 为本地文件生成预览URL
+            if (temp.video instanceof File) {
+                temp.videoUrl = URL.createObjectURL(temp.video)
+            }
+            if (temp.pdf instanceof File) {
+                temp.pdfUrl = URL.createObjectURL(temp.pdf)
+            }
+            currentChapter.value = temp
+            detailDialogVisible.value = true
+            return
+        }
+
         try {
             const response = await getChapterDetail(chapter.chapterId)
             if (response.success) {
@@ -658,6 +872,23 @@ export function useCourseForm() {
                 cancelButtonText: '取消',
                 type: 'warning'
             })
+
+            if (!isEdit.value) {
+                // 本地删除
+                const removeNode = (nodes, id) => {
+                    for (let i = 0; i < nodes.length; i++) {
+                        if (nodes[i].chapterId === id) {
+                            nodes.splice(i, 1)
+                            return true
+                        }
+                        if (nodes[i].children && removeNode(nodes[i].children, id)) return true
+                    }
+                    return false
+                }
+                removeNode(treeData.value, chapter.chapterId)
+                ElMessage.success('删除成功')
+                return
+            }
 
             const response = await deleteChapterApi(chapter.chapterId)
             if (response.success) {
@@ -688,7 +919,7 @@ export function useCourseForm() {
         if (url.startsWith('http://') || url.startsWith('https://')) {
             return url
         }
-        return `${BASE_URL}${url}`
+        return `${BASE_URL}${url} `
     }
 
     // 下载PDF
@@ -810,6 +1041,12 @@ export function useCourseForm() {
         formatTextContent,
         getChapterTypeTag,
         getTypeLabel,
-        formatTime
+        formatTime,
+        // 步骤相关
+        steps,
+        currentStep,
+        nextStep,
+        prevStep,
+        goToStep
     }
 }

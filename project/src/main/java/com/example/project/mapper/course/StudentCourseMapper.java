@@ -124,6 +124,7 @@ public interface StudentCourseMapper extends BaseMapper<StudentCourse> {
                                         "t.teacher_username as teacherName, " +
                                         "t.teacher_head as teacherAvatar, " +
                                         "c.image as courseImage, " +
+                                        "c.major as major, " +
                                         "c.classification as classification " +
                                         "FROM student_course sc " +
                                         "INNER JOIN course c ON sc.course_id = c.id " +

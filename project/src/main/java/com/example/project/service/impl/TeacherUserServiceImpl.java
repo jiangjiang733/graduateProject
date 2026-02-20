@@ -7,7 +7,6 @@ import com.example.project.mapper.TeacherUserMapper;
 import com.example.project.service.TeacherUserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -24,8 +23,6 @@ public class TeacherUserServiceImpl implements TeacherUserService {
     // 上传路径
     @Value("${file.upload-dir:./uploads}")
     private String uploadDir;
-    // 加密算法
-    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     @Override
     public Teacher register(String username, String password, String email, String department, String level) {
@@ -71,20 +68,17 @@ public class TeacherUserServiceImpl implements TeacherUserService {
         boolean match = false;
 
         if (storedPassword != null) {
-            if (storedPassword.startsWith("$2a$")) {
-                match = passwordEncoder.matches(password, storedPassword);
-            }
-
-            if (!match) {
-                try {
-                    String decrypted = com.example.project.util.AESUtil.decrypt(storedPassword);
-                    if (password.equals(decrypted)) {
-                        match = true;
-                    }
-                } catch (Exception e) {
+            // 1. 尝试AES解密验证
+            try {
+                String decrypted = AESUtil.decrypt(storedPassword);
+                if (password.equals(decrypted)) {
+                    match = true;
                 }
+            } catch (Exception e) {
+                // AES解密失败
             }
 
+            // 2. 明文比对（兼容旧数据）
             if (!match && password.equals(storedPassword)) {
                 match = true;
             }
@@ -132,18 +126,17 @@ public class TeacherUserServiceImpl implements TeacherUserService {
         String storedPassword = teacher.getTeacherPassword();
         boolean match = false;
         if (storedPassword != null) {
-            if (storedPassword.startsWith("$2a$")) {
-                match = passwordEncoder.matches(oldPassword, storedPassword);
-            }
-            if (!match) {
-                try {
-                    String decrypted = AESUtil.decrypt(storedPassword);
-                    if (oldPassword.equals(decrypted)) {
-                        match = true;
-                    }
-                } catch (Exception e) {
+            // 1. 尝试AES解密验证
+            try {
+                String decrypted = AESUtil.decrypt(storedPassword);
+                if (oldPassword.equals(decrypted)) {
+                    match = true;
                 }
+            } catch (Exception e) {
+                // AES解密失败
             }
+
+            // 2. 明文比对（兼容旧数据）
             if (!match && oldPassword.equals(storedPassword)) {
                 match = true;
             }
@@ -153,7 +146,7 @@ public class TeacherUserServiceImpl implements TeacherUserService {
             throw new RuntimeException("原密码错误");
         }
 
-        // 更新密码
+        // 使用AES加密新密码
         teacher.setTeacherPassword(AESUtil.encrypt(newPassword));
         teacherUserMapper.updateById(teacher);
     }

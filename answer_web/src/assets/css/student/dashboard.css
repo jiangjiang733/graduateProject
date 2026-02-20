@@ -293,9 +293,10 @@ html.dark .quick-nav-btn:hover {
     overflow: hidden;
 }
 
-.html.dark .welcome-header {
-    background: linear-gradient(120deg, #4338ca 0%, #3b82f6 100%);
+html.dark .welcome-header {
+    background: linear-gradient(120deg, #1e293b 0%, #0f172a 100%);
     box-shadow: none;
+    color: #f1f5f9;
 }
 
 .header-left h2 {

@@ -472,3 +472,39 @@
   background: linear-gradient(135deg, rgba(64, 158, 255, 0.2) 0%, rgba(64, 158, 255, 0.1) 100%);
   color: #1890ff;
 }
+
+html.dark .chat-container,
+html.dark .chat-main,
+html.dark .window-header,
+html.dark .input-area {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+html.dark .chat-sidebar {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+}
+
+html.dark .message-area {
+  background: #0f172a !important;
+}
+
+html.dark .bubble {
+  background: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+html.dark .me .bubble {
+  background: #3b82f6 !important;
+  color: #fff !important;
+}
+
+html.dark .user-item:hover {
+  background: #334155 !important;
+}
+
+html.dark .chat-input,
+html.dark .user-info-text .name {
+  color: #f1f5f9 !important;
+}

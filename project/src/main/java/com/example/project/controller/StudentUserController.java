@@ -13,7 +13,6 @@ import org.springframework.web.multipart.MultipartFile;
 import com.example.project.util.AESUtil;
 import java.util.HashMap;
 import java.util.Map;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 // 学生用户控制器
 @RestController
@@ -45,24 +44,19 @@ public class StudentUserController {
 
         String storedPassword = dbStudent.getStudentsPassword();
         boolean match = false;
-        BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
         if (storedPassword != null) {
-            // 1. BCrypt
-            if (storedPassword.startsWith("$2a$")) {
-                match = passwordEncoder.matches(student.getStudentsPassword(), storedPassword);
-            }
-            // 2. AES
-            if (!match) {
-                try {
-                    String decrypted = AESUtil.decrypt(storedPassword);
-                    if (student.getStudentsPassword().equals(decrypted)) {
-                        match = true;
-                    }
-                } catch (Exception e) {
+            // 1. 尝试AES解密验证
+            try {
+                String decrypted = AESUtil.decrypt(storedPassword);
+                if (student.getStudentsPassword().equals(decrypted)) {
+                    match = true;
                 }
+            } catch (Exception e) {
+                // AES解密失败，尝试明文比对
             }
-            // 3. Plain text
+
+            // 2. 如果AES不匹配，尝试明文比对（兼容旧数据）
             if (!match && student.getStudentsPassword().equals(storedPassword)) {
                 match = true;
             }

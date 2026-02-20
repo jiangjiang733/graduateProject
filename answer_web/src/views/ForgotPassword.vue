@@ -7,11 +7,18 @@
       </div>
       
       <h2 class="forgot-title">重置密码</h2>
-      <p class="forgot-subtitle">请输入您的邮箱地址，我们将发送验证码</p>
+      <p class="forgot-subtitle">请选择用户类型并输入您的邮箱地址</p>
 
       <el-form ref="forgotFormRef" :model="forgotForm" class="forgot-form">
-        <!-- 步骤1: 输入邮箱 -->
+        <!-- 步骤1: 选择用户类型和输入邮箱 -->
         <div v-if="currentStep === 1">
+          <el-form-item label="" prop="userType">
+            <el-radio-group v-model="forgotForm.userType" size="large" class="user-type-radio">
+              <el-radio value="student" border>学生</el-radio>
+              <el-radio value="teacher" border>教师</el-radio>
+            </el-radio-group>
+          </el-form-item>
+
           <el-form-item label="" prop="email">
             <el-input 
               v-model="forgotForm.email" 
@@ -26,7 +33,7 @@
             class="submit-btn" 
             @click="sendCode"
             :loading="sending"
-            :disabled="!forgotForm.email"
+            :disabled="!forgotForm.email || !forgotForm.userType"
           >
             {{ sending ? '发送中...' : '发送验证码' }}
           </el-button>
@@ -101,7 +108,7 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft, Message, Key, Lock } from '@element-plus/icons-vue'
-import axios from 'axios'
+import request from '@/api/request'
 
 const router = useRouter()
 const currentStep = ref(1)
@@ -111,6 +118,7 @@ const countdown = ref(0)
 const forgotFormRef = ref()
 
 const forgotForm = reactive({
+  userType: 'student', // 默认为学生
   email: '',
   code: '',
   newPassword: '',
@@ -119,6 +127,11 @@ const forgotForm = reactive({
 
 // 发送验证码
 const sendCode = async () => {
+  if (!forgotForm.userType) {
+    ElMessage.warning('请选择用户类型')
+    return
+  }
+
   if (!forgotForm.email) {
     ElMessage.warning('请输入邮箱地址')
     return
@@ -133,28 +146,30 @@ const sendCode = async () => {
   sending.value = true
   
   try {
-    // TODO: 调用后端API发送验证码
-    // const response = await axios.post('/api/forgot-password/send-code', {
-    //   email: forgotForm.email
-    // })
+    // 调用后端API发送验证码
+    const response = await request.post('/email/send-reset-code', {
+      email: forgotForm.email,
+      userType: forgotForm.userType
+    })
     
-    // 模拟发送
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    ElMessage.success('验证码已发送到您的邮箱')
-    currentStep.value = 2
-    
-    // 开始倒计时
-    countdown.value = 60
-    const timer = setInterval(() => {
-      countdown.value--
-      if (countdown.value <= 0) {
-        clearInterval(timer)
-      }
-    }, 1000)
+    if (response.code === 200) {
+      ElMessage.success(response.message || '验证码已发送到您的邮箱')
+      currentStep.value = 2
+      
+      // 开始倒计时
+      countdown.value = 60
+      const timer = setInterval(() => {
+        countdown.value--
+        if (countdown.value <= 0) {
+          clearInterval(timer)
+        }
+      }, 1000)
+    } else {
+      ElMessage.error(response.message || '发送失败，请重试')
+    }
   } catch (error) {
     console.error('发送验证码失败:', error)
-    ElMessage.error(error.response?.data?.message || '发送失败，请重试')
+    ElMessage.error(error.response?.data?.message || error.message || '发送失败，请重试')
   } finally {
     sending.value = false
   }
@@ -185,24 +200,26 @@ const resetPassword = async () => {
   resetting.value = true
 
   try {
-    // TODO: 调用后端API重置密码
-    // const response = await axios.post('/api/forgot-password/reset', {
-    //   email: forgotForm.email,
-    //   code: forgotForm.code,
-    //   newPassword: forgotForm.newPassword
-    // })
-
-    // 模拟重置
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // 调用后端API重置密码
+    const response = await request.post('/email/reset-password', {
+      email: forgotForm.email,
+      code: forgotForm.code,
+      newPassword: forgotForm.newPassword,
+      userType: forgotForm.userType
+    })
     
-    ElMessage.success('密码重置成功，请使用新密码登录')
-    
-    setTimeout(() => {
-      router.push('/login')
-    }, 1500)
+    if (response.code === 200) {
+      ElMessage.success(response.message || '密码重置成功，请使用新密码登录')
+      
+      setTimeout(() => {
+        router.push('/login')
+      }, 1500)
+    } else {
+      ElMessage.error(response.message || '重置失败，请重试')
+    }
   } catch (error) {
     console.error('重置密码失败:', error)
-    ElMessage.error(error.response?.data?.message || '重置失败，请重试')
+    ElMessage.error(error.response?.data?.message || error.message || '重置失败，请重试')
   } finally {
     resetting.value = false
   }
@@ -338,5 +355,27 @@ const resetPassword = async () => {
 
 .step-line.active {
   background: linear-gradient(135deg, #2a5298 0%, #1e3c72 100%);
+}
+
+.user-type-radio {
+  width: 100%;
+  display: flex;
+  gap: 12px;
+}
+
+.user-type-radio :deep(.el-radio) {
+  flex: 1;
+  margin: 0;
+}
+
+.user-type-radio :deep(.el-radio.is-bordered) {
+  border-radius: 12px;
+  padding: 12px 20px;
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+.user-type-radio :deep(.el-radio.is-bordered.is-checked) {
+  border-color: #2a5298;
+  background-color: rgba(42, 82, 152, 0.05);
 }
 </style>

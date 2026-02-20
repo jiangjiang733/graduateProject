@@ -67,4 +67,22 @@ public interface CourseEnrollmentService {
      * 教师直接添加学生到课程
      */
     CourseEnrollment directEnroll(String studentId, String courseId);
+
+    /**
+     * 教师邀请学生加入课程（创建待学生确认的邀请记录）
+     * 
+     * @param studentId 学生ID
+     * @param courseId  课程ID
+     * @return 邀请记录
+     */
+    CourseEnrollment inviteStudent(String studentId, String courseId);
+
+    /**
+     * 学生确认或拒绝教师邀请
+     * 
+     * @param enrollmentId 报名ID
+     * @param status       状态 (approved/rejected)
+     * @param reason       拒绝原因（可选）
+     */
+    void studentReviewEnrollment(Long enrollmentId, String status, String reason);
 }

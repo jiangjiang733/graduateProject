@@ -132,11 +132,16 @@
 }
 
 .student-avatar {
-    background: #dbeafe;
-    color: #2563eb;
+    background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+    color: white;
     font-size: 18px;
     font-weight: 700;
-    border: 2px solid white;
+    border: 3px solid white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.student-avatar :deep(img) {
+    object-fit: cover;
 }
 
 .status-dot {
@@ -246,6 +251,13 @@
     text-align: right;
 }
 
+.pagination-container {
+    margin-top: 32px;
+    display: flex;
+    justify-content: center;
+    padding: 16px 0;
+}
+
 /* Utilities */
 .bg-amber-100 {
     background: #fef3c7;
@@ -304,4 +316,134 @@
     .course-select {
         width: 100% !important;
     }
+}
+
+/* ========== 暗黑模式完整适配 ========== */
+.dark-theme .page-title {
+    color: #f1f5f9;
+}
+
+.dark-theme .page-subtitle {
+    color: #94a3b8;
+}
+
+.dark-theme .stat-card {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+.dark-theme .stat-card:hover,
+.dark-theme .stat-card.active {
+    background: #1e293b;
+    border-color: rgba(59, 130, 246, 0.5);
+}
+
+.dark-theme .stat-card.active {
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.2);
+}
+
+.dark-theme .stat-value {
+    color: #f1f5f9;
+}
+
+.dark-theme .stat-label {
+    color: #94a3b8;
+}
+
+.dark-theme .enrollment-list-container {
+    background: #1e293b;
+}
+
+.dark-theme .list-header h3 {
+    color: #f1f5f9;
+}
+
+.dark-theme .student-card {
+    background: #0f172a;
+    border-color: #334155;
+}
+
+.dark-theme .student-card:hover {
+    background: #1e293b;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    border-color: #475569;
+}
+
+.dark-theme .student-name {
+    color: #f1f5f9;
+}
+
+.dark-theme .student-id {
+    color: #64748b;
+}
+
+.dark-theme .student-avatar {
+    background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+    color: white;
+    border-color: #334155;
+}
+
+.dark-theme .card-body {
+    border-bottom-color: #334155;
+}
+
+.dark-theme .info-row {
+    color: #94a3b8;
+}
+
+.dark-theme .course-name {
+    color: #60a5fa;
+}
+
+.dark-theme .reject-reason-box {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+}
+
+/* 暗黑模式 - 统计卡片图标背景 */
+.dark-theme .bg-amber-100 {
+    background: rgba(251, 191, 36, 0.15);
+}
+
+.dark-theme .text-amber-600 {
+    color: #fbbf24;
+}
+
+.dark-theme .bg-emerald-100 {
+    background: rgba(16, 185, 129, 0.15);
+}
+
+.dark-theme .text-emerald-600 {
+    color: #10b981;
+}
+
+.dark-theme .bg-red-100 {
+    background: rgba(239, 68, 68, 0.15);
+}
+
+.dark-theme .text-red-600 {
+    color: #f87171;
+}
+
+.dark-theme .bg-blue-100 {
+    background: rgba(59, 130, 246, 0.15);
+}
+
+.dark-theme .text-blue-600 {
+    color: #60a5fa;
+}
+
+/* 暗黑模式 - 输入框 */
+.dark-theme :deep(.el-input__wrapper) {
+    background-color: #0f172a !important;
+    box-shadow: 0 0 0 1px #334155 !important;
+}
+
+.dark-theme :deep(.el-input__inner) {
+    color: #e2e8f0 !important;
+}
+
+.dark-theme :deep(.el-select__wrapper) {
+    background-color: #0f172a !important;
+    box-shadow: 0 0 0 1px #334155 !important;
 }

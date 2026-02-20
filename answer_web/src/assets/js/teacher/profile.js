@@ -116,24 +116,40 @@ export function useProfile() {
             return
         }
 
+        // 检查邮箱是否有变化
+        if (form.email === profileData.value.teacherEmail) {
+            ElMessage.warning('新邮箱不能与当前邮箱相同')
+            return
+        }
+
         try {
-            // 开始倒计时
             isCounting.value = true
             countdown.value = 60
-            // 调用后端发送验证码接口
-            await axios.post('http://localhost:8088/api/sendVerificationCode', { email: form.email })
 
-            const timer = setInterval(() => {
-                countdown.value--
-                if (countdown.value <= 0) {
-                    clearInterval(timer)
-                    isCounting.value = false
-                }
-            }, 1000)
+            // 调用新的邮箱修改验证码接口
+            const response = await axios.post('http://localhost:8088/api/email/send-update-email-code', {
+                email: form.email,
+                userType: 'teacher'
+            })
 
-            ElMessage.success('验证码已发送到您的邮箱')
+            if (response.data && response.data.code === 200) {
+                const timer = setInterval(() => {
+                    countdown.value--
+                    if (countdown.value <= 0) {
+                        clearInterval(timer)
+                        isCounting.value = false
+                    }
+                }, 1000)
+
+                ElMessage.success(response.data.message || '验证码已发送到您的邮箱')
+            } else {
+                ElMessage.error(response.data?.message || '验证码发送失败')
+                isCounting.value = false
+                countdown.value = 0
+            }
         } catch (error) {
-            ElMessage.error('验证码发送失败: ' + (error.response?.data?.message || error.message))
+            console.error('发送验证码错误:', error)
+            ElMessage.error(error.response?.data?.message || '验证码发送失败')
             isCounting.value = false
             countdown.value = 0
         }
@@ -153,7 +169,42 @@ export function useProfile() {
 
             submitLoading.value = true
 
-            // 准备提交数据
+            // 检查邮箱是否发生变化
+            const emailChanged = form.email !== profileData.value.teacherEmail
+
+            if (emailChanged) {
+                // 如果邮箱发生变化，必须验证验证码
+                if (!form.verificationCode || form.verificationCode.length !== 6) {
+                    ElMessage.error('请输入6位验证码')
+                    submitLoading.value = false
+                    return
+                }
+
+                // 调用验证码验证并更新邮箱接口
+                try {
+                    const emailResponse = await axios.post('http://localhost:8088/api/email/update-email', {
+                        userId: teacherId,
+                        email: form.email,
+                        code: form.verificationCode,
+                        userType: 'teacher'
+                    })
+
+                    if (!emailResponse.data || emailResponse.data.code !== 200) {
+                        ElMessage.error(emailResponse.data?.message || '验证码验证失败，请检查验证码是否正确')
+                        submitLoading.value = false
+                        return
+                    }
+
+                    ElMessage.success('邮箱修改成功')
+                } catch (error) {
+                    console.error('邮箱验证错误:', error)
+                    ElMessage.error(error.response?.data?.message || '验证码验证失败')
+                    submitLoading.value = false
+                    return
+                }
+            }
+
+            // 准备提交其他数据（院系、级别等）
             const updateData = {
                 email: form.email,
                 level: form.level,
@@ -284,6 +335,7 @@ export function useProfile() {
         ],
         newPassword: [
             { required: true, message: '请输入新密码', trigger: 'blur' },
+            { min: 6, message: '密码长度不能少于6位', trigger: 'blur' },
             {
                 validator: (rule, value, callback) => {
                     if (value === passwordForm.oldPassword) {

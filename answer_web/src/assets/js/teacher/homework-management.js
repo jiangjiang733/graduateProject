@@ -13,7 +13,7 @@ import {
     getLabReportDetail
 } from '@/api/homework.js'
 
-export function useHomeworkManagement() {
+export function useHomeworkManagement(autoLoad = true, onSuccess = null) {
     const router = useRouter()
     const route = useRoute()
     const loading = ref(false)
@@ -531,7 +531,11 @@ export function useHomeworkManagement() {
             if (response.success) {
                 ElMessage.success(status === 0 ? '草稿保存成功' : '作业发布成功')
                 dialogVisible.value = false
-                loadHomeworks()
+                if (onSuccess) {
+                    onSuccess()
+                } else if (autoLoad) {
+                    loadHomeworks()
+                }
             } else {
                 ElMessage.error(response.message || '发布失败')
             }
@@ -655,7 +659,11 @@ export function useHomeworkManagement() {
             if (response.success) {
                 ElMessage.success(statusOverride === 0 ? '草稿更新成功' : '作业更新成功')
                 dialogVisible.value = false
-                loadHomeworks()
+                if (onSuccess) {
+                    onSuccess()
+                } else if (autoLoad) {
+                    loadHomeworks()
+                }
             } else {
                 ElMessage.error(response.message || '更新失败')
             }
@@ -740,8 +748,13 @@ export function useHomeworkManagement() {
     }
 
     onMounted(async () => {
-        await loadCourses()
-        await loadHomeworks()
+        if (autoLoad) {
+            await loadCourses()
+            await loadHomeworks()
+        } else {
+            // 即使不自动加载，也需要加载课程列表供下拉框使用
+            await loadCourses()
+        }
     })
 
     return {

@@ -94,8 +94,8 @@
         <el-table-column label="权限操作" width="220" fixed="right">
           <template #default="{ row }">
             <div class="action-btns">
-              <el-button size="small" plain @click="handleEdit(row)">档案</el-button>
-              <el-button size="small" type="info" plain @click="handleResetPassword(row)">锁屏</el-button>
+              <el-button size="small" plain @click="handleEdit(row)"cd >档案</el-button>
+              <el-button size="small" type="info" plain @click="handleResetPassword(row)">重置密码</el-button>
               <el-button size="small" type="danger" plain @click="handleDelete(row)">解聘</el-button>
             </div>
           </template>

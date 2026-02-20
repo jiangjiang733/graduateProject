@@ -30,7 +30,7 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Druid 数据源 -->
+        <!-- Druid 数据�?-->
         <dependency>
             <groupId>com.alibaba</groupId>
             <artifactId>druid-spring-boot-starter</artifactId>
@@ -95,7 +95,7 @@
             <artifactId>spring-security-crypto</artifactId>
         </dependency>
 
-        <!-- BCrypt Provider (可选，通常 spring-security-crypto 已包含) -->
+        <!-- BCrypt Provider (可选，通常 spring-security-crypto 已包�? -->
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-jdk15on</artifactId>
@@ -121,11 +121,16 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Jakarta Annotations API (替代 javax.annotation，JDK 9+ 需要) -->
         <dependency>
             <groupId>jakarta.annotation</groupId>
             <artifactId>jakarta.annotation-api</artifactId>
             <version>2.1.1</version>
+        </dependency>
+
+        <!-- Spring Boot Starter Mail -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
     </dependencies>
 

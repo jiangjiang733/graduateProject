@@ -146,4 +146,41 @@ public class CourseEnrollmentController {
             return Result.error(e.getMessage());
         }
     }
+
+    /**
+     * 教师邀请学生加入课程（创建待学生确认的邀请记录）
+     * POST /api/enrollment/invite
+     */
+    @PostMapping("/invite")
+    public Result<CourseEnrollment> inviteStudent(
+            @RequestParam String studentId,
+            @RequestParam String courseId) {
+        try {
+            CourseEnrollment enrollment = enrollmentService.inviteStudent(studentId, courseId);
+            return Result.success("邀请已发送，等待学生确认", enrollment);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 学生确认或拒绝教师邀请
+     * PUT /api/enrollment/{enrollmentId}/student-review
+     */
+    @PutMapping("/{enrollmentId}/student-review")
+    public Result<String> studentReviewEnrollment(
+            @PathVariable Long enrollmentId,
+            @RequestBody EnrollmentReviewDTO reviewDTO) {
+        try {
+            enrollmentService.studentReviewEnrollment(
+                    enrollmentId,
+                    reviewDTO.getStatus(),
+                    reviewDTO.getReason());
+
+            String message = "approved".equals(reviewDTO.getStatus()) ? "已接受邀请" : "已拒绝邀请";
+            return Result.success(message);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
 }

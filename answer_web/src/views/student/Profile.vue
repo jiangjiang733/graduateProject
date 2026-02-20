@@ -157,9 +157,7 @@
       :close-on-click-modal="false"
     >
       <el-form :model="editForm" :rules="editRules" ref="editFormRef" label-width="80px">
-        <el-form-item label="学号">
-          <el-input v-model="editForm.studentsId" disabled />
-        </el-form-item>
+
         <el-form-item label="姓名" prop="studentsUsername">
           <el-input v-model="editForm.studentsUsername" placeholder="请输入姓名" />
         </el-form-item>

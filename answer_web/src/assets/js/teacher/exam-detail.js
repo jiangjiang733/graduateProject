@@ -2,6 +2,7 @@ import { ref, onMounted, nextTick, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getExamDetail, publishExam as publishExamApi, unpublishExam as unpublishExamApi, deleteExam as deleteExamApi, getStudentExams, returnStudentExam, getExamStatistics, updateExam } from '@/api/exam'
+import { getCourseDetail } from '@/api/course'
 import * as echarts from 'echarts'
 
 export function useExamDetail() {
@@ -51,13 +52,42 @@ export function useExamDetail() {
       const res = await getExamDetail(examId)
 
       if (res.code === 200 && res.data) {
-        // 兼容不同的后端返回结构：有的返回 {exam, questions}，有的连同 root 返回直接就是 exam 对象
+        let examData = null
         if (res.data.exam) {
-          exam.value = res.data.exam
+          examData = res.data.exam
           questions.value = res.data.questions || res.data.exam.questions || []
         } else {
-          exam.value = res.data
+          examData = res.data
           questions.value = res.data.questions || res.data.questionList || []
+        }
+
+        // 数据字段映射和纠偏
+        exam.value = {
+          ...examData,
+          examId: examData.examId || examData.exam_id || examData.id,
+          examTitle: examData.examTitle || examData.exam_title || examData.title,
+          courseId: examData.courseId || examData.course_id || (examData.course && examData.course.id) || (examData.course && examData.course.courseId),
+          courseName: examData.courseName || examData.course_name || examData.courseTitle || examData.course_title ||
+            (examData.course && (examData.course.courseName || examData.course.course_name || examData.course.title || examData.course.courseTitle)),
+          startTime: examData.startTime || examData.start_time,
+          endTime: examData.endTime || examData.end_time,
+          duration: examData.duration || 0,
+          totalScore: examData.totalScore || examData.total_score || 100,
+          passScore: examData.passScore || examData.pass_score || Math.floor((examData.totalScore || examData.total_score || 100) * 0.6),
+          examDescription: examData.examDescription || examData.exam_description || examData.description,
+          status: examData.status,
+          statusText: examData.statusText || examData.status_text,
+          submittedCount: examData.submittedCount || examData.submitted_count || 0,
+          totalStudents: examData.totalStudents || examData.total_students || 0
+        }
+
+        console.log('考试详情数据映射后:', exam.value)
+        console.log('原始 course 对象:', examData.course)
+        console.log('尝试获取课程信息, ID:', exam.value.courseId, '类型:', typeof exam.value.courseId)
+
+        // 只要有 courseId，即使有名称也尝试再次获取以确保准确（或作为兜底）
+        if (exam.value.courseId) {
+          fetchCourseName(exam.value.courseId)
         }
 
         // 获取学生答题情况
@@ -72,6 +102,31 @@ export function useExamDetail() {
       ElMessage.error('获取考试详情失败')
     } finally {
       loading.value = false
+    }
+  }
+
+  // 获取课程名称
+  const fetchCourseName = async (courseId) => {
+    console.log('开始获取课程名称, courseId:', courseId)
+    if (!courseId) return
+
+    try {
+      // 尝试 1: 获取课程详情
+      const res = await getCourseDetail(courseId)
+      console.log('获取课程详情响应:', res)
+
+      // 兼容性判断：有的接口返回 code: 200，有的直接返回 success: true
+      if ((res.code === 200 || res.success) && res.data) {
+        const name = res.data.courseName || res.data.course_name || res.data.title || res.data.courseTitle
+        if (name) {
+          exam.value.courseName = name
+          console.log('已补充课程名称 (from detail):', name)
+          return
+        }
+      }
+
+    } catch (error) {
+      console.warn('获取课程名称失败:', error)
     }
   }
 
@@ -361,6 +416,19 @@ export function useExamDetail() {
     return []
   }
 
+  // 获取题目选项（判断题自动生成选项）
+  const getQuestionOptions = (question) => {
+    // 判断题：如果没有选项，自动生成
+    if (['JUDGE', 'JUDGEMENT', 'TRUE_FALSE'].includes(question.questionType)) {
+      if (!question.questionOptions) {
+        return ['正确', '错误']
+      }
+    }
+
+    // 其他题型：正常解析
+    return parseOptions(question.questionOptions)
+  }
+
   // 格式化题目内容（处理填空题括号）
   const formatQuestionContent = (question) => {
     let content = question.questionContent || ''
@@ -377,20 +445,37 @@ export function useExamDetail() {
 
   // 格式化答案显示
   const formatAnswer = (question) => {
-    // 兼容多种可能的字段名 (correctAnswer, answer, correct_answer)
-    const ans = question.answer !== undefined && question.answer !== null ? question.answer :
+    // 1. 尝试从各个可能的答案字段获取
+    let ans = question.answer !== undefined && question.answer !== null ? question.answer :
       (question.correctAnswer !== undefined && question.correctAnswer !== null ? question.correctAnswer : question.correct_answer);
+
+    // 2. 如果字段确实为空，尝试从选项中提取 (针对单选、多选、判断)
+    if ((ans === undefined || ans === null || ans === '') && question.questionOptions) {
+      try {
+        const opts = typeof question.questionOptions === 'string'
+          ? JSON.parse(question.questionOptions)
+          : question.questionOptions;
+
+        if (Array.isArray(opts)) {
+          const correctIndices = opts.map((o, i) => (o.isCorrect || o.correct) ? i : -1).filter(i => i !== -1);
+          if (correctIndices.length > 0) {
+            ans = correctIndices.map(i => String.fromCharCode(65 + i)).join(', ');
+          }
+        }
+      } catch (e) {
+        console.error('从选项提取答案失败:', e);
+      }
+    }
 
     if (ans === undefined || ans === null || ans === '') return '未设置'
 
     const ansStr = String(ans);
 
-    // 如果是单选或多选，且答案是索引，转换为字母
+    // 3. 处理单选/多选的索引转换 (如果是数字索引则转为字母)
     if (['SINGLE', 'MULTIPLE', 'SINGLE_CHOICE', 'MULTIPLE_CHOICE'].includes(question.questionType)) {
       if (/^\d+$/.test(ansStr)) {
         return String.fromCharCode(65 + parseInt(ansStr))
       }
-      // 如果是 JSON 数组索引 (如多选 ["0", "1"])
       try {
         const parsed = JSON.parse(ansStr)
         if (Array.isArray(parsed)) {
@@ -399,15 +484,13 @@ export function useExamDetail() {
             return digit ? String.fromCharCode(65 + parseInt(idx)) : idx;
           }).join(', ')
         }
-      } catch (e) {
-        // 解析失败则按原样显示
-      }
+      } catch (e) { }
     }
 
-    // 判断题处理
+    // 4. 判断题处理
     if (['JUDGE', 'JUDGEMENT', 'TRUE_FALSE'].includes(question.questionType)) {
-      if (ansStr === 'true' || ansStr === '1' || ansStr === '对' || ansStr === 'A') return 'A. 正确'
-      if (ansStr === 'false' || ansStr === '0' || ansStr === '错' || ansStr === 'B') return 'B. 错误'
+      if (ansStr === 'true' || ansStr === '1' || ansStr === '对' || ansStr === 'A' || ansStr.includes('正确')) return 'A. 正确'
+      if (ansStr === 'false' || ansStr === '0' || ansStr === '错' || ansStr === 'B' || ansStr.includes('错误')) return 'B. 错误'
     }
 
     return ansStr
@@ -496,6 +579,59 @@ export function useExamDetail() {
     return colors[type] || ''
   }
 
+  // 按题型分组显示试题
+  const groupedQuestions = computed(() => {
+    // 定义题型顺序：单选 -> 多选 -> 判断 -> 填空 -> 简答
+    const typeOrder = {
+      'SINGLE': 1,
+      'SINGLE_CHOICE': 1,
+      'MULTIPLE': 2,
+      'MULTIPLE_CHOICE': 2,
+      'JUDGE': 3,
+      'TRUE_FALSE': 3,
+      'FILL': 4,
+      'FILL_BLANK': 4,
+      'SHORT': 5,
+      'SHORT_ANSWER': 5,
+      'ESSAY': 5
+    }
+
+    const typeNames = {
+      1: '一、单选题',
+      2: '二、多选题',
+      3: '三、判断题',
+      4: '四、填空题',
+      5: '五、简答题'
+    }
+
+    // 给每道题添加全局序号
+    const questionsWithIndex = questions.value.map((q, index) => ({
+      ...q,
+      globalIndex: index + 1
+    }))
+
+    // 按题型分组
+    const grouped = {}
+    questionsWithIndex.forEach(question => {
+      const order = typeOrder[question.questionType] || 99
+      if (!grouped[order]) {
+        grouped[order] = {
+          typeName: typeNames[order] || '其他题型',
+          questions: []
+        }
+      }
+      grouped[order].questions.push(question)
+    })
+
+    // 按顺序返回
+    return Object.keys(grouped)
+      .sort((a, b) => parseInt(a) - parseInt(b))
+      .reduce((acc, key) => {
+        acc[key] = grouped[key]
+        return acc
+      }, {})
+  })
+
   // 获取考试状态类型
   const getExamStatusType = (status) => {
     const types = {
@@ -526,6 +662,7 @@ export function useExamDetail() {
     loading,
     exam,
     questions,
+    groupedQuestions,
     studentExams,
     fetchExamDetail,
     unpublishExam,
@@ -537,6 +674,7 @@ export function useExamDetail() {
     refreshStudents,
     viewStudentAnswer,
     parseOptions,
+    getQuestionOptions,
     formatQuestionContent,
     formatAnswer,
     formatDate,

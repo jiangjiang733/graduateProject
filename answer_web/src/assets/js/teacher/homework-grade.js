@@ -2,6 +2,7 @@ import { ref, onMounted, computed, reactive, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getLabReportDetail, getSubmissions, gradeLabReport } from '@/api/homework.js'
+import { getProfile } from '@/api/student.js'
 
 export function useHomeworkGrade() {
     const route = useRoute()
@@ -203,7 +204,27 @@ export function useHomeworkGrade() {
             }
 
             if (subRes.success) {
-                submissions.value = subRes.data || []
+                const submissionList = subRes.data || []
+
+                // 并行获取每个学生的头像信息
+                const submissionsWithAvatar = await Promise.all(
+                    submissionList.map(async (sub) => {
+                        try {
+                            const profileRes = await getProfile(sub.studentId)
+                            if (profileRes.success && profileRes.data) {
+                                return {
+                                    ...sub,
+                                    studentAvatar: profileRes.data.studentsHead || profileRes.data.studentAvatar
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('获取学生头像失败:', sub.studentId, e)
+                        }
+                        return sub
+                    })
+                )
+
+                submissions.value = submissionsWithAvatar
 
                 // 自动选择第一个未批改的提交
                 if (!currentSubmission.value && submissions.value.length > 0) {
@@ -262,6 +283,13 @@ export function useHomeworkGrade() {
         } catch (e) {
             return date
         }
+    }
+
+    // ===== 13.5 获取学生头像URL =====
+    const getStudentAvatarUrl = (student) => {
+        if (!student || !student.studentAvatar) return ''
+        if (student.studentAvatar.startsWith('http')) return student.studentAvatar
+        return `http://localhost:8088${student.studentAvatar}`
     }
 
     // ===== 14. 文件下载 =====
@@ -393,6 +421,7 @@ export function useHomeworkGrade() {
         applyAutoScore,
         getQuestionTypeText,
         getQuestionTypeTag,
+        getStudentAvatarUrl,
         loadData
     }
 }

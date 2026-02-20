@@ -151,6 +151,39 @@
     margin-top: 32px;
 }
 
+.question-type-group {
+    margin-bottom: 40px;
+}
+
+.type-group-header {
+    margin: 24px 0 16px 0;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-radius: 12px;
+    border-left: 4px solid #3b82f6;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.type-group-header h3 {
+    margin: 0;
+    font-size: 16px;
+    color: #1e293b;
+    font-weight: 700;
+}
+
+/* 暗黑模式适配 */
+.dark-theme .type-group-header {
+    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    border-left-color: #3b82f6;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.dark-theme .type-group-header h3 {
+    color: #f1f5f9;
+}
+
 .q-detail-item {
     background: #f8fafc;
     border-radius: 12px;
@@ -376,4 +409,111 @@
     .info-grid {
         grid-template-columns: 1fr;
     }
+}
+
+/* ========== 暗黑模式完整适配 ========== */
+.dark-theme .homework-detail {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+}
+
+.dark-theme .page-header,
+.dark-theme .glass-panel {
+    background: rgba(30, 41, 59, 0.95);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.dark-theme .page-title,
+.dark-theme .section-title {
+    color: #f1f5f9;
+}
+
+.dark-theme .glass-btn {
+    background: rgba(30, 41, 59, 0.9);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #e2e8f0;
+}
+
+.dark-theme .glass-btn:hover {
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+}
+
+.dark-theme .info-item .label {
+    color: #94a3b8;
+}
+
+.dark-theme .info-item .value {
+    color: #e2e8f0;
+}
+
+.dark-theme .description-content {
+    color: #cbd5e1;
+}
+
+.dark-theme .description-content .question-header {
+    color: #f1f5f9;
+}
+
+.dark-theme .attachment-box {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.1) 100%);
+}
+
+.dark-theme .attachment-box .file-name {
+    color: #e2e8f0;
+}
+
+.dark-theme .q-detail-item {
+    background: #0f172a;
+}
+
+.dark-theme .q-item-content {
+    color: #e2e8f0;
+}
+
+.dark-theme .opt-line {
+    background: #1e293b;
+}
+
+.dark-theme .opt-line.correct {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.1) 100%);
+}
+
+.dark-theme .opt-label {
+    background: #334155;
+    color: #94a3b8;
+}
+
+.dark-theme .opt-text {
+    color: #cbd5e1;
+}
+
+.dark-theme .q-item-analysis {
+    background: linear-gradient(135deg, #422006 0%, #78350f 100%);
+}
+
+.dark-theme .analysis-label {
+    color: #fbbf24;
+}
+
+.dark-theme .analysis-text {
+    color: #fde68a;
+}
+
+/* 右侧统计卡片 */
+.dark-theme .stat-box {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0.1) 100%);
+}
+
+.dark-theme .stat-label {
+    color: #94a3b8;
+}
+
+.dark-theme .progress-info {
+    color: #94a3b8;
+}
+
+.dark-theme .full-btn.warning {
+    background: linear-gradient(135deg, #78350f 0%, #92400e 100%);
+    color: #fbbf24;
+    border-color: #f59e0b;
 }

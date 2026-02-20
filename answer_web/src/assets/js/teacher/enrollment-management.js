@@ -1,7 +1,7 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getCourseList } from '@/api/course.js'
-import { getCourseEnrollments, reviewEnrollment, getTeacherEnrollments, cancelEnrollment, directEnroll } from '@/api/enrollment.js'
+import { getCourseEnrollments, reviewEnrollment, getTeacherEnrollments, cancelEnrollment, inviteStudent } from '@/api/enrollment.js'
 import { getProfile } from '@/api/student.js'
 
 export function useEnrollmentManagement() {
@@ -292,11 +292,11 @@ export function useEnrollmentManagement() {
             await inviteFormRef.value.validate()
             inviteSubmitting.value = true
 
-            // 使用新加的API
-            const response = await directEnroll(inviteForm.studentId, inviteForm.courseId)
+            // 使用邀请API，创建待学生确认的邀请记录
+            const response = await inviteStudent(inviteForm.studentId, inviteForm.courseId)
 
             if (response.success) {
-                ElMessage.success('邀请成功')
+                ElMessage.success('邀请已发送，等待学生确认')
                 inviteDialogVisible.value = false
                 inviteForm.studentId = ''
                 loadEnrollments()
