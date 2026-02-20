@@ -16,7 +16,7 @@ export function useTeacherLayout() {
     const showQuickCreate = computed(() => route.path === '/teacher/dashboard' || route.path === '/teacher/courses')
 
     const menuItems = [
-        { path: '/teacher/dashboard', label: '主页', icon: 'Odometer' },
+        { path: '/teacher/dashboard', label: '主页', icon: 'HomeFilled' },
         { path: '/teacher/courses', label: '课程中心', icon: 'Reading' },
         { path: '/teacher/exams', label: '考试管理', icon: 'Collection' },
         { path: '/teacher/homework', label: '作业管理', icon: 'EditPen' },

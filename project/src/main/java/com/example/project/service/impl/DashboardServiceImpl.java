@@ -44,47 +44,76 @@ public class DashboardServiceImpl implements DashboardService {
     @Override
     public DashboardStatisticsDTO getStatistics(String teacherId) {
         DashboardStatisticsDTO statistics = new DashboardStatisticsDTO();
+        Date now = new Date();
 
         try {
-            // 获取课程总数
+            // 获取课程列表
             QueryWrapper<Course> courseWrapper = new QueryWrapper<>();
             courseWrapper.eq("teacher_id", teacherId);
             courseWrapper.eq("state", 1);
-            Long courseCount = courseMapper.selectCount(courseWrapper);
-            statistics.setCourseCount(courseCount.intValue());
+            List<Course> allCourses = courseMapper.selectList(courseWrapper);
 
-            // 获取课程ID列表
-            List<Course> courses = courseMapper.selectList(courseWrapper);
-            List<String> courseIds = courses.stream().map(Course::getId).collect(Collectors.toList());
+            // 筛选出进行中的课程（未结束的）
+            List<Course> ongoingCourses = allCourses.stream()
+                    .filter(c -> c.getEndTime() == null || c.getEndTime().after(now))
+                    .collect(Collectors.toList());
+            statistics.setCourseCount(ongoingCourses.size());
 
-            if (!courseIds.isEmpty()) {
+            // 获取进行中课程的ID列表
+            List<String> ongoingCourseIds = ongoingCourses.stream()
+                    .map(Course::getId)
+                    .collect(Collectors.toList());
+
+            // 获取所有课程ID用于统计学生和作业
+            List<String> allCourseIds = allCourses.stream()
+                    .map(Course::getId)
+                    .collect(Collectors.toList());
+
+            if (!allCourseIds.isEmpty()) {
                 // 1. 活跃学生总数 (去重处理：同一学生加入多个课程只算一个)
                 QueryWrapper<com.example.project.entity.course.StudentCourse> scWrapper = new QueryWrapper<>();
-                scWrapper.in("course_id", courseIds);
+                scWrapper.in("course_id", ongoingCourseIds);
                 scWrapper.eq("status", 1);
-                // 获取所有学生ID并去重
                 scWrapper.select("DISTINCT student_id");
                 List<Object> studentIds = studentCourseMapper.selectObjs(scWrapper);
                 statistics.setStudentCount(studentIds != null ? studentIds.size() : 0);
 
-                // 2. 待批改作业数 (统计已提交但未批改的记录)
-                QueryWrapper<com.example.project.entity.homework.StudentLabReport> slrWrapper = new QueryWrapper<>();
-                slrWrapper.in("report_id",
-                        labReportMapper
-                                .selectList(new QueryWrapper<com.example.project.entity.homework.LabReport>()
-                                        .in("course_id", courseIds))
-                                .stream().map(com.example.project.entity.homework.LabReport::getReportId)
-                                .collect(Collectors.toList()));
-                slrWrapper.eq("status", 1); // 1-已提交待批改
-                Long pendingCount = studentLabReportMapper.selectCount(slrWrapper);
-                statistics.setPendingHomeworkCount(pendingCount.intValue());
+                // 2. 待批改作业数 (统计已提交但未批改的记录，且作业截止日期未过期
+                // 查询该教师的所有作业（通过教师ID或课程ID）
+                QueryWrapper<com.example.project.entity.homework.LabReport> reportWrapper = new QueryWrapper<>();
+                reportWrapper.and(w -> w.eq("teacher_id", teacherId).or().in("course_id", allCourseIds));
+                reportWrapper.ge("deadline", now);  // 只统计未过期的作业
+                List<Long> reportIds = labReportMapper.selectList(reportWrapper)
+                        .stream()
+                        .map(com.example.project.entity.homework.LabReport::getReportId)
+                        .collect(Collectors.toList());
 
-                // 3. 进行中的考试数 (统计该教师课程下所有已发布的考试)
+                if (!reportIds.isEmpty()) {
+                    QueryWrapper<com.example.project.entity.homework.StudentLabReport> slrWrapper = new QueryWrapper<>();
+                    slrWrapper.in("report_id", reportIds);
+                    slrWrapper.eq("status", 1);  // 1-已提交待批改
+                    Long pendingCount = studentLabReportMapper.selectCount(slrWrapper);
+                    statistics.setPendingHomeworkCount(pendingCount.intValue());
+                } else {
+                    statistics.setPendingHomeworkCount(0);
+                }
+
+                // 3. 进行中的考试数 (已发布且在考试时间范围内)
                 QueryWrapper<com.example.project.entity.exam.Exam> examWrapper = new QueryWrapper<>();
-                examWrapper.in("course_id", courseIds);
-                examWrapper.eq("status", 1); // 1-已发布
-                Long publishedExams = examMapper.selectCount(examWrapper);
-                statistics.setOngoingExamCount(publishedExams.intValue());
+                examWrapper.in("course_id", allCourseIds);
+                examWrapper.eq("status", 1);
+                List<com.example.project.entity.exam.Exam> exams = examMapper.selectList(examWrapper);
+
+                // 过滤出当前时间在考试时间范围内的考试
+                int ongoingExamCount = (int) exams.stream()
+                        .filter(e -> {
+                            Date start = e.getStartTime();
+                            Date end = e.getEndTime();
+                            if (start == null || end == null) return false;
+                            return !now.before(start) && !now.after(end);
+                        })
+                        .count();
+                statistics.setOngoingExamCount(ongoingExamCount);
 
             } else {
                 statistics.setStudentCount(0);
@@ -156,21 +185,21 @@ public class DashboardServiceImpl implements DashboardService {
 
             // 1. 待批改作业 (暂无)
 
-            // 2. 待审核报名 (查CourseEnrollment表)
-            QueryWrapper<CourseEnrollment> enrollWrapper = new QueryWrapper<>();
-            enrollWrapper.in("course_id", courseIds);
-            enrollWrapper.eq("status", "pending");
-            Long pendingAudit = courseEnrollmentMapper.selectCount(enrollWrapper);
+            // 2. 待审核报名 - 暂时注释，等报名功能修复后再启用
+            // QueryWrapper<CourseEnrollment> enrollWrapper = new QueryWrapper<>();
+            // enrollWrapper.in("course_id", courseIds);
+            // enrollWrapper.eq("status", "pending");
+            // Long pendingAudit = courseEnrollmentMapper.selectCount(enrollWrapper);
 
-            if (pendingAudit > 0) {
-                TodoItemDTO item = new TodoItemDTO();
-                item.setRelatedId(2L);
-                item.setTitle("待审核选课");
-                item.setDescription("您有 " + pendingAudit + " 位学生申请加入课程");
-                item.setType("course_approval");
-                item.setCount(pendingAudit.intValue());
-                todoList.add(item);
-            }
+            // if (pendingAudit > 0) {
+            //     TodoItemDTO item = new TodoItemDTO();
+            //     item.setRelatedId(2L);
+            //     item.setTitle("待审核选课");
+            //     item.setDescription("您有 " + pendingAudit + " 位学生申请加入课程");
+            //     item.setType("course_approval");
+            //     item.setCount(pendingAudit.intValue());
+            //     todoList.add(item);
+            // }
 
         } catch (Exception e) {
             e.printStackTrace();

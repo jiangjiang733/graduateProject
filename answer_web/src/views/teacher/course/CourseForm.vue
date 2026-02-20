@@ -6,34 +6,31 @@
       <h2 class="page-title">{{ isEdit ? '编辑课程' : '创建课程' }}</h2>
     </div>
 
-    <!-- 表单内容 -->
-    <el-card class="form-card" shadow="never">
-      <!-- 步骤指示器 -->
-      <div class="steps-container">
+    <!-- 步骤导航条 -->
+    <div class="step-navigation-bar">
+      <div class="step-wrapper">
         <div 
           v-for="(step, index) in steps" 
-          :key="step.value" 
-          class="step-item"
-          :class="{ active: currentStep === index, completed: currentStep > index, clickable: isEdit }"
-          @click="isEdit && goToStep(index)"
+          :key="step.value"
+          class="step-item-nav"
+          :class="{ active: currentStep === index, clickable: true }"
+          @click="goToStep(index)"
         >
-          <div class="step-circle">
-            <span v-if="currentStep > index"><el-icon><Check /></el-icon></span>
-            <span v-else>{{ index + 1 }}</span>
-          </div>
-          <div class="step-label">{{ step.label }}</div>
-          <div v-if="index < steps.length - 1" class="step-line"></div>
+          <div class="step-number">{{ index + 1 }}</div>
+          <span class="step-label">{{ step.label }}</span>
         </div>
       </div>
+    </div>
 
-      <!-- 步骤内容区域 -->
-      <div class="step-content">
-        <!-- 步骤 1: 基本信息 -->
-        <div v-show="currentStep === 0" class="step-panel">
-          <div class="panel-header">
-            <el-icon color="#10b981"><Document /></el-icon>
-            <h3>第一步：填写课程基本信息</h3>
-          </div>
+    <!-- 表单内容 -->
+    <div class="form-blocks-container">
+      
+      <!-- 块 1: 基本信息 -->
+      <el-card v-show="currentStep === 0" class="section-card" shadow="never">
+        <div class="panel-header">
+          <el-icon color="#10b981"><Document /></el-icon>
+          <h3>基本信息</h3>
+        </div>
           
           <el-form
             ref="formRef"
@@ -100,13 +97,13 @@
               </div>
             </el-form-item>
           </el-form>
-        </div>
+      </el-card>
 
-        <!-- 步骤 2: 课程详情 -->
-        <div v-show="currentStep === 1" class="step-panel">
+      <!-- 块 2: 课程详情与封面 -->
+      <el-card v-show="currentStep === 1" class="section-card" shadow="never">
           <div class="panel-header">
             <el-icon color="#10b981"><Reading /></el-icon>
-            <h3>第二步：课程详细信息</h3>
+            <h3>课程详情</h3>
           </div>
           
           <el-form
@@ -140,46 +137,34 @@
                 />
               </el-form-item>
             </div>
-          </el-form>
-        </div>
-        <div v-show="currentStep === 2" class="step-panel">
-          <div class="panel-header">
-            <el-icon color="#10b981"><User /></el-icon>
-            <h3>第三步：状态</h3>
-          </div>
-          
-          <el-form label-position="top" class="premium-form">
+
             <div class="form-row">
               <el-form-item label="课程状态" class="form-item-half">
                 <el-radio-group v-model="formData.state">
-                  <el-radio :label="0">草稿（仅自己可见，不对学生开放）</el-radio>
+                  <el-radio :label="0">草稿（仅自己可见）</el-radio>
                   <el-radio :label="1">已发布（学生可见和加入）</el-radio>
                 </el-radio-group>
               </el-form-item>
 
-            
+              <el-form-item label="备注说明" class="form-item-half">
+                <el-input
+                  v-model="formData.remark"
+                  type="textarea"
+                  :rows="2"
+                  placeholder="可填写先修要求、学习建议等"
+                  maxlength="500"
+                  show-word-limit
+                />
+              </el-form-item>
             </div>
-
-        
-
-            <el-form-item label="备注说明（选填）">
-              <el-input
-                v-model="formData.remark"
-                type="textarea"
-                :rows="3"
-                placeholder="可填写课程的其他说明信息，如先修要求、学习建议等"
-                maxlength="500"
-                show-word-limit
-              />
-            </el-form-item>
           </el-form>
-        </div>
+      </el-card>
 
-        <!-- 步骤 4: 课程时间 -->
-        <div v-show="currentStep === 3" class="step-panel">
+      <!-- 块 3: 课程排课 -->
+      <el-card v-show="currentStep === 2" class="section-card" shadow="never">
           <div class="panel-header">
-            <el-icon color="#10b981"><Clock /></el-icon>
-            <h3>第四步：上课时间设置</h3>
+            <el-icon color="#10b981"><Calendar /></el-icon>
+            <h3>课程排课大纲安排</h3>
           </div>
 
           <div class="schedule-management">
@@ -211,13 +196,13 @@
             </div>
             <el-empty v-else description="暂无上课时间，请点击上方按钮添加" :image-size="80" />
           </div>
-        </div>
+      </el-card>
 
-        <!-- 步骤 5: 课程大纲 -->
-        <div v-show="currentStep === 4" class="step-panel">
+      <!-- 块 4: 大纲管理 (仅在保存了课程后可用) -->
+      <el-card v-show="currentStep === 3" class="section-card" shadow="never">
           <div class="panel-header">
-            <el-icon color="#10b981"><Document /></el-icon>
-            <h3>第五步：课程大纲</h3>
+            <el-icon color="#10b981"><List /></el-icon>
+            <h3>大纲管理</h3>
           </div>
 
           <div class="chapter-management">
@@ -228,93 +213,79 @@
               </el-button>
             </div>
 
-            <div class="chapter-tree-container">
-              <el-tree
-                :data="treeData"
-                node-key="chapterId"
-                :props="treeProps"
-                default-expand-all
-                :expand-on-click-node="false"
-                empty-text="暂无章节，请点击上方按钮添加"
-              >
-                <template #default="{ node, data }">
-                  <div class="custom-tree-node">
-                    <div class="node-content">
-                      <el-icon v-if="data.chapterType === 'FOLDER'" class="node-icon folder"><Folder /></el-icon>
-                      <el-icon v-else-if="data.children && data.children.length > 0" class="node-icon folder"><Folder /></el-icon>
-                      <el-icon v-else-if="data.chapterType === 'VIDEO'" class="node-icon video"><VideoPlay /></el-icon>
-                      <el-icon v-else-if="data.chapterType === 'PDF'" class="node-icon pdf"><Document /></el-icon>
-                      <el-icon v-else class="node-icon mixed"><Reading /></el-icon>
-                      
-                      <span class="node-title">{{ data.chapterTitle }}</span>
-                      <el-tag v-if="data.chapterType" size="small" :type="getChapterTypeTag(data.chapterType)" class="node-tag">
-                        {{ getTypeLabel(data.chapterType) }}
-                      </el-tag>
-                    </div>
-                    
-                    <div class="node-actions">
-                      <el-button 
-                        v-if="data.chapterType === 'FOLDER' || (data.children && data.children.length > 0)" 
-                        link 
-                        type="primary" 
-                        size="small" 
-                        @click.stop="openAddDialog(data)"
-                      >
-                        <el-icon><Plus /></el-icon>
-                      </el-button>
-                      <el-button link type="primary" size="small" @click.stop="editChapter(data)">
-                        <el-icon><Edit /></el-icon>
-                      </el-button>
-                      <el-button link type="primary" size="small" @click.stop="viewChapter(data)" v-if="data.chapterType !== 'FOLDER'">
-                        <el-icon><View /></el-icon>
-                      </el-button>
-                      <el-button link type="danger" size="small" @click.stop="deleteChapter(data)">
-                        <el-icon><Delete /></el-icon>
-                      </el-button>
-                    </div>
+            <div class="chapter-list-clean">
+              <div v-for="(chapter, idx) in treeData" :key="chapter.chapterId" class="chapter-block-clean">
+                <div class="chapter-header-clean">
+                  <div class="ch-left">
+                    <div class="ch-num">{{ idx + 1 }}</div>
+                    <div class="ch-title">{{ chapter.chapterTitle }}</div>
+                    <el-tag v-if="chapter.chapterType === 'FOLDER'" class="ch-tag" size="small" type="info">文件夹</el-tag>
                   </div>
-                </template>
-              </el-tree>
+                  <div class="ch-actions">
+                    <el-button link type="primary" size="small" @click.stop="openAddDialog(chapter)">
+                      <el-icon><Plus /></el-icon>
+                    </el-button>
+                    <el-button link type="primary" size="small" @click.stop="editChapter(chapter)">
+                      <el-icon><Edit /></el-icon>
+                    </el-button>
+                    <el-button link type="danger" size="small" @click.stop="deleteChapter(chapter)">
+                      <el-icon><Delete /></el-icon>
+                    </el-button>
+                  </div>
+                </div>
+
+                <div class="chapter-children-clean">
+                   <div v-for="(child, cIdx) in (chapter.children || [])" :key="child.chapterId" class="child-item-clean">
+                     <div class="child-left">
+                       <el-icon class="child-icon" :class="'icon-' + child.chapterType.toLowerCase()">
+                         <VideoPlay v-if="child.chapterType === 'VIDEO'" />
+                         <Document v-else-if="child.chapterType === 'PDF'" />
+                         <Reading v-else-if="child.chapterType === 'TEXT'" />
+                         <Notebook v-else />
+                       </el-icon>
+                       <span class="child-title">{{ child.chapterTitle }}</span>
+                       <el-tag size="small" class="child-tag" :type="getChapterTypeTag(child.chapterType)">
+                         {{ getTypeLabel(child.chapterType) }}
+                       </el-tag>
+                     </div>
+                     <div class="child-actions">
+                       <el-button link type="primary" size="small" @click.stop="editChapter(child)">
+                         <el-icon><Edit /></el-icon>
+                       </el-button>
+                       <el-button link type="primary" size="small" @click.stop="viewChapter(child)">
+                         <el-icon><View /></el-icon>
+                       </el-button>
+                       <el-button link type="danger" size="small" @click.stop="deleteChapter(child)">
+                         <el-icon><Delete /></el-icon>
+                       </el-button>
+                     </div>
+                   </div>
+                   
+                   <div class="add-child-btn-clean" @click="openAddDialog(chapter)">
+                     <el-icon><Plus /></el-icon> 添加课件内容
+                   </div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+      </el-card>
+    </div>
 
-      <!-- 底部按钮 -->
-      <div class="step-footer">
-        <el-button @click="goBack" class="footer-btn-cancel">
-          <el-icon><Close /></el-icon>
-          取消
-        </el-button>
-        <div class="footer-btns-right">
-          <el-button 
-            v-if="currentStep > 0"
-            @click="prevStep" 
-            class="footer-btn-prev"
-          >
-            上一步
-          </el-button>
-          <el-button 
-            v-if="currentStep < steps.length - 1"
-            type="primary" 
-            @click="nextStep"
-            class="footer-btn-next"
-          >
-            下一步
-            <el-icon><ArrowRight /></el-icon>
-          </el-button>
-          <el-button 
-            v-else
-            type="primary" 
-            @click="submitForm"
-            :loading="submitting"
-            class="footer-btn-submit"
-          >
-            {{ isEdit ? '更新课程' : '创建课程' }}
-          </el-button>
-        </div>
-      </div>
-    </el-card>
+    <!-- 保存按钮悬浮在底部 -->
+    <div class="page-action-bar">
+      <el-button @click="goBack" class="footer-btn-cancel">
+        <el-icon><Close /></el-icon>取消
+      </el-button>
+      <el-button
+        type="primary"
+        @click="submitForm"
+        :loading="submitting"
+        class="footer-btn-submit"
+      >
+        <el-icon><Check /></el-icon>
+        {{ isEdit ? '更新课程' : '保存并提交' }}
+      </el-button>
+    </div>
 
     <!-- 添加章节对话框 -->
     <el-dialog
@@ -570,7 +541,7 @@
 </template>
 
 <script setup>
-import { ArrowLeft, Plus, Folder, VideoPlay, Document, Edit, View, Delete, Search, Check, Download, Warning, CircleCheckFilled, Upload, Close, ArrowRight, Reading, User, Location } from '@element-plus/icons-vue'
+import { ArrowLeft, Plus, Folder, VideoPlay, Document, Edit, View, Delete, Search, Check, Download, Warning, CircleCheckFilled, Upload, Close, ArrowRight, Reading, User, Location, Calendar, Notebook } from '@element-plus/icons-vue'
 import { useCourseForm } from '@/assets/js/teacher/course-form.js'
 import { onMounted, ref } from 'vue'
 

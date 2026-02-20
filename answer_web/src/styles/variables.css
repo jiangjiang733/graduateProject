@@ -27,21 +27,23 @@
 
   /* 背景色 */
   --bg-color: #FFFFFF;
-  --bg-page: #F5F7FA;
+  --bg-page: #F4F7FC;
+  /* 浅灰蓝 */
   --bg-overlay: rgba(0, 0, 0, 0.5);
 
-  /* 阴影 */
-  --shadow-base: 0 2px 4px rgba(0, 0, 0, 0.12), 0 0 6px rgba(0, 0, 0, 0.04);
-  --shadow-light: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  --shadow-dark: 0 4px 16px rgba(0, 0, 0, 0.15);
+  /* 阴影 - 弥散阴影 */
+  --shadow-base: 0 20px 50px rgba(0, 0, 0, 0.04);
+  --shadow-light: 0 10px 30px rgba(0, 0, 0, 0.03);
+  --shadow-dark: 0 30px 60px rgba(0, 0, 0, 0.06);
 
   /* 字体控制 */
   --global-scale: 1;
-  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+  --font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
   --font-size-base: calc(14px * var(--global-scale));
   --font-size-small: calc(12px * var(--global-scale));
   --font-size-large: calc(16px * var(--global-scale));
   --font-size-extra-large: calc(18px * var(--global-scale));
+  --letter-spacing-base: -0.01em;
 
   /* 间距 */
   --spacing-xs: 4px;
@@ -52,11 +54,11 @@
   --spacing-xxl: 24px;
   --spacing-xxxl: 32px;
 
-  /* 圆角 */
-  --border-radius-base: 4px;
-  --border-radius-small: 2px;
-  --border-radius-large: 8px;
-  --border-radius-round: 20px;
+  /* 圆角 - 统一大圆角 */
+  --border-radius-base: 12px;
+  --border-radius-small: 8px;
+  --border-radius-large: 32px;
+  --border-radius-round: 32px;
   --border-radius-circle: 50%;
 
   /* 过渡 */

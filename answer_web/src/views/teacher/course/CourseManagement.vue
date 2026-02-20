@@ -1,145 +1,199 @@
 <template>
   <div class="course-management">
-    <div class="course-header">
-      <div class="search-input">
+    <!-- 控制面板 -->
+    <div class="teacher-course-controls">
+      <!-- 状态过滤 -->
+      <div class="filter-tabs-modern">
+        <el-radio-group v-model="currentFilter" @change="handleFilterChange">
+          <el-radio-button value="all">
+            <el-icon><Folder /></el-icon> 全部 ({{ stats.totalCourses || 0 }})
+          </el-radio-button>
+          <el-radio-button value="publish">
+            <el-icon><VideoPlay /></el-icon> 已发布 ({{ stats.activeCourses || 0 }})
+          </el-radio-button>
+          <el-radio-button value="draft">
+            <el-icon><Document /></el-icon> 草稿 ({{ stats.draftCourses || 0 }})
+          </el-radio-button>
+        </el-radio-group>
+      </div>
+
+      <div class="stats-pill">共 {{ pagination.total || 0 }} 门课程</div>
+      <div style="flex:1;" />
+
+      <!-- 搜索 -->
+      <div class="search-bar-modern">
         <el-input
           v-model="searchKeyword"
-          placeholder="搜索课程"
-          prefix-icon="Search"
+          placeholder="搜索课程名称…"
+          :prefix-icon="Search"
           @keyup.enter="handleSearch"
           clearable
-          @clear="handleSearch"
+          @clear="handleClearSearch"
         />
-        <el-button @click="handleSearch" style="margin-left: 8px;">搜索</el-button>
+        <el-button type="primary" @click="handleSearch" class="search-btn-modern">搜索</el-button>
       </div>
-      <el-button type="primary" @click="createCourse">
-        <el-icon><Plus /></el-icon>
-        创建课程
+
+      <!-- 创建 -->
+      <el-button type="primary" @click="createCourse" class="create-btn-modern">
+        <el-icon><Plus /></el-icon> 创建课程
       </el-button>
     </div>
 
-    <!-- 筛选和统计栏 -->
-    <el-card class="filter-card" shadow="never">
-      <div class="filter-container">
-        <div class="filter-tabs">
-          <el-radio-group v-model="currentFilter" @change="handleFilterChange">
-            <el-radio-button value="all">
-              <el-icon><Folder /></el-icon>
-              全部 ({{ stats.totalCourses }})
-            </el-radio-button>
-            <el-radio-button value="publish">
-              <el-icon><VideoPlay /></el-icon>
-              已发布 ({{ stats.activeCourses }})
-            </el-radio-button>
-            <el-radio-button value="draft">
-              <el-icon><Document/></el-icon>
-              草稿 ({{ stats.draftCourses }})
-            </el-radio-button>
-
-          </el-radio-group>
-        </div>
-        <div class="stats-info">
-          <el-tag type="info" size="large">共 {{ pagination.total }} 门课程</el-tag>
-        </div>
+    <!-- 内容包装器 -->
+    <div class="course-content-wrapper">
+      <!-- 骨架屏 -->
+      <div v-if="loading" class="loading-container">
+        <el-skeleton :rows="6" animated />
       </div>
-    </el-card>
-    <!-- 加载状态 -->
-    <div v-if="loading" class="loading-container">
-      <el-skeleton :rows="6" animated />
-    </div>
-    <!-- 课程列表 -->
-    <div v-if="!loading && courses.length > 0" class="course-grid">
-      <el-card
-        v-for="course in courses"
-        :key="course.id"
-        class="course-card"
-        shadow="hover"
-      >
-        <template #header>
-          <div class="course-header-content">
-            <div class="course-header-title">{{ course.courseName || course.name }}</div>
-            <el-tag
-              :type="course.state === 1 ? 'success' : 'info'"
-              size="small"
+
+      <template v-else>
+        <!-- 可滚动区域 -->
+        <div class="course-scroll-area">
+          <!-- 课程卡片网格 -->
+          <div v-if="courses.length > 0" class="course-grid">
+            <div
+              v-for="(course, index) in courses"
+              :key="course.id"
+              class="course-card-modern"
+              @click="viewCourseDetail(course)"
             >
-              {{ course.state === 1 ? '已发布' : '草稿' }}
-            </el-tag>
-          </div>
-        </template>
-        <div class="course-content">
-          <img
-            :src="getCourseImage(course.image)"
-            :alt="course.courseName || course.name"
-            class="course-image"
-          />
-          <div class="course-info">
-            <div class="course-description">简介:{{ course.courseDescription || course.description || '暂无描述' }}</div>
+              <!-- 顶部图片/渐变区 -->
+              <div class="card-top" :class="'card-color-' + (index % 4)">
+                <div v-if="course.image" class="card-top-bg"
+                  :style="{ backgroundImage: 'url(' + getCourseImage(course.image) + ')' }" />
+                <div v-if="course.image" class="card-top-overlay" />
 
-            <div class="course-meta-grid">
+                <div class="card-top-content">
+                  <div class="card-top-header">
+                    <!-- 课程码 -->
+                    <div class="course-code-pill">{{ course.courseCode || '——' }}</div>
 
-              <div class="meta-item">
-                <el-icon><Key /></el-icon>
-                <span class="label">课程码:</span>
-                <span class="value">{{ course.courseCode || '-' }}</span>
+                    <!-- 下拉菜单（阻止冒泡） -->
+                    <div @click.stop>
+                      <el-dropdown @command="(cmd) => handleDropdownCommand(cmd, course)">
+                        <el-icon class="more-icon"><MoreFilled /></el-icon>
+                        <template #dropdown>
+                          <el-dropdown-menu>
+                            <el-dropdown-item command="edit">
+                              <el-icon><Edit /></el-icon> 编辑课程
+                            </el-dropdown-item>
+                            <el-dropdown-item command="view">
+                              <el-icon><View /></el-icon> 进入课堂
+                            </el-dropdown-item>
+                            <el-dropdown-item command="toggle-state" divided>
+                              {{ course.state === 1 ? '设为草稿' : '立即发布' }}
+                            </el-dropdown-item>
+                            <el-dropdown-item command="copy-code">复制课程码</el-dropdown-item>
+                            <el-dropdown-item command="delete" divided>
+                              <span style="color:#f56c6c;">删除课程</span>
+                            </el-dropdown-item>
+                          </el-dropdown-menu>
+                        </template>
+                      </el-dropdown>
+                    </div>
+                  </div>
+
+                  <!-- 底部：发布状态 + 课程名 -->
+                  <div>
+                    <div class="card-state-badge" :class="course.state === 1 ? 'published' : 'draft'">
+                      {{ course.state === 1 ? '已发布' : '草稿' }}
+                    </div>
+                    <h3 class="card-course-title">{{ course.courseName || course.name }}</h3>
+                  </div>
+                </div>
               </div>
-              <div class="meta-item">
-                <el-icon><School /></el-icon>
-                <span class="label">专业:</span>
-                <span class="value">{{ course.major || '-' }}</span>
+
+              <!-- 底部信息区 -->
+              <div class="card-bottom">
+                <!-- 选课人数 + 状态行 -->
+                <div class="card-status-row">
+                  <div class="enrolled-count">
+                    <el-icon><User /></el-icon>
+                    {{ course.studentCount ?? '—' }} 人选修
+                  </div>
+                  <div class="status-badge-new" :class="getCourseStatus(course).class">
+                    {{ getCourseStatus(course).text }}
+                  </div>
+                </div>
+
+                <!-- 课程简介 -->
+                <div class="card-desc" v-if="course.courseDescription || course.description">
+                  {{ course.courseDescription || course.description }}
+                </div>
+                <div class="card-desc" v-else style="color:#cbd5e1;">暂无课程简介</div>
+
+                <!-- 排课信息（仅有数据时显示） -->
+                <div class="schedule-blocks" v-if="course.schedules && course.schedules.length > 0">
+                  <div v-for="(sch, i) in course.schedules.slice(0,2)" :key="i" class="sch-item">
+                    <div class="sch-time">
+                      <el-icon><Calendar /></el-icon>
+                      {{ getDayName(sch.dayOfWeek) }} 第{{ sch.startSection }}-{{ sch.endSection }}节
+                    </div>
+                    <div class="sch-loc">
+                      <el-icon><Location /></el-icon>
+                      {{ sch.location }}
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 课程有效期 -->
+                <div class="course-date-range" v-if="course.startTime || course.endTime">
+                  <el-icon><Clock /></el-icon>
+                  <span v-if="course.startTime && course.endTime">
+                    {{ formatDate(course.startTime) }} 至 {{ formatDate(course.endTime) }}
+                  </span>
+                  <span v-else-if="course.startTime">
+                    开始: {{ formatDate(course.startTime) }}
+                  </span>
+                  <span v-else-if="course.endTime">
+                    截止: {{ formatDate(course.endTime) }}
+                  </span>
+                </div>
+
+                <!-- 操作按钮 -->
+                <div class="card-action-row">
+                  <el-button class="btn-detail" @click.stop="goClassroom(course)">
+                    <el-icon><Monitor /></el-icon> 进入课堂
+                  </el-button>
+                  <el-button class="btn-edit" @click.stop="editCourse(course)">
+                    <el-icon><Edit /></el-icon> 编辑
+                  </el-button>
+                </div>
               </div>
             </div>
           </div>
-          <div class="course-actions">
-            <el-button size="small" @click.stop="viewCourseDetail(course)">
-              <el-icon><View /></el-icon>
-              详情
-            </el-button>
-            <el-button size="small" type="primary" @click.stop="editCourse(course)">
-              <el-icon><Edit /></el-icon>
-              编辑
-            </el-button>
-            <el-dropdown @command="(command) => handleDropdownCommand(command, course)">
-              <el-button size="small" type="info">
-                更多<el-icon class="el-icon--right"><arrow-down /></el-icon>
-              </el-button>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="toggle-state">
-                    {{ course.state === 1 ? '设为草稿' : '发布课程' }}
-                  </el-dropdown-item>
-                  <el-dropdown-item command="copy-code">复制课程码</el-dropdown-item>
-                  <el-dropdown-item command="delete" divided>
-                    <span style="color: #f56c6c;">删除课程</span>
-                  </el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
+
+          <!-- 空状态 -->
+          <el-empty
+            v-if="courses.length === 0"
+            :description="getEmptyDescription()"
+            :image-size="200"
+          />
+
+          <!-- 分页 — 固定在底部右侧 -->
+          <div v-if="pagination.total > 0" class="pagination-container">
+            <el-pagination
+              v-model:current-page="pagination.currentPage"
+              v-model:page-size="pagination.pageSize"
+              :page-sizes="[3, 6, 9, 12]"
+              :total="pagination.total"
+              layout="total, sizes, prev, pager, next, jumper"
+              @size-change="handleSizeChange"
+              @current-change="handlePageChange"
+            />
           </div>
         </div>
-      </el-card>
-    </div>
-
-    <!-- 空状态 -->
-    <el-empty v-if="!loading && courses.length === 0" :description="getEmptyDescription()" :image-size="200" />
-
-    <!-- 分页 -->
-    <div v-if="!loading && pagination.total > 0" class="pagination-container">
-      <el-pagination
-        v-model:current-page="pagination.currentPage"
-        v-model:page-size="pagination.pageSize"
-        :page-sizes="[2, 4, 6, 8]"
-        :total="pagination.total"
-        layout="total, sizes, prev, pager, next, jumper"
-        @size-change="handleSizeChange"
-        @current-change="handlePageChange"
-      />
+      </template>
     </div>
   </div>
 </template>
 
 <script setup>
 import { useCourseManagement } from '@/assets/js/teacher/course-management.js'
-import {Document} from "@element-plus/icons-vue";
+import {
+  Search, Plus, Folder, VideoPlay, Document, View, Edit,
+  MoreFilled, User, Calendar, Location, Monitor, Clock
+} from '@element-plus/icons-vue'
 
 const {
   courses,
@@ -148,29 +202,30 @@ const {
   currentFilter,
   stats,
   pagination,
-  activeCourses,
-  totalChapters,
   handleSearch,
+  handleClearSearch,
   handleFilterChange,
   handlePageChange,
   handleSizeChange,
   getCourseImage,
+  getCourseStatus,
+  formatDate,
   viewCourseDetail,
+  goClassroom,
   editCourse,
   createCourse,
   handleDropdownCommand,
-  formatDate
 } = useCourseManagement()
 
-// 根据当前筛选状态显示不同的空状态提示
 const getEmptyDescription = () => {
-  if (currentFilter.value === 'draft') {
-    return '暂无草稿课程，点击右上角创建课程'
-  } else if (currentFilter.value === 'published') {
-    return '暂无已发布课程，请先发布课程'
-  } else {
-    return '暂无课程，点击右上角创建课程'
-  }
+  if (currentFilter.value === 'draft') return '暂无草稿课程，点击右上角创建课程'
+  if (currentFilter.value === 'publish') return '暂无已发布课程，请先发布课程'
+  return '暂无课程，点击右上角创建课程'
+}
+
+const getDayName = (day) => {
+  const days = ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日']
+  return days[day] || ''
 }
 </script>
 

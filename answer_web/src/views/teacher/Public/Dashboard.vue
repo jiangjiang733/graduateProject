@@ -10,17 +10,17 @@
       <section class="stats-row">
         <div v-for="(stat, index) in statCards" :key="index" class="stat-box">
           <div class="stat-header">
-            <span class="stat-label">{{ stat.label }}</span>
-            <el-icon class="stat-icon-top"><component :is="stat.icon" /></el-icon>
-          </div>
-          <div class="stat-value-row">
-            <span class="stat-number">
-              <count-to :startVal="0" :endVal="stat.value" :duration="1500"></count-to>
-            </span>
-            <div class="stat-trend" :class="stat.trendUp ? 'up' : 'down'">
-              <el-icon><CaretTop v-if="stat.trendUp" /><CaretBottom v-else /></el-icon>
-              {{ stat.trend }}
+            <div class="stat-icon-wrap" :class="getStatIconClass(index)">
+              <el-icon><component :is="getStatIcon(index, stat.icon)" /></el-icon>
             </div>
+            <el-icon class="stat-more"><MoreFilled /></el-icon>
+          </div>
+          <div class="stat-content">
+            <div class="stat-label">{{ stat.label }}</div>
+            <div class="stat-number">
+              <count-to :startVal="0" :endVal="stat.value" :duration="1500"></count-to>
+            </div>
+            
           </div>
         </div>
       </section>
@@ -68,48 +68,80 @@
 
         <!-- 右侧：待办事项 -->
         <section class="todo-section">
-          <h3 class="section-title">待办事项</h3>
-          
-          <!-- 有待办事项时显示列表 -->
-          <div v-if="todoItems && todoItems.length > 0" class="todo-list">
-            <div v-for="(todo, i) in todoItems" :key="i" class="todo-item animate-slide-in" :style="{ animationDelay: i * 0.1 + 's' }">
-              <div class="todo-icon" :class="getTodoIconClass(todo.type)">
-                <el-icon>
-                  <EditPen v-if="todo.type === 'homework'" />
-                  <User v-else-if="todo.type === 'profile'" />
-                  <Document v-else-if="todo.type === 'document'" />
-                  <Bell v-else-if="todo.type === 'notification'" />
-                  <Calendar v-else />
-                </el-icon>
-              </div>
-              <div class="todo-info">
-                <h4 class="todo-title">{{ todo.title || todo.content }}</h4>
-                <p class="todo-desc" v-if="todo.description">{{ todo.description }}</p>
-                <p class="todo-date" v-if="todo.deadline">截止日期：{{ formatDate(todo.deadline) }}</p>
-              </div>
-              <el-button link type="primary" class="todo-btn" @click="handleTodoClick(todo)">
-                {{ todo.buttonText || '处理' }}
-              </el-button>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <el-icon style="color: #f97316; font-size: 20px;"><Calendar /></el-icon>
+              <h3 class="section-title" style="margin-bottom: 0;">待办事项</h3>
             </div>
           </div>
           
-          <!-- 无待办事项时显示空状态 -->
-          <div v-else class="todo-empty">
-            <el-icon class="empty-icon"><CircleCheck /></el-icon>
-            <p class="empty-text">暂无待办事项</p>
-            <p class="empty-subtext">所有任务已完成，继续保持！</p>
+          <!-- 待办事项列表 -->
+          <div class="todo-list">
+            <!-- 列表项 -->
+            <template v-if="displayTodos.length > 0">
+              <div v-for="(todo, i) in displayTodos" :key="i" class="todo-item animate-slide-in" :style="{ animationDelay: i * 0.1 + 's' }" :class="{ 'todo-completed': todo.completed, 'todo-system': !todo.isCustom, 'todo-custom': todo.isCustom }">
+                <!-- 只有自定义待办才有复选框 -->
+                <div v-if="todo.isCustom" class="todo-checkbox" :class="getCheckboxColor(todo, i)" @click="toggleTodo(todo)">
+                  <el-icon v-if="todo.completed" color="#fff"><Select /></el-icon>
+                </div>
+                <!-- 系统待办显示提示图标 -->
+                <div v-else class="todo-system-icon">
+                  <el-icon color="#f97316"><Bell /></el-icon>
+                </div>
+                <div class="todo-info" :class="{ 'is-completed': todo.completed }">
+                  <h4 class="todo-title">{{ todo.title || todo.content }}</h4>
+                  <p class="todo-date">
+                    <el-icon><Clock /></el-icon> 
+                    {{ todo.isCustom ? '自定义待办' : '系统待办' }}
+                  </p>
+                </div>
+                <!-- Delete Custom Todo -->
+                <el-button v-if="todo.isCustom" link type="danger" @click.stop="deleteCustomTodo(todo, i)">删除</el-button>
+                <el-button v-else link type="primary" class="todo-btn" @click.stop="handleTodoClick(todo)">
+                  {{ todo.buttonText || '处理' }}
+                </el-button>
+              </div>
+            </template>
+            <!-- 空状态 -->
+            <div v-else class="todo-empty">
+              <el-icon class="empty-icon"><CircleCheck /></el-icon>
+              <p class="empty-text">暂无待办事项</p>
+              <p class="empty-subtext">所有任务已完成，继续保持！</p>
+            </div>
+            
+            <!-- 添加新待办按钮 -->
+            <div class="add-todo-btn" @click="addTodoVisible = true">
+              <el-icon><Plus /></el-icon> 添加新待办
+            </div>
           </div>
         </section>
       </div>
     </div>
+
+    <!-- 添加待办弹窗 -->
+    <el-dialog v-model="addTodoVisible" title="新建待办" width="400px" destroy-on-close>
+      <el-input 
+        v-model="newTodoText" 
+        placeholder="请输入待办事项内容..." 
+        clearable 
+        @keyup.enter="confirmAddTodo"
+      />
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="addTodoVisible = false">取消</el-button>
+          <el-button type="primary" @click="confirmAddTodo">确定</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { CountTo } from 'vue3-count-to'
 import * as echarts from 'echarts'
+import { ElMessage } from 'element-plus'
 import { 
   Calendar, 
   UserFilled, 
@@ -123,7 +155,14 @@ import {
   Bell,
   CircleCheck,
   Refresh,
-  Download
+  Download,
+  MoreFilled,
+  VideoPlay,
+  DocumentChecked,
+  Medal,
+  Select,
+  Clock,
+  Plus
 } from '@element-plus/icons-vue'
 import { useTeacherDashboard } from '@/assets/js/teacher/dashboard.js'
 
@@ -138,6 +177,80 @@ const {
   courseOptions,
   updateAnalysis
 } = useTeacherDashboard()
+
+// ----- 自定义待办事项逻辑 -----
+const localTodos = ref([])
+const addTodoVisible = ref(false)
+const newTodoText = ref('')
+
+// Component onMounted retrieve from localStorage
+onMounted(() => {
+  const saved = localStorage.getItem('teacher_local_todos')
+  if (saved) {
+    try {
+      localTodos.value = JSON.parse(saved)
+    } catch(e) {}
+  }
+})
+
+// watch and save to local
+watch(localTodos, (newVal) => {
+  localStorage.setItem('teacher_local_todos', JSON.stringify(newVal))
+}, { deep: true })
+
+const displayTodos = computed(() => {
+  let arr = [...(todoItems.value || [])]
+  arr.forEach(t => { if(t.completed === undefined) t.completed = false })
+  
+  // 过滤掉已完成的系统待办（系统待办完成后自动删除）
+  const filteredSystemTodos = arr.filter(t => !t.isCustom && !t.completed)
+  
+  return [...filteredSystemTodos, ...localTodos.value]
+})
+
+const getCheckboxColor = (todo, index) => {
+  if (todo.completed) return 'checkbox-red'
+  if (todo.type === 'homework' || index % 3 === 0) return 'checkbox-red'
+  if (todo.type === 'profile' || index % 3 === 1) return 'checkbox-orange'
+  return 'checkbox-gray'
+}
+
+const toggleTodo = (todo) => {
+  todo.completed = !todo.completed
+}
+
+const confirmAddTodo = () => {
+  if (!newTodoText.value.trim()) {
+    ElMessage.warning('请输入待办内容')
+    return
+  }
+  localTodos.value.push({
+    title: newTodoText.value.trim(),
+    isCustom: true,
+    completed: false
+  })
+  newTodoText.value = ''
+  addTodoVisible.value = false
+  ElMessage.success('添加成功')
+}
+
+const deleteCustomTodo = (todo, idx) => {
+  const indexInLocal = localTodos.value.findIndex(t => t === todo)
+  if(indexInLocal !== -1) {
+    localTodos.value.splice(indexInLocal, 1)
+  }
+}
+// ----- 自定义待办事项结束 -----
+
+const getStatIconClass = (index) => {
+  const classes = ['icon-blue', 'icon-purple', 'icon-orange', 'icon-green']
+  return classes[index % 4]
+}
+
+const getStatIcon = (index, originalIcon) => {
+  const icons = ['User', 'VideoPlay', 'DocumentChecked', 'Medal']
+  return icons[index % 4] || originalIcon
+}
 
 // Chart Refs
 const scoreDistChartRef = ref(null)
@@ -217,11 +330,8 @@ const updateCharts = () => {
             barWidth: '40%',
             data: dist,
             itemStyle: { 
-                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                    { offset: 0, color: '#60a5fa' },
-                    { offset: 1, color: '#3b82f6' }
-                ]),
-                borderRadius: [4, 4, 0, 0] 
+                color: '#3b82f6', // Solid blue color
+                borderRadius: [8, 8, 0, 0] 
             },
             label: {
                 show: true,

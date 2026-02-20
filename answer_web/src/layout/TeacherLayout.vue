@@ -2,12 +2,15 @@
   <div class="layout">
     <!-- Sidebar -->
     <aside class="sidebar glass">
-      <div class="logo">
-        <h2>Teacher Hub</h2>
+      <div class="sidebar-logo">
+        <div class="logo-icon-bg">
+          <span style="color: white; font-size: 26px; line-height: 1;">📖</span>
+        </div>
+        <h1 class="logo-text">智慧教学平台</h1>
       </div>
       <nav class="nav-menu">
         <router-link to="/teacher/dashboard" class="nav-item">
-          <i class="icon">📊</i> Dashboard
+          <i class="icon">🏠</i> Dashboard
         </router-link>
         <router-link to="/teacher/courses" class="nav-item">
           <i class="icon">👨‍🏫</i> My Courses
@@ -32,7 +35,7 @@
       </div>
     </aside>
 
-    <!-- Main Content -->
+   
     <main class="main-content">
       <header class="top-bar glass">
         <h3>Teacher Workspace</h3>
@@ -77,7 +80,7 @@ const handleLogout = () => {
   display: flex;
   height: 100vh;
   width: 100vw;
-  background-color: var(--bg-color);
+  background-color: var(--bg-page);
   overflow: hidden;
 }
 
@@ -86,21 +89,39 @@ const handleLogout = () => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border-right: 1px solid rgba(255, 255, 255, 0.4);
   z-index: 20;
 }
 
-.logo {
-  padding: 1.5rem;
-  border-bottom: 1px solid var(--glass-border);
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 2rem 1rem;
+  margin-bottom: 1rem;
 }
 
-.logo h2 {
+.logo-icon-bg {
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, #4A7AFF, #2563EB);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 16px rgba(37, 99, 235, 0.2);
+}
+
+.logo-text {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #2563EB;
   margin: 0;
-  font-size: 1.5rem;
-  background: linear-gradient(to right, var(--secondary-color), var(--accent-color)); /* Different gradient for teacher */
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  letter-spacing: 0.05em;
 }
 
 .nav-menu {
@@ -115,20 +136,24 @@ const handleLogout = () => {
   display: flex;
   align-items: center;
   padding: 0.8rem 1rem;
-  color: var(--text-secondary);
+  color: #94A3B8;
   text-decoration: none;
-  border-radius: var(--radius-sm);
-  transition: all 0.3s ease;
+  border-radius: 12px;
+  font-weight: 600;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.nav-item:hover, .nav-item.router-link-active {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-primary);
+.nav-item:hover {
+  background: rgba(0, 0, 0, 0.02);
+  color: #64748B;
+  transform: scale(1.05);
 }
 
 .nav-item.router-link-active {
-  background: linear-gradient(90deg, rgba(236, 72, 153, 0.1), transparent);
-  border-left: 3px solid var(--secondary-color);
+  background: #2563EB;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+  border-left: none; /* remove the old border styling */
 }
 
 .nav-item .icon {
@@ -216,8 +241,10 @@ const handleLogout = () => {
 
 .content-view {
   flex: 1;
-  padding: 2rem;
-  overflow-y: auto;
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Route transition */

@@ -3,14 +3,11 @@
     <div class="layout-wrapper">
       <!-- 侧边栏 -->
       <aside class="sidebar">
-        <div class="sidebar-header cursor-pointer" @click="navigate('/teacher/profile')">
-          <el-avatar :size="64" :src="teacherStore.avatarUrl" class="user-avatar transition-all">
-            {{ teacherStore.teacherName?.charAt(0) || '教' }}
-          </el-avatar>
-          <div class="user-meta">
-            <h2 class="user-name">{{ teacherStore.teacherName }}</h2>
-            <span class="user-role">教师</span>
+        <div class="sidebar-logo">
+          <div class="logo-icon-bg">
+            <el-icon :size="28" color="#ffffff"><Reading /></el-icon>
           </div>
+          <h1 class="logo-text">智慧教学平台</h1>
         </div>
 
         <nav class="side-nav">
@@ -37,6 +34,15 @@
         </nav>
 
         <div class="sidebar-footer">
+          <div class="user-profile-card transition-all cursor-pointer" >
+            <el-avatar :size="40" :src="teacherStore.avatarUrl" class="user-avatar-small">
+              {{ teacherStore.teacherName?.charAt(0) || '教' }}
+            </el-avatar>
+            <div class="user-meta-small">
+              <h2 class="user-name-small">{{ teacherStore.teacherName }}</h2>
+            
+            </div>
+          </div>
           <div class="nav-item logout" @click="handleUserCommand('logout')">
             <el-icon :size="20"><SwitchButton /></el-icon>
             <span class="nav-label">退出系统</span>
@@ -73,7 +79,7 @@
 
 <script setup>
 import {
-  Reading, Odometer, User, EditPen, ChatDotRound, 
+  Reading, HomeFilled, User, EditPen, ChatDotRound, 
   Setting, ArrowRight, Search, Bell, Plus, ArrowDown, SwitchButton,
   Collection, List, Folder, UserFilled, Checked, Sunny, Moon
 } from '@element-plus/icons-vue'

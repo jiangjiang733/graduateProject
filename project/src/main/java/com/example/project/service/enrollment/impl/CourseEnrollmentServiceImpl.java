@@ -166,8 +166,6 @@ public class CourseEnrollmentServiceImpl implements CourseEnrollmentService {
     public List<Map<String, Object>> getTeacherEnrollments(String teacherId) {
         QueryWrapper<CourseEnrollment> wrapper = new QueryWrapper<>();
         wrapper.eq("teacher_id", teacherId);
-        // 只显示学生申请的记录，不显示教师邀请的记录
-        wrapper.and(w -> w.eq("enrollment_type", "APPLY").or().isNull("enrollment_type"));
         wrapper.orderByDesc("apply_time");
 
         List<CourseEnrollment> enrollments = enrollmentMapper.selectList(wrapper);

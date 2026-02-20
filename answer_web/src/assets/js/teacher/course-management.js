@@ -2,29 +2,15 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getCourseList, searchCourses, deleteCourse, toggleCourseState, getCourseStats } from '@/api/course.js'
-
-// 格式化日期函数
-const formatDate = (dateString) => {
-    if (!dateString) return '未知'
-    try {
-        const date = new Date(dateString)
-        return date.toLocaleDateString('zh-CN', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit'
-        })
-    } catch (err) {
-        return '未知'
-    }
-}
+import { getCourseSchedules } from '@/api/schedule.js'
 
 export function useCourseManagement() {
     const router = useRouter()
     const courses = ref([])
-    const allCourses = ref([]) // 存储所有课程数据用于分页
+    const allCourses = ref([])
     const loading = ref(false)
     const searchKeyword = ref('')
-    const currentFilter = ref('all') // 默认显示草稿状态
+    const currentFilter = ref('all')
     const stats = ref({
         totalCourses: 0,
         activeCourses: 0,
@@ -33,26 +19,20 @@ export function useCourseManagement() {
         totalStudents: 0
     })
 
-    // 存储键，用于记忆分页设置
     const PAGE_SIZE_STORAGE_KEY = 'teacher_course_page_size'
 
-    // 从localStorage获取保存的每页条数，默认为2
     const getSavedPageSize = () => {
         const saved = localStorage.getItem(PAGE_SIZE_STORAGE_KEY)
-        if (saved && [2, 4, 6, 8].includes(parseInt(saved))) {
-            return parseInt(saved)
-        }
-        return 2 // 默认每页2条
+        if (saved && [3, 6, 9, 12].includes(parseInt(saved))) return parseInt(saved)
+        return 6
     }
 
-    // 分页配置
     const pagination = ref({
         currentPage: 1,
         pageSize: getSavedPageSize(),
         total: 0
     })
 
-    // 计算属性 - 课程统计
     const activeCourses = computed(() => stats.value.activeCourses)
     const totalChapters = computed(() => stats.value.totalChapters)
 
@@ -61,7 +41,6 @@ export function useCourseManagement() {
         try {
             const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
             if (!teacherId) return
-
             const response = await getCourseStats(teacherId)
             if (response.success && response.data) {
                 stats.value = response.data
@@ -71,12 +50,11 @@ export function useCourseManagement() {
         }
     }
 
-    // 获取课程列表
+    // 获取课程列表（含 studentCount 来自后端 num 字段）
     const loadCourses = async () => {
         try {
             loading.value = true
             const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
-
             if (!teacherId) {
                 ElMessage.warning('请先登录')
                 router.push('/login')
@@ -85,20 +63,24 @@ export function useCourseManagement() {
 
             const response = await getCourseList({
                 pageNumber: 1,
-                pageSize: 1000, // 获取所有数据用于前端分页和筛选
-                teacherId: teacherId
+                pageSize: 1000,
+                teacherId
             })
 
             if (response.success && response.data) {
-                allCourses.value = response.data.list || []
+                allCourses.value = (response.data.list || []).map(c => ({
+                    ...c,
+                    studentCount: c.num ?? c.studentCount ?? null,
+                    schedules: []
+                }))
                 applyFilterAndPagination()
+                loadAllCourseSchedules()
             } else {
                 allCourses.value = []
                 courses.value = []
                 pagination.value.total = 0
             }
 
-            // 加载统计数据
             await loadStats()
         } catch (error) {
             console.error('获取课程列表失败:', error)
@@ -110,53 +92,50 @@ export function useCourseManagement() {
         }
     }
 
-    // 应用筛选和分页
+    // 应用过滤 + 分页
     const applyFilterAndPagination = () => {
-        let filteredCourses = allCourses.value
+        let filtered = allCourses.value
 
-        // 根据状态筛选
         if (currentFilter.value === 'draft') {
-            filteredCourses = allCourses.value.filter(course => course.state === 0)
+            filtered = allCourses.value.filter(c => c.state === 0)
         } else if (currentFilter.value === 'publish') {
-            filteredCourses = allCourses.value.filter(course => course.state === 1)
+            filtered = allCourses.value.filter(c => c.state === 1)
         }
-        // 更新总数
-        pagination.value.total = filteredCourses.length
 
-        // 前端分页
+        // 同步统计数据（从本地 allCourses 计算）
+        if (!stats.value.totalCourses) {
+            stats.value.totalCourses = allCourses.value.length
+            stats.value.activeCourses = allCourses.value.filter(c => c.state === 1).length
+            stats.value.draftCourses = allCourses.value.filter(c => c.state === 0).length
+        }
+
+        pagination.value.total = filtered.length
         const start = (pagination.value.currentPage - 1) * pagination.value.pageSize
-        const end = start + pagination.value.pageSize
-        courses.value = filteredCourses.slice(start, end)
+        courses.value = filtered.slice(start, start + pagination.value.pageSize)
     }
 
-    // 切换筛选状态
     const handleFilterChange = (filter) => {
         currentFilter.value = filter
-        pagination.value.currentPage = 1 // 重置到第一页
+        pagination.value.currentPage = 1
         applyFilterAndPagination()
     }
 
-    // 处理分页变化
     const handlePageChange = (page) => {
         pagination.value.currentPage = page
         applyFilterAndPagination()
-        // 滚动到顶部
         window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
-    // 处理每页显示数量变化
     const handleSizeChange = (size) => {
         pagination.value.pageSize = size
         pagination.value.currentPage = 1
-        // 保存用户选择到localStorage
         localStorage.setItem(PAGE_SIZE_STORAGE_KEY, size.toString())
         applyFilterAndPagination()
     }
 
-    // 搜索课程
+    // 搜索（关键词为空时自动显示全部）
     const handleSearch = async () => {
         if (!searchKeyword.value.trim()) {
-            // 清空搜索，重新加载并应用筛选
             pagination.value.currentPage = 1
             applyFilterAndPagination()
             return
@@ -165,17 +144,21 @@ export function useCourseManagement() {
         try {
             loading.value = true
             const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
-
             const response = await searchCourses({
                 keyword: searchKeyword.value,
                 filterType: 'MY',
-                teacherId: teacherId
+                teacherId
             })
 
             if (response.success && response.data) {
-                allCourses.value = response.data
+                allCourses.value = (response.data || []).map(c => ({
+                    ...c,
+                    studentCount: c.num ?? c.studentCount ?? null,
+                    schedules: []
+                }))
                 pagination.value.currentPage = 1
                 applyFilterAndPagination()
+                loadAllCourseSchedules()
             } else {
                 allCourses.value = []
                 courses.value = []
@@ -189,23 +172,74 @@ export function useCourseManagement() {
         }
     }
 
-    // 查看课程详情
+    // 清空搜索 → 自动显示全部
+    const handleClearSearch = () => {
+        searchKeyword.value = ''
+        pagination.value.currentPage = 1
+        loadCourses()
+    }
+
     const getCourseImage = (image) => {
-        if (!image) return 'https://via.placeholder.com/400x180?text=Course'
+        if (!image) return ''
         if (image.startsWith('http')) return image
         return `http://localhost:8088${image}`
     }
 
+    const getCourseStatus = (course) => {
+        if (course.state === 0) return { text: '草稿', class: 'draft' }
+        const now = new Date()
+        const start = course.startTime ? new Date(course.startTime) : null
+        const end = course.endTime ? new Date(course.endTime) : null
+        if (end && now > end) return { text: '已结束', class: 'ended' }
+        if (start && now < start) return { text: '未开始', class: 'pending' }
+        return { text: '进行中', class: 'active' }
+    }
+
+    const formatDate = (dateStr) => {
+        if (!dateStr) return ''
+        const date = new Date(dateStr)
+        const year = date.getFullYear()
+        const month = String(date.getMonth() + 1).padStart(2, '0')
+        const day = String(date.getDate()).padStart(2, '0')
+        return `${year}-${month}-${day}`
+    }
+
+    const loadAllCourseSchedules = async () => {
+        const courseIds = allCourses.value.map(c => c.id).filter(Boolean)
+        if (courseIds.length === 0) return
+        try {
+            const promises = courseIds.map(id => getCourseSchedules(id).catch(() => ({ success: false, data: [] })))
+            const results = await Promise.all(promises)
+            results.forEach((response, index) => {
+                if (response.success && response.data) {
+                    const course = allCourses.value.find(c => c.id === courseIds[index])
+                    if (course) {
+                        course.schedules = response.data || []
+                    }
+                }
+            })
+            applyFilterAndPagination()
+        } catch (error) {
+            console.error('加载排课信息失败:', error)
+        }
+    }
+
+    // 进入课堂（课程详情页）
     const viewCourseDetail = (course) => {
         router.push(`/teacher/course/${course.id}`)
     }
 
-    // 进入课程编辑
+    // 进入课堂（学习页面）
+    const goClassroom = (course) => {
+        router.push(`/teacher/course/${course.id}/learn`)
+    }
+
+    // 编辑课程
     const editCourse = (course) => {
         router.push(`/teacher/course/edit/${course.id}`)
     }
 
-    // 创建新课程
+    // 创建课程
     const createCourse = () => {
         router.push('/teacher/course/create')
     }
@@ -213,14 +247,17 @@ export function useCourseManagement() {
     // 处理下拉菜单命令
     const handleDropdownCommand = async (command, course) => {
         switch (command) {
+            case 'edit':
+                editCourse(course)
+                break
+            case 'view':
+                goClassroom(course)
+                break
             case 'toggle-state':
                 await handleToggleState(course)
                 break
             case 'copy-code':
                 await handleCopyCode(course)
-                break
-            case 'export':
-                ElMessage.info('导出功能开发中...')
                 break
             case 'delete':
                 await handleDeleteCourse(course)
@@ -228,89 +265,62 @@ export function useCourseManagement() {
         }
     }
 
-    // 切换课程状态
     const handleToggleState = async (course) => {
         try {
             const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
-
-            if (!teacherId) {
-                ElMessage.error('未找到教师ID，请重新登录')
-                return
-            }
+            if (!teacherId) { ElMessage.error('未找到教师ID，请重新登录'); return }
 
             const newState = course.state === 1 ? 0 : 1
             const response = await toggleCourseState(course.id, teacherId, newState)
 
             if (response.success) {
-                // 1. 更新课程对象的状态
                 course.state = newState
-
-                // 2. 同时更新allCourses中对应的课程对象
                 const courseInAll = allCourses.value.find(c => c.id === course.id)
-                if (courseInAll) {
-                    courseInAll.state = newState
-                }
+                if (courseInAll) courseInAll.state = newState
 
-                // 3. 重新加载统计数据
-                await loadStats()
+                // 重置本地统计
+                stats.value.activeCourses = allCourses.value.filter(c => c.state === 1).length
+                stats.value.draftCourses = allCourses.value.filter(c => c.state === 0).length
 
-                // 4. 重新应用筛选和分页
                 applyFilterAndPagination()
-
-                // 5. 如果当前页没有课程了（比如最后一条被移到其他标签），跳转到第一页
                 if (courses.value.length === 0 && pagination.value.currentPage > 1) {
                     pagination.value.currentPage = 1
                     applyFilterAndPagination()
                 }
-
                 ElMessage.success(newState === 1 ? '课程已发布' : '课程已设为草稿')
             } else {
                 ElMessage.error(response.message || '状态更新失败')
             }
         } catch (error) {
-            console.error('状态更新失败:', error)
             ElMessage.error('状态更新失败')
         }
     }
 
-    // 复制课程码
     const handleCopyCode = async (course) => {
-        if (!course.courseCode) {
-            ElMessage.warning('该课程暂未设置课程码')
-            return
-        }
-
+        if (!course.courseCode) { ElMessage.warning('该课程暂未设置课程码'); return }
         try {
             await navigator.clipboard.writeText(course.courseCode)
             ElMessage.success('课程码已复制到剪贴板')
-        } catch (error) {
-            // 降级方案
-            const textArea = document.createElement('textarea')
-            textArea.value = course.courseCode
-            document.body.appendChild(textArea)
-            textArea.select()
+        } catch {
+            const ta = document.createElement('textarea')
+            ta.value = course.courseCode
+            document.body.appendChild(ta)
+            ta.select()
             document.execCommand('copy')
-            document.body.removeChild(textArea)
+            document.body.removeChild(ta)
             ElMessage.success('课程码已复制到剪贴板')
         }
     }
 
-    // 删除课程
     const handleDeleteCourse = async (course) => {
         try {
             await ElMessageBox.confirm(
                 `确定要删除课程"${course.courseName || course.name}"吗？此操作不可恢复。`,
                 '删除确认',
-                {
-                    confirmButtonText: '确定',
-                    cancelButtonText: '取消',
-                    type: 'warning'
-                }
+                { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
             )
-
             const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
             const response = await deleteCourse(course.id, teacherId)
-
             if (response.success) {
                 ElMessage.success('课程删除成功')
                 loadCourses()
@@ -325,9 +335,7 @@ export function useCourseManagement() {
         }
     }
 
-    onMounted(() => {
-        loadCourses()
-    })
+    onMounted(() => { loadCourses() })
 
     return {
         courses,
@@ -339,14 +347,17 @@ export function useCourseManagement() {
         activeCourses,
         totalChapters,
         handleSearch,
+        handleClearSearch,
         handleFilterChange,
         handlePageChange,
         handleSizeChange,
         getCourseImage,
+        getCourseStatus,
+        formatDate,
         viewCourseDetail,
+        goClassroom,
         editCourse,
         createCourse,
         handleDropdownCommand,
-        formatDate
     }
 }

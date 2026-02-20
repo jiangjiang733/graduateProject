@@ -118,7 +118,8 @@ export function useTeacherDashboard() {
             // 计算进行中的考试数量：状态为进行中，且未过期
             const now = new Date()
             const realOngoingExams = allExams.value.filter(e => {
-                const isStatusActive = e.status === 'published' || e.status === 'ongoing' || e.status === 'running'
+                // statusText: ONGOING-进行中, PUBLISHED-已发布但未开始
+                const isStatusActive = e.statusText === 'ONGOING' || e.statusText === 'PUBLISHED'
                 const isNotExpired = e.endTime ? new Date(e.endTime) > now : true
                 return isStatusActive && isNotExpired
             })

@@ -70,7 +70,6 @@ export function useCourseForm() {
     const steps = ref([
         { label: '基本信息', value: 'basic' },
         { label: '课程详情', value: 'details' },
-        { label: '课程状态', value: 'students' },
         { label: '课程时间', value: 'schedule' },
         { label: '课程大纲', value: 'chapters' }
     ])
@@ -89,9 +88,7 @@ export function useCourseForm() {
     }
 
     const goToStep = (index) => {
-        if (isEdit.value) {
-            currentStep.value = index
-        }
+        currentStep.value = index
     }
 
     // 提交状态
@@ -218,13 +215,9 @@ export function useCourseForm() {
         if (!isEdit.value) {
             const tempSchedule = { ...scheduleForm }
             if (isEditSchedule.value) {
-                // 编辑现有项
                 const index = schedules.value.findIndex(item => item.scheduleId === tempSchedule.scheduleId)
-                if (index !== -1) {
-                    schedules.value[index] = tempSchedule
-                }
+                if (index !== -1) schedules.value[index] = tempSchedule
             } else {
-                // 添加新项 (生成临时ID)
                 tempSchedule.scheduleId = 'temp_' + Date.now()
                 schedules.value.push(tempSchedule)
             }
@@ -233,26 +226,40 @@ export function useCourseForm() {
             return
         }
 
+        // 将 reactive 对象转为普通对象，避免 axios 序列化 Proxy 问题
+        const payload = {
+            scheduleId: scheduleForm.scheduleId,
+            courseId: scheduleForm.courseId || courseId.value,
+            dayOfWeek: scheduleForm.dayOfWeek,
+            startSection: scheduleForm.startSection,
+            endSection: scheduleForm.endSection,
+            startWeek: scheduleForm.startWeek,
+            endWeek: scheduleForm.endWeek,
+            location: scheduleForm.location,
+            status: scheduleForm.status || 1
+        }
+
         scheduleLoading.value = true
         try {
+            let response
             if (isEditSchedule.value) {
-                const response = await updateSchedule(scheduleForm.scheduleId, scheduleForm)
-                if (response.success) {
-                    ElMessage.success('更新成功')
-                    scheduleDialogVisible.value = false
-                    loadSchedules()
-                }
+                response = await updateSchedule(payload.scheduleId, payload)
             } else {
-                const response = await addSchedule(scheduleForm)
-                if (response.success) {
-                    ElMessage.success('添加成功')
-                    scheduleDialogVisible.value = false
-                    loadSchedules()
-                }
+                response = await addSchedule(payload)
+            }
+
+            if (response.success) {
+                ElMessage.success(isEditSchedule.value ? '更新成功' : '添加成功')
+                scheduleDialogVisible.value = false
+                loadSchedules()
+            } else {
+                ElMessage.error(response.message || '操作失败')
             }
         } catch (error) {
             console.error('保存课程时间失败:', error)
-            ElMessage.error(error.message || '保存失败')
+            // 优先显示后端返回的具体错误信息
+            const msg = error?.response?.data?.message || error?.message || '保存失败，请检查时间是否冲突'
+            ElMessage.error(msg)
         } finally {
             scheduleLoading.value = false
         }
@@ -264,11 +271,7 @@ export function useCourseForm() {
             await ElMessageBox.confirm(
                 '确定要删除这个上课时间吗？',
                 '删除确认',
-                {
-                    confirmButtonText: '确定',
-                    cancelButtonText: '取消',
-                    type: 'warning'
-                }
+                { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
             )
 
             // 如果是创建课程模式，仅在本地操作
@@ -286,12 +289,14 @@ export function useCourseForm() {
             if (response.success) {
                 ElMessage.success('删除成功')
                 loadSchedules()
+            } else {
+                ElMessage.error(response.message || '删除失败')
             }
         } catch (error) {
-            if (error !== 'cancel') {
-                console.error('删除课程时间失败:', error)
-                ElMessage.error('删除失败')
-            }
+            if (error === 'cancel' || error?.toString() === 'cancel') return
+            console.error('删除课程时间失败:', error)
+            const msg = error?.response?.data?.message || error?.message || '删除失败'
+            ElMessage.error(msg)
         } finally {
             scheduleLoading.value = false
         }
@@ -436,8 +441,8 @@ export function useCourseForm() {
                 major: formData.major,
                 classification: formData.classification,
                 state: formData.state,
-                num: formData.num || 0,
                 remark: formData.remark || '',
+                num: formData.num || 0,
                 creatorUsername: teacherName
             }
 
@@ -453,24 +458,32 @@ export function useCourseForm() {
             }
 
             let response
-            if (isEdit.value) {
-                // 编辑模式
-                response = await updateCourse(route.params.id, submitData)
-            } else {
-                // 创建模式
-                response = await createCourse(submitData)
+            try {
+                if (isEdit.value) {
+                    response = await updateCourse(route.params.id, submitData)
+                } else {
+                    response = await createCourse(submitData)
+                }
+            } catch (apiError) {
+                console.error('API调用失败:', apiError.response?.data || apiError)
+                if (apiError.response?.data?.message) {
+                    ElMessage.error(apiError.response.data.message)
+                } else {
+                    ElMessage.error('服务器错误，请稍后重试')
+                }
+                return
             }
 
-            if (response.success) {
-                // 成功
-                const newCourseId = response.data.id || response.data // 获取新课程ID
+            console.log('API响应:', response)
 
-                // 如果是创建模式，且有预设的时间表，则批量提交时间表
+            if (response.success || response.code === 200 || (response.data && response.data.success)) {
+                const success = response.success || (response.data && response.data.success)
+                const newCourseId = response.data?.id || response.data?.data?.id || response.id || (isEdit.value ? route.params.id : null)
+
                 if (!isEdit.value && schedules.value.length > 0 && newCourseId) {
                     try {
                         for (const schedule of schedules.value) {
                             schedule.courseId = newCourseId
-                            // 删除临时ID
                             if (schedule.scheduleId && String(schedule.scheduleId).startsWith('temp_')) {
                                 delete schedule.scheduleId
                             }
@@ -482,7 +495,6 @@ export function useCourseForm() {
                     }
                 }
 
-                // 如果是创建模式，且有预设的章节，则批量提交章节
                 if (!isEdit.value && treeData.value.length > 0 && newCourseId) {
                     try {
                         ElMessage.info('正在保存课程章节及文件，请稍候...')
@@ -494,13 +506,14 @@ export function useCourseForm() {
                 }
 
                 ElMessage.success(isEdit.value ? '课程更新成功' : '课程创建成功')
-                router.push('/teacher/courses')
+                if (!isEdit.value) {
+                    router.push('/teacher/courses')
+                }
             } else {
-                ElMessage.error(response.message || '操作失败')
+                ElMessage.error(response.message || response.data?.message || '操作失败')
             }
         } catch (error) {
             if (error.errors) {
-                // 表单验证错误
                 return
             }
             console.error('提交失败:', error)
@@ -976,14 +989,23 @@ export function useCourseForm() {
         console.log('=== useCourseForm onMounted ===')
         console.log('isEdit:', isEdit.value)
         console.log('courseId:', courseId.value)
-        console.log('route.params:', route.params)
 
         if (isEdit.value && courseId.value && courseId.value !== 'create') {
             try {
                 await loadCourseDetail()
             } catch (error) {
                 console.error('加载课程详情时出错:', error)
-                // 即使加载失败，也不阻止页面渲染
+            }
+            // 同时加载排课和章节
+            try {
+                await loadSchedules()
+            } catch (e) {
+                console.error('加载时间表失败:', e)
+            }
+            try {
+                await fetchChapters()
+            } catch (e) {
+                console.error('加载章节失败:', e)
             }
         } else {
             console.log('创建模式，跳过加载课程详情')

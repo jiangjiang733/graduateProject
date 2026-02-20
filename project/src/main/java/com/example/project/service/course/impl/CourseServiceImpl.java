@@ -27,7 +27,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -170,7 +169,7 @@ public class CourseServiceImpl implements CourseService {
 
         IPage<Course> pageResult = courseMapper.selectPage(page, queryWrapper);
 
-        // 填充教师头像
+        // 填充教师头像和选课人数
         for (Course course : pageResult.getRecords()) {
             if (course.getTeacherId() != null) {
                 Teacher teacher = teacherUserMapper.selectById(course.getTeacherId());
@@ -178,6 +177,13 @@ public class CourseServiceImpl implements CourseService {
                     course.setTeacherAvatar(teacher.getTeacherHead());
                 }
             }
+            // 统计选课人数
+            QueryWrapper<com.example.project.entity.course.StudentCourse> scWrapper = new QueryWrapper<>();
+            scWrapper.eq("course_id", course.getId());
+            scWrapper.eq("status", 1);  // 只统计已通过审核的
+            Long studentCount = studentCourseMapper.selectCount(scWrapper);
+            course.setStudentCount(studentCount.intValue());
+            course.setNum(studentCount.intValue());  // 同时设置num字段确保前端正确显示
         }
 
         return pageResult;
@@ -202,7 +208,7 @@ public class CourseServiceImpl implements CourseService {
     @Transactional
     public void updateCourse(String courseId, String teacherId, String courseName,
             String courseDescription, String major, String classification,
-            Date startTime, Date endTime,
+            Date startTime, Date endTime, Integer state, String remark,
             MultipartFile image) {
         // 验证权限
         permissionService.validateEditPermission(courseId, teacherId);
@@ -232,6 +238,12 @@ public class CourseServiceImpl implements CourseService {
         }
         if (endTime != null) {
             course.setEndTime(endTime);
+        }
+        if (state != null) {
+            course.setState(state);
+        }
+        if (remark != null) {
+            course.setRemark(remark);
         }
 
         // 更新封面图片
@@ -270,10 +282,14 @@ public class CourseServiceImpl implements CourseService {
         System.out.println("已删除课程评论");
 
         // 3. 删除学生课程进度
-        QueryWrapper<CourseProgress> progressWrapper = new QueryWrapper<>();
-        progressWrapper.eq("course_id", courseId);
-        progressMapper.delete(progressWrapper);
-        System.out.println("已删除学生课程进度");
+        try {
+            QueryWrapper<CourseProgress> progressWrapper = new QueryWrapper<>();
+            progressWrapper.eq("course_id", courseId);
+            progressMapper.delete(progressWrapper);
+            System.out.println("已删除学生课程进度");
+        } catch (Exception e) {
+            System.out.println("删除学生课程进度失败 (可能表不存在): " + e.getMessage());
+        }
 
         // 4. 删除课程时间表
         QueryWrapper<CourseSchedule> scheduleWrapper = new QueryWrapper<>();

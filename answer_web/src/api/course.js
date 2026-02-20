@@ -44,17 +44,18 @@ export const updateCourse = async (courseId, courseData) => {
   formData.append('teacherId', courseData.teacherId)
 
   if (courseData.courseName) formData.append('courseName', courseData.courseName)
-  if (courseData.courseDescription) formData.append('courseDescription', courseData.courseDescription)
+  if (courseData.courseDescription !== undefined) formData.append('courseDescription', courseData.courseDescription)
   if (courseData.major) formData.append('major', courseData.major)
   if (courseData.classification) formData.append('classification', courseData.classification)
   if (courseData.startTime) formData.append('startTime', courseData.startTime)
   if (courseData.endTime) formData.append('endTime', courseData.endTime)
+  if (courseData.state !== undefined && courseData.state !== null) formData.append('state', courseData.state)
+  if (courseData.remark !== undefined) formData.append('remark', courseData.remark)
   if (courseData.image) formData.append('image', courseData.image)
 
   const token = localStorage.getItem('token') || localStorage.getItem('teacherToken') || localStorage.getItem('t_token')
 
   try {
-    // 只保留 Authorization
     const response = await axios.put(`${API_BASE_URL}/course/${courseId}`, formData, {
       headers: {
         'Authorization': token ? `Bearer ${token}` : ''

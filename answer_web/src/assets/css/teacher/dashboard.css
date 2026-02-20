@@ -18,10 +18,10 @@
     margin-bottom: 40px;
 }
 
-/* 底部网格布局：数据分析在左，待办事项在右 */
+/* 底部网格布局：数据分析在左，待办事项在右 (2:1 比例) */
 .bottom-grid {
     display: grid;
-    grid-template-columns: 1fr 400px;
+    grid-template-columns: 2fr 1fr;
     gap: 24px;
     margin-bottom: 40px;
     align-items: start;
@@ -45,11 +45,15 @@
 .stat-box {
     background: white;
     padding: 24px;
-    border-radius: 16px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    border-radius: 24px;
+    /* matching layout iOS */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
     display: flex;
     flex-direction: column;
+    justify-content: space-between;
     transition: transform 0.2s;
+    height: 100%;
+    /* 高度统一 */
 }
 
 .stat-box:hover {
@@ -57,40 +61,73 @@
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
 }
 
+.stat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+
+.stat-icon-wrap {
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+}
+
+/* 10% opacity backgrounds */
+.icon-blue {
+    background: #eff6ff;
+    color: #3b82f6;
+}
+
+/* bg-blue-50 */
+.icon-purple {
+    background: #f3e8ff;
+    color: #a855f7;
+}
+
+.icon-orange {
+    background: #ffedd5;
+    color: #f97316;
+}
+
+.icon-green {
+    background: #dcfce7;
+    color: #22c55e;
+}
+
+.stat-more {
+    color: #cbd5e1;
+    cursor: pointer;
+}
+
+.stat-content {
+    display: flex;
+    flex-direction: column;
+}
+
 .stat-label {
-    font-size: 14px;
-    color: #6f767e;
+    font-size: 15px;
+    color: #64748b;
+    margin-bottom: 8px;
     font-weight: 500;
-    margin-bottom: 12px;
 }
 
 .stat-number {
-    font-size: 28px;
+    font-size: 32px;
     font-weight: 700;
-    color: #1a1d1f;
+    color: #1e293b;
+    margin-bottom: 8px;
+    line-height: 1;
 }
 
-.stat-value-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.stat-trend {
+.stat-desc {
     font-size: 13px;
-    font-weight: 600;
-    margin-top: 8px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.stat-trend.up {
-    color: #27ae60;
-}
-
-.stat-trend.down {
-    color: #ff6b6b;
+    color: #94a3b8;
 }
 
 /* 待办事项 */
@@ -139,8 +176,22 @@
     align-items: center;
     gap: 16px;
     padding: 18px 0;
+    padding-left: 16px;
     border-bottom: 1px solid #f8f9fa;
-    transition: transform 0.2s;
+    border-left: 3px solid transparent;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s;
+}
+
+.todo-item.todo-system {
+    border-left-color: #10b981;
+}
+
+.todo-item.todo-custom {
+    border-left-color: #f97316;
+}
+
+.todo-item.todo-completed {
+    opacity: 0.6;
 }
 
 .todo-item:last-child {
@@ -148,41 +199,76 @@
 }
 
 .todo-item:hover {
-    transform: translateX(4px);
+    transform: translateX(8px);
+    /* 8px -> translate-x-2 */
 }
 
-.todo-icon {
-    width: 44px;
-    height: 44px;
-    background: #ecfdf5;
-    border-radius: 12px;
+.todo-checkbox {
+    width: 22px;
+    height: 22px;
+    border: 2px solid;
+    border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #10b981;
-    font-size: 22px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.2s;
+    background: transparent;
+}
+
+.checkbox-red {
+    border-color: #ef4444;
+    /* red */
+    color: #ef4444;
+}
+
+.checkbox-red:hover {
+    background: #fef2f2;
+}
+
+.checkbox-orange {
+    border-color: #f97316;
+    /* orange */
+    color: #f97316;
+}
+
+.checkbox-orange:hover {
+    background: #fff7ed;
+}
+
+.checkbox-gray {
+    border-color: #94a3b8;
+    color: #94a3b8;
+}
+
+.todo-system-icon {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
 }
 
-/* 不同类型的待办图标颜色 */
-.todo-icon-homework {
-    background: #fef3c7;
-    color: #f59e0b;
+.checkbox-gray:hover {
+    background: #f8fafc;
 }
 
-.todo-icon-profile {
-    background: #dbeafe;
-    color: #3b82f6;
+/* If completed, we turn background solid and icon color white. Handled in getCheckboxColor by returning checkbox-red but let's define active state */
+.todo-checkbox .el-icon {
+    font-size: 16px;
 }
 
-.todo-icon-document {
-    background: #e0e7ff;
-    color: #6366f1;
+.checkbox-red .el-icon,
+.checkbox-orange .el-icon {
+    /* If checked is rendered, color is overriden inline, but background is filled */
+    color: white;
 }
 
-.todo-icon-notification {
-    background: #fce7f3;
-    color: #ec4899;
+.todo-item .todo-checkbox:has(.el-icon) {
+    background: #ef4444 !important;
+    border-color: #ef4444 !important;
 }
 
 .todo-info {
@@ -191,9 +277,14 @@
 
 .todo-title {
     font-size: 15px;
-    font-weight: 600;
-    color: #1a1d1f;
-    margin: 0 0 4px 0;
+    font-weight: 500;
+    color: #334155;
+    margin: 0 0 6px 0;
+}
+
+.todo-info.is-completed .todo-title {
+    text-decoration: line-through;
+    color: #94a3b8;
 }
 
 .todo-desc {
@@ -203,9 +294,36 @@
 }
 
 .todo-date {
-    font-size: 12px;
+    font-size: 13px;
     color: #94a3b8;
     margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* 添加新待办按钮 */
+.add-todo-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+    margin-top: 20px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+    background: #f8fafc;
+    gap: 6px;
+    height: 48px;
+}
+
+.add-todo-btn:hover {
+    color: #64748b;
+    border-color: #94a3b8;
+    background: #f1f5f9;
 }
 
 /* 空状态样式 */
@@ -408,6 +526,7 @@
 .dark-theme .stat-box {
     background: #1e293b;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    border: 1px solid #334155;
 }
 
 .dark-theme .stat-label {
@@ -418,8 +537,40 @@
     color: #f1f5f9;
 }
 
+.dark-theme .stat-desc {
+    color: #64748b;
+}
+
+.dark-theme .stat-more {
+    color: #475569;
+}
+
+.dark-theme .icon-blue {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+}
+
+.dark-theme .icon-purple {
+    background: rgba(168, 85, 247, 0.15);
+    color: #c084fc;
+}
+
+.dark-theme .icon-orange {
+    background: rgba(249, 115, 22, 0.15);
+    color: #fb923c;
+}
+
+.dark-theme .icon-green {
+    background: rgba(34, 197, 94, 0.15);
+    color: #4ade80;
+}
+
 .dark-theme .section-title {
     color: #f1f5f9;
+}
+
+.dark-theme .section-subtitle {
+    color: #64748b;
 }
 
 .dark-theme .todo-list,
@@ -430,8 +581,33 @@
     border-color: #334155;
 }
 
-.dark-theme .todo-item {
+.dark-theme .todo-empty {
+    background: #1e293b;
+    border: 1px solid #334155;
+}
+
+.dark-theme .empty-text {
+    color: #f1f5f9;
+}
+
+.dark-theme .empty-subtext {
+    color: #94a3b8;
+}
+
+.dark-theme .add-todo-btn {
     background: #0f172a;
+    border-color: #334155;
+    color: #64748b;
+}
+
+.dark-theme .add-todo-btn:hover {
+    background: #1e293b;
+    border-color: #475569;
+    color: #94a3b8;
+}
+
+.dark-theme .todo-item {
+    background: transparent;
     border-color: #334155;
 }
 
@@ -439,12 +615,84 @@
     border-color: #3b82f6;
 }
 
+.dark-theme .todo-item.todo-system {
+    border-left: 3px solid #10b981;
+    padding-left: 13px;
+}
+
+.dark-theme .todo-item.todo-custom {
+    border-left: 3px solid #f97316;
+    padding-left: 13px;
+}
+
+.dark-theme .todo-item.todo-completed {
+    opacity: 0.5;
+}
+
 .dark-theme .todo-title {
     color: #e2e8f0;
 }
 
+.dark-theme .todo-desc {
+    color: #94a3b8;
+}
+
+.dark-theme .todo-date {
+    color: #64748b;
+    font-size: 12px;
+}
+
 .dark-theme .todo-meta {
     color: #64748b;
+}
+
+.dark-theme .checkbox-red:hover {
+    background: rgba(239, 68, 68, 0.15);
+}
+
+.dark-theme .checkbox-orange:hover {
+    background: rgba(249, 115, 22, 0.15);
+}
+
+.dark-theme .checkbox-gray:hover {
+    background: #1e293b;
+}
+
+.dark-theme .kpi-box {
+    background: #1e293b;
+    border: 1px solid #334155;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.dark-theme .kpi-label {
+    color: #94a3b8;
+}
+
+.dark-theme .kpi-value {
+    color: #f1f5f9;
+}
+
+.dark-theme .kpi-value small {
+    color: #64748b;
+}
+
+.dark-theme .kpi-icon-bg.purple {
+    background: rgba(99, 102, 241, 0.15);
+    color: #818cf8;
+}
+
+.dark-theme .kpi-icon-bg.blue {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+}
+
+.dark-theme .kpi-icon-bg.green {
+    background: rgba(16, 185, 129, 0.15);
+    color: #34d399;
+}
+
+.dark-theme .chart-title {
+    color: #f1f5f9;
 }
 
 .dark-theme .score-title,
@@ -462,4 +710,85 @@
 
 .dark-theme .date-text {
     color: #94a3b8;
+}
+
+.dark-theme .course-select :deep(.el-select__wrapper) {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+.dark-theme .course-select :deep(.el-input__inner) {
+    color: #f1f5f9;
+}
+
+.dark-theme .course-select :deep(.el-input__placeholder) {
+    color: #64748b;
+}
+
+/* 暗黑模式 - el-dialog 弹窗样式 */
+.dark-theme :deep(.el-dialog) {
+    background-color: #1e293b !important;
+    border: 1px solid #334155 !important;
+}
+
+.dark-theme :deep(.el-dialog__header) {
+    background-color: #1e293b !important;
+    border-bottom: 1px solid #334155 !important;
+}
+
+.dark-theme :deep(.el-dialog__title) {
+    color: #f1f5f9 !important;
+}
+
+.dark-theme :deep(.el-dialog__body) {
+    background-color: #1e293b !important;
+    color: #e2e8f0 !important;
+}
+
+.dark-theme :deep(.el-dialog__footer) {
+    background-color: #1e293b !important;
+    border-top: 1px solid #334155 !important;
+}
+
+.dark-theme :deep(.el-input__wrapper) {
+    background-color: #0f172a;
+    box-shadow: 0 0 0 1px #334155 inset;
+}
+
+.dark-theme :deep(.el-input__inner) {
+    color: #e2e8f0;
+}
+
+.dark-theme :deep(.el-input__inner::placeholder) {
+    color: #64748b;
+}
+
+.dark-theme :deep(.el-button) {
+    border-color: #334155;
+    color: #94a3b8;
+    background-color: #1e293b;
+}
+
+.dark-theme :deep(.el-button--primary) {
+    background-color: #10b981;
+    border-color: #10b981;
+    color: #fff;
+}
+
+.dark-theme :deep(.el-button:not(.el-button--primary):hover) {
+    background-color: #334155;
+    color: #e2e8f0;
+}
+
+.dark-theme :deep(.el-button--primary:hover) {
+    background-color: #059669;
+    border-color: #059669;
+}
+
+.dark-theme :deep(.el-dialog__close) {
+    color: #94a3b8;
+}
+
+.dark-theme :deep(.el-dialog__close:hover) {
+    color: #e2e8f0;
 }
