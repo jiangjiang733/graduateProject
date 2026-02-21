@@ -1,11 +1,5 @@
 <template>
   <div class="course-form-page">
-    <!-- 页面头部 -->
-    <div class="page-header">
-      <el-button :icon="ArrowLeft" @click="goBack">返回</el-button>
-      <h2 class="page-title">{{ isEdit ? '编辑课程' : '创建课程' }}</h2>
-    </div>
-
     <!-- 步骤导航条 -->
     <div class="step-navigation-bar">
       <div class="step-wrapper">
@@ -146,16 +140,7 @@
                 </el-radio-group>
               </el-form-item>
 
-              <el-form-item label="备注说明" class="form-item-half">
-                <el-input
-                  v-model="formData.remark"
-                  type="textarea"
-                  :rows="2"
-                  placeholder="可填写先修要求、学习建议等"
-                  maxlength="500"
-                  show-word-limit
-                />
-              </el-form-item>
+
             </div>
           </el-form>
       </el-card>
@@ -206,14 +191,7 @@
           </div>
 
           <div class="chapter-management">
-            <div class="section-header">
-              <el-button type="primary" @click="openAddDialog(null)">
-                <el-icon><Plus /></el-icon>
-                添加章节
-              </el-button>
-            </div>
-
-            <div class="chapter-list-clean">
+            <div v-if="treeData && treeData.length > 0" class="chapter-list-clean">
               <div v-for="(chapter, idx) in treeData" :key="chapter.chapterId" class="chapter-block-clean">
                 <div class="chapter-header-clean">
                   <div class="ch-left">
@@ -267,6 +245,15 @@
                 </div>
               </div>
             </div>
+            
+            <div v-else class="chapter-empty-state">
+              <el-icon class="empty-icon"><Document /></el-icon>
+              <div class="empty-text">暂无章节内容</div>
+              <div class="empty-hint">添加您的第一个章节</div>
+              <div class="add-chapter-btn-clean" @click="openAddDialog(null)">
+                <el-icon><Plus /></el-icon> 添加章节
+              </div>
+            </div>
           </div>
       </el-card>
     </div>
@@ -274,7 +261,7 @@
     <!-- 保存按钮悬浮在底部 -->
     <div class="page-action-bar">
       <el-button @click="goBack" class="footer-btn-cancel">
-        <el-icon><Close /></el-icon>取消
+        <el-icon><Back /></el-icon>返回
       </el-button>
       <el-button
         type="primary"
@@ -295,7 +282,7 @@
     >
       <el-form :model="chapterForm" label-width="100px">
         <el-form-item label="章节类型">
-          <el-radio-group v-model="chapterForm.type">
+          <el-radio-group v-model="chapterForm.type" :disabled="isEditChapter">
             <el-radio label="FOLDER">📁 文件夹</el-radio>
             <el-radio label="MIXED">📚 混合内容（视频+PDF+文本）</el-radio>
             <el-radio label="VIDEO">🎬 仅视频</el-radio>
@@ -314,40 +301,87 @@
 
         <!-- 混合内容 - 视频上传 -->
         <el-form-item v-if="chapterForm.type === 'MIXED' || chapterForm.type === 'VIDEO'" label="视频文件">
+          <!-- 已有文件卡片列表 -->
+          <div v-if="chapterForm.existingVideos && chapterForm.existingVideos.length > 0" class="existing-files-list">
+            <div 
+              v-for="(file, idx) in chapterForm.existingVideos" 
+              :key="idx" 
+              class="existing-file-card"
+            >
+              <div class="file-card-icon">
+                <el-icon color="#67c23a"><VideoPlay /></el-icon>
+              </div>
+              <div class="file-card-info">
+                <span class="file-card-name">{{ file.name }}</span>
+                <span v-if="file.size" class="file-card-size">{{ formatFileSize(file.size) }}</span>
+                <span v-if="file.isLocal" class="file-card-badge local">未保存到服务器</span>
+                <span v-else class="file-card-badge saved">已存储</span>
+              </div>
+              <el-button 
+                link 
+                type="danger" 
+                size="small"
+                @click="removeExistingVideo(idx)"
+              ><el-icon><Delete /></el-icon></el-button>
+            </div>
+          </div>
+
+          <!-- 新增文件选择 -->
           <el-upload
-              ref="videoUploadRef" :auto-upload="false"
-            :limit="1"
-            :on-change="handleVideoChange"
-            accept="video/*"
+              ref="videoUploadRef"
+              :auto-upload="false"
+              :multiple="true"
+              :on-change="handleVideoChange"
+              :on-remove="handleVideoRemove"
+              accept="video/*"
           >
-            <el-button>选择视频（可选）</el-button>
+            <el-button>选择视频（可多选）</el-button>
             <template #tip>
-              <div class="el-upload__tip">支持 mp4、avi、mov、wmv 格式，最大 500MB</div>
+              <div class="el-upload__tip">支持 mp4、avi、mov、wmv 格式，最大 500MB；可同时选择多个视频。</div>
             </template>
           </el-upload>
-          <div v-if="chapterForm.videoUrl && !chapterForm.video" style="margin-top: 8px; color: #67c23a; font-size: 13px; display: flex; align-items: center; gap: 4px;">
-             <el-icon><CircleCheckFilled /></el-icon>
-             <span>当前已包含视频文件，重新上传将覆盖</span>
-          </div>
         </el-form-item>
 
         <!-- 混合内容 - PDF上传 -->
         <el-form-item v-if="chapterForm.type === 'MIXED' || chapterForm.type === 'PDF'" label="PDF文件">
+          <!-- 已有文件卡片列表 -->
+          <div v-if="chapterForm.existingPdfs && chapterForm.existingPdfs.length > 0" class="existing-files-list">
+            <div 
+              v-for="(file, idx) in chapterForm.existingPdfs" 
+              :key="idx" 
+              class="existing-file-card"
+            >
+              <div class="file-card-icon">
+                <el-icon color="#e6a23c"><Document /></el-icon>
+              </div>
+              <div class="file-card-info">
+                <span class="file-card-name">{{ file.name }}</span>
+                <span v-if="file.size" class="file-card-size">{{ formatFileSize(file.size) }}</span>
+                <span v-if="file.isLocal" class="file-card-badge local">未保存到服务器</span>
+                <span v-else class="file-card-badge saved">已存储</span>
+              </div>
+              <el-button 
+                link 
+                type="danger" 
+                size="small"
+                @click="removeExistingPdf(idx)"
+              ><el-icon><Delete /></el-icon></el-button>
+            </div>
+          </div>
+
+          <!-- 新增文件选择 -->
           <el-upload
             :auto-upload="false"
-            :limit="1"
+            :multiple="true"
             :on-change="handlePdfChange"
+            :on-remove="handlePdfRemove"
             accept=".pdf"
           >
-            <el-button>选择PDF（可选）</el-button>
+            <el-button>选择PDF（可多选）</el-button>
             <template #tip>
-              <div class="el-upload__tip">支持 PDF 格式，最大 50MB</div>
+              <div class="el-upload__tip">支持 PDF 格式，最大 50MB；可同时选择多个文件。</div>
             </template>
           </el-upload>
-          <div v-if="chapterForm.pdfUrl && !chapterForm.pdf" style="margin-top: 8px; color: #67c23a; font-size: 13px; display: flex; align-items: center; gap: 4px;">
-             <el-icon><CircleCheckFilled /></el-icon>
-             <span>当前已包含PDF文件，重新上传将覆盖</span>
-          </div>
         </el-form-item>
 
         <!-- 混合内容 - 文本内容 -->
@@ -362,7 +396,7 @@
       </el-form>
 
       <template #footer>
-        <el-button @click="addDialogVisible = false">取消</el-button>
+        <el-button @click="addDialogVisible = false">返回</el-button>
         <el-button type="primary" @click="submitChapter" :loading="chaptersLoading">
           {{ isEditChapter ? '保存修改' : '立即创建' }}
         </el-button>
@@ -586,7 +620,12 @@ const {
   openAddDialog,
   editChapter,
   handleVideoChange,
+  handleVideoRemove,
   handlePdfChange,
+  handlePdfRemove,
+  removeExistingVideo,
+  removeExistingPdf,
+  formatFileSize,
   submitChapter,
   viewChapter,
   deleteChapter,
@@ -668,5 +707,117 @@ html.dark .el-dialog .el-textarea__inner:hover {
 html.dark .el-dialog .el-input__wrapper.is-focus,
 html.dark .el-dialog .el-textarea__inner:focus {
     box-shadow: 0 0 0 1px #409eff inset !important;
+}
+
+/* ==========================================
+   已上传文件展示卡片（Existing File Cards）
+   ========================================== */
+.existing-files-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.existing-file-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 10px;
+    transition: all 0.2s;
+}
+
+.existing-file-card:hover {
+    background: #dcfce7;
+    border-color: #86efac;
+}
+
+.file-card-icon {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+.file-card-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.file-card-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: #166534;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 260px;
+}
+
+.file-card-size {
+    font-size: 12px;
+    color: #16a34a;
+    flex-shrink: 0;
+}
+
+.file-card-badge {
+    font-size: 11px;
+    padding: 1px 8px;
+    border-radius: 99px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.file-card-badge.saved {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #a7f3d0;
+}
+
+.file-card-badge.local {
+    background: #fef9c3;
+    color: #713f12;
+    border: 1px solid #fde68a;
+}
+
+html.dark .existing-file-card {
+    background: #052e16;
+    border-color: #14532d;
+}
+
+html.dark .existing-file-card:hover {
+    background: #14532d;
+}
+
+html.dark .file-card-name {
+    color: #86efac;
+}
+
+html.dark .file-card-icon {
+    background: #1a2e1a;
+}
+
+html.dark .file-card-badge.saved {
+    background: #14532d;
+    color: #4ade80;
+    border-color: #166534;
+}
+
+html.dark .file-card-badge.local {
+    background: #3d2908;
+    color: #fcd34d;
+    border-color: #78350f;
 }
 </style>

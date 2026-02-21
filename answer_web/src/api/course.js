@@ -219,7 +219,82 @@ export const createMixedChapter = (chapterData) => {
 
 export const deleteChapter = (chapterId) => request.delete(`/course/chapter/${chapterId}`)
 
+/**
+ * 删除章节的视频文件（仅删除指定 url 的那个文件）
+ */
+export const deleteChapterVideo = (chapterId, userId, url) =>
+  request.delete(`/course/chapter/${chapterId}/video`, { params: { userId, url } })
+
+/**
+ * 删除章节的PDF文件（仅删除指定 url 的那个文件）
+ */
+export const deleteChapterPdf = (chapterId, userId, url) =>
+  request.delete(`/course/chapter/${chapterId}/pdf`, { params: { userId, url } })
+
+
 export const updateChapter = (chapterId, userId, updateData) => request.put(`/course/chapter/${chapterId}`, updateData, { params: { userId } })
+
+/**
+ * 更新章节（含文件）——带视频/PDF文件的完整更新
+ * 当用户选择了新文件时调用此接口，否则调用 updateChapter
+ */
+export const updateChapterWithFiles = (chapterId, userId, updateData) => {
+  const formData = new FormData()
+  formData.append('chapterTitle', updateData.chapterTitle)
+  formData.append('chapterOrder', updateData.chapterOrder)
+  formData.append('chapterType', updateData.chapterType)
+  if (updateData.textContent !== undefined) formData.append('textContent', updateData.textContent || '')
+
+  // 追加所有视频文件（支持多文件）
+  if (updateData.videos && updateData.videos.length > 0) {
+    updateData.videos.forEach(file => formData.append('video', file))
+  } else if (updateData.video) {
+    formData.append('video', updateData.video)
+  }
+
+  // 追加所有PDF文件（支持多文件）
+  if (updateData.pdfs && updateData.pdfs.length > 0) {
+    updateData.pdfs.forEach(file => formData.append('pdf', file))
+  } else if (updateData.pdf) {
+    formData.append('pdf', updateData.pdf)
+  }
+
+  const token = localStorage.getItem('token') || localStorage.getItem('teacherToken') || localStorage.getItem('t_token')
+  // 使用专用的 /files multipart 端点，避免与 @RequestBody JSON 端点冲突
+  return axios.put(`${API_BASE_URL}/course/chapter/${chapterId}/files?userId=${userId}`, formData, {
+    headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+  })
+}
+
+/**
+ * 创建混合章节（支持多视频/多PDF）
+ */
+export const createMixedChapterMulti = (chapterData) => {
+  const formData = new FormData()
+  formData.append('courseId', chapterData.courseId)
+  formData.append('title', chapterData.title)
+  formData.append('order', chapterData.order)
+
+  if (chapterData.parentId) formData.append('parentId', chapterData.parentId)
+
+  // 多视频
+  if (chapterData.videos && chapterData.videos.length > 0) {
+    chapterData.videos.forEach(f => formData.append('video', f))
+  } else if (chapterData.video) {
+    formData.append('video', chapterData.video)
+  }
+
+  // 多PDF
+  if (chapterData.pdfs && chapterData.pdfs.length > 0) {
+    chapterData.pdfs.forEach(f => formData.append('pdf', f))
+  } else if (chapterData.pdf) {
+    formData.append('pdf', chapterData.pdf)
+  }
+
+  if (chapterData.content) formData.append('content', chapterData.content)
+
+  return axios.post(`${API_BASE_URL}/course/chapter/mixed`, formData)
+}
 
 export const updateChapterCover = (chapterId, userId, coverImage) => {
   const formData = new FormData()

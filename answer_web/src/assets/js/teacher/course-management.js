@@ -20,15 +20,22 @@ export function useCourseManagement() {
     })
 
     const PAGE_SIZE_STORAGE_KEY = 'teacher_course_page_size'
+    const PAGE_CURRENT_STORAGE_KEY = 'teacher_course_current_page'
 
     const getSavedPageSize = () => {
         const saved = localStorage.getItem(PAGE_SIZE_STORAGE_KEY)
-        if (saved && [3, 6, 9, 12].includes(parseInt(saved))) return parseInt(saved)
-        return 6
+        if (saved && [4, 8, 12, 16, 20].includes(parseInt(saved))) return parseInt(saved)
+        return 8
+    }
+
+    const getSavedCurrentPage = () => {
+        const saved = sessionStorage.getItem(PAGE_CURRENT_STORAGE_KEY)
+        if (saved) return parseInt(saved) || 1
+        return 1
     }
 
     const pagination = ref({
-        currentPage: 1,
+        currentPage: getSavedCurrentPage(),
         pageSize: getSavedPageSize(),
         total: 0
     })
@@ -117,11 +124,13 @@ export function useCourseManagement() {
     const handleFilterChange = (filter) => {
         currentFilter.value = filter
         pagination.value.currentPage = 1
+        sessionStorage.setItem(PAGE_CURRENT_STORAGE_KEY, '1')
         applyFilterAndPagination()
     }
 
     const handlePageChange = (page) => {
         pagination.value.currentPage = page
+        sessionStorage.setItem(PAGE_CURRENT_STORAGE_KEY, page.toString())
         applyFilterAndPagination()
         window.scrollTo({ top: 0, behavior: 'smooth' })
     }
@@ -130,6 +139,7 @@ export function useCourseManagement() {
         pagination.value.pageSize = size
         pagination.value.currentPage = 1
         localStorage.setItem(PAGE_SIZE_STORAGE_KEY, size.toString())
+        sessionStorage.setItem(PAGE_CURRENT_STORAGE_KEY, '1')
         applyFilterAndPagination()
     }
 
@@ -137,6 +147,7 @@ export function useCourseManagement() {
     const handleSearch = async () => {
         if (!searchKeyword.value.trim()) {
             pagination.value.currentPage = 1
+            sessionStorage.setItem(PAGE_CURRENT_STORAGE_KEY, '1')
             applyFilterAndPagination()
             return
         }
@@ -157,6 +168,7 @@ export function useCourseManagement() {
                     schedules: []
                 }))
                 pagination.value.currentPage = 1
+                sessionStorage.setItem(PAGE_CURRENT_STORAGE_KEY, '1')
                 applyFilterAndPagination()
                 loadAllCourseSchedules()
             } else {
@@ -176,6 +188,7 @@ export function useCourseManagement() {
     const handleClearSearch = () => {
         searchKeyword.value = ''
         pagination.value.currentPage = 1
+        sessionStorage.setItem(PAGE_CURRENT_STORAGE_KEY, '1')
         loadCourses()
     }
 
@@ -284,7 +297,8 @@ export function useCourseManagement() {
 
                 applyFilterAndPagination()
                 if (courses.value.length === 0 && pagination.value.currentPage > 1) {
-                    pagination.value.currentPage = 1
+                    pagination.value.currentPage -= 1
+                    sessionStorage.setItem(PAGE_CURRENT_STORAGE_KEY, pagination.value.currentPage.toString())
                     applyFilterAndPagination()
                 }
                 ElMessage.success(newState === 1 ? '课程已发布' : '课程已设为草稿')

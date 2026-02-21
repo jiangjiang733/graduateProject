@@ -26,76 +26,114 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    background-color: var(--bg-page);
+    background-color: #f8fafc;
+    /* 高亮果粉白 bg-[#F8FAFC] */
     font-family: 'Inter', sans-serif;
     color: var(--text-main);
+    position: relative;
+    overflow-x: hidden;
 }
 
-/* 2. Header (Sticky Top) */
+/* 2. Header (Fixed Top) */
 .modern-header {
-    height: var(--header-height);
-    background-color: #fff;
-    border-bottom: 1px solid var(--border-color);
-    position: sticky;
+    height: 72px;
+    background-color: transparent;
+    border-bottom: none;
+    position: absolute;
     top: 0;
+    left: 0;
+    right: 0;
     z-index: 100;
-    /* Ensure header stays on top */
     display: flex;
     align-items: center;
-    padding: 0 20px;
+    padding: 0 32px;
+    pointer-events: none;
 }
 
-.back-link {
+.modern-header .header-left {
     display: flex;
     align-items: center;
-    gap: 6px;
-    color: var(--text-secondary);
-    font-size: 14px;
+    gap: 16px;
+    pointer-events: auto;
+}
+
+.modern-header .header-right {
+    pointer-events: auto;
+}
+
+.back-link-circle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    background-color: #f8fafc;
+    color: #1e293b;
+    font-size: 18px;
     cursor: pointer;
-    padding: 8px 12px;
-    border-radius: 6px;
+    border-radius: 50%;
     transition: all 0.2s;
 }
 
-.back-link:hover {
-    background-color: #f3f4f6;
-    color: var(--primary-color);
+.back-link-circle:hover {
+    background-color: #f1f5f9;
+}
+
+.header-divider {
+    width: 1px;
+    height: 24px;
+    background-color: #e2e8f0;
+}
+
+.header-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.header-subtitle {
+    font-size: 18px;
+    color: #94a3b8;
+    font-weight: 500;
 }
 
 /* 3. Main Layout Container */
 .learn-layout {
     display: flex;
     align-items: flex-start;
-    /* Layout aligns to top */
     justify-content: center;
     width: 100%;
     max-width: 1920px;
-    /* Optional cap for ultra-wide screens */
     margin: 0 auto;
+    padding: 80px 24px 24px;
+    gap: 16px;
+    /* 16px 透明间隙Gap */
+    box-sizing: border-box;
 }
 
 /* 4. Left Content (Flexible, grows with content) */
 .main-content-area {
-    flex: 1;
-    /* Take remaining width */
-    min-width: 0;
-    /* Prevent flex overflow */
+    width: calc(75% - 8px);
+    /* 主内容区横向 等比缩放减去一半的gap */
+    flex: none;
     display: flex;
     flex-direction: column;
-    background-color: transparent;
-    padding-bottom: 40px;
-    /* Space at bottom */
+    background-color: #ffffff;
+    border-radius: 2.5rem;
+    /* 超大圆角 rounded-[2.5rem] */
+    box-shadow: 0 20px 50px rgba(59, 130, 246, 0.08);
+    /* 冷色调弥散发光阴影 */
+    overflow: hidden;
 }
 
 /* Mixed Task Bar */
 .mixed-task-bar {
-    background-color: #fff;
+    background-color: transparent;
     display: flex;
-    padding: 0 16px;
-    border-bottom: 1px solid var(--border-color);
-    position: sticky;
-    /* Keep task tabs visible if needed, or remove if distracting */
-    top: var(--header-height);
+    padding: 0 32px;
+    border-bottom: 1px solid #e2e8f0;
+    position: relative;
+    /* Changed from sticky to avoid overlapping when transparent */
     z-index: 40;
 }
 
@@ -118,28 +156,34 @@ body {
 /* Content Viewer */
 .content-viewer-window {
     width: 100%;
-    background-color: #fff;
+    background-color: transparent;
     min-height: 400px;
+    padding: 32px 32px 0 32px;
 }
 
 .renderer-video {
     width: 100%;
     aspect-ratio: 16/9;
-    background: #000;
+    background-color: transparent;
+    border-radius: 1rem;
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
 }
 
 .renderer-video video {
     width: 100%;
     height: 100%;
+    background: #000;
 }
 
 .renderer-pdf {
     height: 800px;
-    /* Fixed rough height for PDF in native flow */
-    background: #e5e7eb;
+    background-color: transparent;
+    border-radius: 1rem;
+    overflow: hidden;
+    margin: 16px 0;
 }
 
 .renderer-pdf iframe {
@@ -155,22 +199,35 @@ body {
 
 /* Navigation */
 .content-navigation {
-    background: #fff;
-    padding: 16px 24px;
+    background: transparent;
+    padding: 24px 32px 32px 32px;
     display: flex;
     justify-content: space-between;
-    border-bottom: 1px solid var(--border-color);
+    border-top: none;
+    position: relative;
+    z-index: 10;
 }
 
 .nav-chapters-btn {
-    padding: 8px 16px;
-    background: #f3f4f6;
-    border-radius: 6px;
-    color: var(--text-secondary);
+    padding: 8px 24px;
+    background: #ffffff;
+    border-radius: 9999px;
+    /* rounded-full */
+    color: #2563eb;
+    /* text-blue-600 */
     cursor: pointer;
     display: flex;
     gap: 8px;
     align-items: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    /* 模拟悬浮 */
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.nav-chapters-btn:hover {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
 }
 
 /* Tabs */
@@ -185,28 +242,88 @@ body {
 
 /* 5. Right Sidebar (Sticky Behavior) */
 .course-sidebar {
-    width: var(--sidebar-width);
-    background-color: #ffffff;
-    border-left: 1px solid var(--border-color);
-    flex-shrink: 0;
-    /* Stick to the top under header */
+    width: calc(25% - 8px);
+    flex: none;
+    background: #ffffff;
+    border: none;
+    box-shadow: 0 20px 50px rgba(59, 130, 246, 0.05);
+    border-radius: 2.5rem;
     position: sticky;
-    top: var(--header-height);
-    /* Height aligns with viewport minus header */
-    height: calc(100vh - var(--header-height));
-    /* Internal scroll for directory if it's too long */
-    overflow-y: auto;
+    top: calc(72px + 24px);
+    height: calc(100vh - 72px - 60px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
-/* Sidebar Styling */
-.course-sidebar,
+/* Sidebar Tabs Header */
+.sidebar-tabs-pill-wrapper {
+    display: flex;
+    justify-content: center;
+    /* Center the pill toggle */
+    padding: 32px 32px 12px;
+}
+
+.sidebar-tabs-pill {
+    display: flex;
+    background-color: #f1f5f9;
+    border-radius: 9999px;
+    padding: 6px;
+    gap: 0;
+    width: fit-content;
+}
+
+.sidebar-tab-pill-item {
+    padding: 8px 36px;
+    /* Balance the massive tabs so they don't break flex */
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 600;
+    color: #64748b;
+    border-radius: 9999px;
+    transition: all 0.2s;
+}
+
+.sidebar-tab-pill-item.active {
+    background-color: #3b82f6;
+    color: #ffffff;
+    box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2);
+}
+
+.sidebar-scroll-wrapper {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0 16px 24px;
+    /* Add internal padding to constrain scrollbars neatly */
+    margin-right: 2px;
+}
+
+/* Custom scrollbar for webkit browsers within sidebar */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.2);
+    border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(100, 116, 139, 0.4);
+}
+
 .chapter-group {
-    border-bottom: 1px solid var(--border-color);
+    background: transparent;
 }
 
 .chapter-header {
     padding: 16px 20px;
-    background-color: #fff;
+    background-color: transparent;
     cursor: pointer;
     display: flex;
     justify-content: space-between;
@@ -216,24 +333,30 @@ body {
 }
 
 .chapter-header:hover {
-    background-color: #f9fafb;
+    background-color: rgba(255, 255, 255, 0.4);
 }
 
 .lesson-item {
     display: flex;
-    padding: 12px 20px 12px 16px;
+    padding: 14px 16px;
+    margin: 4px 16px;
+    border-radius: 1.5rem;
+    /* Match video container corner radius roughly */
     cursor: pointer;
-    gap: 10px;
-    border-left: 3px solid transparent;
+    gap: 12px;
+    align-items: center;
+    transition: all 0.2s;
 }
 
 .lesson-item:hover {
-    background-color: #f9fafb;
+    background-color: rgba(255, 255, 255, 0.4);
 }
 
 .lesson-item.active {
-    background-color: #eff6ff;
-    border-left-color: var(--primary-color);
+    background-color: #3b82f6;
+    /* bg-blue-500 */
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(59, 130, 246, 0.15);
 }
 
 .type-tag {
@@ -247,16 +370,70 @@ body {
 
 .lesson-title {
     font-size: 14px;
-    color: var(--text-secondary);
+    font-weight: 600;
+    color: #334155;
+}
+
+.lesson-item.active .lesson-title {
+    color: #ffffff;
 }
 
 .status-icon {
-    margin-top: 3px;
-    color: #d1d5db;
+    display: flex;
+    align-items: center;
+    color: #64748b;
+    font-size: 16px;
 }
 
-.status-icon.active {
-    color: var(--primary-color);
+.status-icon.icon-video {
+    color: #3b82f6;
+    /* Blue for video */
+}
+
+.status-icon.icon-pdf {
+    color: #ef4444;
+    /* Red for PDF */
+}
+
+.status-icon.icon-mixed {
+    color: #a855f7;
+    /* Purple for mixed/quiz */
+}
+
+.status-icon.active,
+.lesson-item.active .status-icon {
+    color: #ffffff;
+}
+
+/* Override dark mode changes so they map correctly to the new UI structure */
+html.dark .back-link-circle {
+    background-color: #1f2937 !important;
+    color: #e5e7eb !important;
+}
+
+html.dark .header-title {
+    color: #f9fafb !important;
+}
+
+html.dark .header-subtitle {
+    color: #9ca3af !important;
+}
+
+html.dark .sidebar-tabs-pill {
+    background-color: #374151 !important;
+}
+
+html.dark .sidebar-tab-pill-item {
+    color: #9ca3af;
+}
+
+html.dark .sidebar-tab-pill-item.active {
+    background-color: #4b5563 !important;
+    color: #60a5fa !important;
+}
+
+html.dark .lesson-item.active {
+    background-color: #2563eb !important;
 }
 
 /* Hide Sidebar on Mobile */
@@ -281,28 +458,81 @@ html.dark body {
     color: var(--text-main);
 }
 
-html.dark .modern-header,
-html.dark .mixed-task-bar,
+html.dark .course-learn-modern {
+    background-color: #111827 !important;
+}
+
+html.dark .main-content-area {
+    background-color: #1f2937 !important;
+    border-color: #374151 !important;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5) !important;
+}
+
 html.dark .content-viewer-window,
+html.dark .renderer-video,
 html.dark .renderer-text,
-html.dark .content-navigation,
-html.dark .course-sidebar,
+html.dark .renderer-pdf {
+    background-color: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+}
+
+html.dark .course-sidebar {
+    background: #1f2937 !important;
+    border-color: #374151 !important;
+}
+
+html.dark .content-navigation {
+    background: transparent !important;
+    border-top: none !important;
+}
+
+html.dark .back-link {
+    background-color: rgba(31, 41, 55, 0.8) !important;
+    color: #2dd4bf !important;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5) !important;
+}
+
+html.dark .mixed-task-bar,
 html.dark .chapter-header,
 html.dark .p-4.bg-white,
 /* 修复内联 bg-white 的卡片 */
 html.dark .resource-item {
-    background-color: #1f2937 !important;
-    /* dark-800 */
-    border-color: var(--border-color);
+    background-color: transparent !important;
+    border-color: #374151 !important;
     color: var(--text-main);
+}
+
+html.dark .nav-chapters-btn {
+    background-color: #374151 !important;
+    color: #93c5fd !important;
+    box-shadow: none !important;
+}
+
+html.dark .nav-chapters-btn:hover {
+    background-color: #4b5563 !important;
+}
+
+html.dark .nav-chapters-btn.primary-btn {
+    background-color: #3b82f6 !important;
+    color: #ffffff !important;
+}
+
+html.dark .nav-chapters-btn.primary-btn:hover {
+    background-color: #2563eb !important;
 }
 
 /* Inputs & Textareas */
 html.dark .el-textarea__inner,
 html.dark .el-input__wrapper {
-    background-color: #374151;
-    box-shadow: none;
-    color: white;
+    background-color: #374151 !important;
+    box-shadow: 0 0 0 1px #4b5563 inset !important;
+    color: white !important;
+}
+
+.el-textarea__inner {
+    border-radius: 20px !important;
+    padding: 12px 16px !important;
 }
 
 html.dark .el-textarea__inner::placeholder {
@@ -321,29 +551,7 @@ html.dark .lesson-item.active {
     border-left-color: #6366f1;
 }
 
-html.dark .back-link:hover {
-    background-color: #374151;
-}
 
-html.dark .type-tag {
-    background-color: #374151;
-    color: #d1d5db;
-}
-
-/* 修复底部的白色卡片 */
-html.dark .bg-white {
-    background-color: #1f2937 !important;
-    border-color: #374151 !important;
-}
-
-html.dark .text-gray-800 {
-    color: #f3f4f6 !important;
-}
-
-html.dark .text-gray-600,
-html.dark .text-gray-400 {
-    color: #9ca3af !important;
-}
 
 /* 修复资料下载卡片 */
 html.dark .bg-gray-50 {

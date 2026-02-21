@@ -13,6 +13,8 @@
           :props="{ label: 'chapterTitle', value: 'chapterId', children: 'children' }"
           @change="fetchComments"
           class="chapter-select"
+          popper-class="chapter-select-popper"
+          :render-after-expand="false"
         />
       </div>
       <div class="filter-right">

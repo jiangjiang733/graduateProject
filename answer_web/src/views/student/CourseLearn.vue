@@ -3,10 +3,12 @@
     <!-- 顶部导航栏 (极简模式) -->
     <header class="modern-header">
       <div class="header-left">
-        <div class="back-link" @click="handleBack">
+        <div class="back-link-circle" @click="handleBack">
           <el-icon><ArrowLeft /></el-icon>
-          <span>返回课程主页</span>
         </div>
+        <div class="header-divider"></div>
+        <div class="header-title">{{ courseInfo?.courseName || '课程详情' }}</div>
+        
       </div>
     </header>
 
@@ -73,65 +75,117 @@
 
         <!-- 3. 底部导航条 -->
         <div class="content-navigation">
-           <div 
-             class="nav-chapters-btn"
-             :class="{ 'opacity-50 cursor-not-allowed': !prevChapter }"
-             @click="prevChapter && handleChapterClick(prevChapter)"
-           >
-             <el-icon><ArrowLeft /></el-icon>
-             <span>上一节</span>
+           <div style="flex: 1; display: flex; justify-content: flex-start;">
+             <div 
+               v-if="prevChapter"
+               class="nav-chapters-btn"
+               @click="handleChapterClick(prevChapter)"
+             >
+               <el-icon><ArrowLeft /></el-icon>
+               <span>上一节</span>
+             </div>
            </div>
 
-           <div class="text-xs text-gray-400 hidden md:block">
+           <div style="flex: 2; display: flex; align-items: center; justify-content: center;" class="text-xs text-gray-400 hidden md:flex">
               当前: {{ currentChapter?.chapterTitle || '...' }}
            </div>
 
-           <div 
-             class="nav-chapters-btn bg-indigo-600 text-white hover:bg-indigo-700"
-             :class="{ 'opacity-50 cursor-not-allowed': !nextChapter }"
-             @click="nextChapter && handleChapterClick(nextChapter)"
-           >
-             <span>下一节</span>
-             <el-icon><ArrowRight /></el-icon>
+           <div style="flex: 1; display: flex; justify-content: flex-end;">
+             <div 
+               v-if="nextChapter"
+               class="nav-chapters-btn primary-btn"
+               @click="handleChapterClick(nextChapter)"
+             >
+               <span>下一节</span>
+               <el-icon><ArrowRight /></el-icon>
+             </div>
            </div>
         </div>
 
-        <!-- 4. 底部选项卡区域 (恢复大屏显示) -->
-        <div class="bottom-tabs-section">
-          <el-tabs v-model="activeTabName" class="modern-tabs">
-            <el-tab-pane label="课程介绍" name="intro">
-               <div class="p-4 bg-white rounded-lg border border-gray-100">
-                  <h3 class="text-lg font-bold text-gray-800 mb-3 border-l-4 border-indigo-500 pl-3">课程简介</h3>
-                  <p class="text-gray-600 leading-relaxed">{{ courseInfo.courseDescription || '暂无简介' }}</p>
-               </div>
-            </el-tab-pane>
+        <!-- 4. 底部选项卡区域移至侧边栏 -->
+      </main>
 
-            <el-tab-pane label="讨论区" name="discuss">
-               <template #label>
-                 <span>讨论区</span>
-               </template>
-               
-               <div class="discussion-container">
-                  <div class="flex gap-4 mb-6">
-                     <el-avatar :size="40" :src="userInfo?.avatarUrl" class="flex-shrink-0">{{ userInfo?.userName?.charAt(0) }}</el-avatar>
-                     <div class="flex-1 relative">
+      <!-- 右侧悬浮交互面板 (Interactive Panel) -->
+      <aside class="course-sidebar">
+        <!-- 面板顶部选项卡 -->
+        <div class="sidebar-tabs-pill-wrapper">
+          <div class="sidebar-tabs-pill">
+             <div 
+               class="sidebar-tab-pill-item" 
+               :class="{ active: rightSideTab === 'chapter' }"
+               @click="rightSideTab = 'chapter'"
+             >
+               大纲
+             </div>
+             <div 
+               class="sidebar-tab-pill-item" 
+               :class="{ active: rightSideTab === 'qa' }"
+               @click="rightSideTab = 'qa'"
+             >
+               互动
+             </div>
+          </div>
+        </div>
+
+        <div class="sidebar-scroll-wrapper custom-scrollbar">
+           <!-- 章节目录 -->
+           <div v-show="rightSideTab === 'chapter'" class="chapter-scroller">
+              <!-- 手风琴目录结构 -->
+              <div v-for="chapter in chapters" :key="chapter.chapterId" class="chapter-group">
+                 <div class="chapter-header" @click="toggleChapterExpand(chapter.chapterId)">
+                   <span class="truncate pr-2 w-full">{{ chapter.chapterTitle }}</span>
+                 </div>
+                 
+                 <div v-show="expandedChapters.includes(chapter.chapterId)" class="lesson-list">
+                    <div 
+                       v-for="lesson in chapter.children" 
+                       :key="lesson.chapterId" 
+                       class="lesson-item"
+                       :class="{ active: currentChapter?.chapterId === lesson.chapterId }"
+                       @click="handleChapterClick(lesson)"
+                    >
+                       <!-- 状态图标 -->
+                       <div class="status-icon" :class="{ 
+                           completed: isCompleted(lesson), 
+                           active: currentChapter?.chapterId === lesson.chapterId,
+                           ['icon-' + getLessonType(lesson).toLowerCase()]: true
+                       }">
+                          <el-icon v-if="getLessonType(lesson) === 'video'"><VideoPlay /></el-icon>
+                          <el-icon v-else-if="getLessonType(lesson) === 'pdf'"><Document /></el-icon>
+                          <el-icon v-else><Notebook /></el-icon>
+                       </div>
+                       
+                       <div class="lesson-content">
+                          <div class="lesson-title">{{ lesson.chapterTitle }}</div>
+                       </div>
+
+                    </div>
+                 </div>
+              </div>
+           </div>
+           
+           <!-- 互动问答区域 -->
+           <div v-show="rightSideTab === 'qa'" class="qa-scroller">
+               <div class="discussion-container p-4">
+                  <div class="flex gap-4 mb-6 items-start">
+                     <el-avatar :size="36" :src="userInfo?.avatarUrl" class="flex-shrink-0 mt-1">{{ userInfo?.userName?.charAt(0) }}</el-avatar>
+                     <div class="flex-1 relative" style="min-width: 0;">
                         <el-input
                           v-model="newComment"
                           type="textarea"
-                          :rows="3"
-                          placeholder="针对本章节提问..."
+                          :rows="2"
+                          placeholder="提出你的疑问..."
                           resize="none"
+                          class="modern-input"
                         />
-                        <!-- 增加间距 mt-4 -->
-                        <!-- 强制间距和颜色 -->
-                        <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
+                        <div style="margin-top: 12px; display: flex; justify-content: flex-end;">
                            <el-button 
                              type="primary" 
-                             style="background-color: #4f46e5; border-color: #4f46e5; color: white; padding: 10px 24px; border-radius: 8px;"
+                             style="background-color: rgba(79, 70, 229, 0.9); border: none; color: white; padding: 8px 16px; border-radius: 8px; font-size: 13px;"
                              @click="submitComment" 
                              :loading="commentsLoading"
                            >
-                             发布评论
+                             发送
                            </el-button>
                         </div>
                      </div>
@@ -146,80 +200,9 @@
                       :showChapter="false"
                       @commentPosted="currentChapter && loadChapterComments(currentChapter.chapterId)"
                     />
-                    <el-empty v-if="comments.length === 0" description="暂无讨论，来抢沙发吧" />
+                    <el-empty v-if="comments.length === 0" description="暂无互动" :image-size="60" />
                   </div>
                </div>
-            </el-tab-pane>
-
-            <el-tab-pane label="资料下载" name="resources">
-               <!-- 保留修正后的资料卡片样式 -->
-               <div v-if="currentChapter?.pdfUrl" class="resource-card hover:shadow-sm transition-all duration-300">
-                  <div class="flex items-center gap-4 p-4 rounded-xl bg-gray-50 border border-gray-100">
-                     <div class="w-12 h-12 bg-white rounded-lg flex items-center justify-center text-indigo-500 shadow-sm">
-                        <el-icon :size="24"><Document /></el-icon>
-                     </div>
-                     <div class="flex-1">
-                        <div class="font-medium text-gray-800 text-base mb-1">{{ currentChapter.chapterTitle }} - 课件文档</div>
-                        <div class="text-xs text-gray-400 flex items-center gap-2">
-                           <span class="bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded text-[10px] font-semibold">PDF</span>
-                           <span>{{ '1.2 MB' }}</span>
-                        </div>
-                     </div>
-                     <el-button type="primary" bg class="!rounded-lg px-6" @click="downloadFile(currentChapter.pdfUrl, currentChapter.chapterTitle)">
-                        <el-icon class="mr-1"><Download /></el-icon> 下载
-                     </el-button>
-                  </div>
-               </div>
-               <el-empty v-else description="本章节暂无附件资料" :image-size="100" />
-            </el-tab-pane>
-          </el-tabs>
-        </div>
-      </main>
-
-      <!-- 右侧侧边栏 (恢复为纯目录) -->
-      <aside class="course-sidebar">
-        <!-- 侧边栏头部进度条已移除，只保留目录列表 -->
-        <div class="chapter-scroller custom-scrollbar">
-           <!-- 手风琴目录结构 -->
-           <div v-for="chapter in chapters" :key="chapter.chapterId" class="chapter-group">
-              <div class="chapter-header" @click="toggleChapterExpand(chapter.chapterId)">
-                <span class="truncate pr-2">{{ chapter.chapterTitle }}</span>
-                <el-icon class="text-gray-400">
-                  <ArrowUp v-if="expandedChapters.includes(chapter.chapterId)" />
-                  <ArrowDown v-else />
-                </el-icon>
-              </div>
-              
-              <div v-show="expandedChapters.includes(chapter.chapterId)" class="lesson-list">
-                 <div 
-                    v-for="lesson in chapter.children" 
-                    :key="lesson.chapterId" 
-                    class="lesson-item"
-                    :class="{ active: currentChapter?.chapterId === lesson.chapterId }"
-                    @click="handleChapterClick(lesson)"
-                 >
-                    <!-- 状态图标 -->
-                    <div class="status-icon" :class="{ completed: isCompleted(lesson), active: currentChapter?.chapterId === lesson.chapterId }">
-                       <el-icon v-if="isCompleted(lesson)"><CircleCheckFilled /></el-icon>
-                       <el-icon v-else-if="currentChapter?.chapterId === lesson.chapterId"><VideoPlay /></el-icon>
-                       <el-icon v-else><Lock v-if="lesson.locked" /><CircleCheck v-else /></el-icon>
-                    </div>
-                    
-                    <div class="lesson-content">
-                       <div class="lesson-meta">
-                          <span class="type-tag" :class="getLessonType(lesson).toLowerCase()">
-                            {{ getLessonTypeTitle(lesson) }}
-                          </span>
-                       </div>
-                       <div class="lesson-title">{{ lesson.chapterTitle }}</div>
-                    </div>
-
-                    <div class="duration-text" v-if="lesson.videoUrl">
-                       <!-- 模拟时长 -->
-                       {{ '10:00' }}
-                    </div>
-                 </div>
-              </div>
            </div>
         </div>
       </aside>
@@ -263,6 +246,7 @@ const courseId = computed(() => route.params.id)
 const activeTabName = ref('intro')
 const expandedChapters = ref([]) // 存储展开的章节ID
 const currentTaskIndex = ref(0) // 混合任务当前索引
+const rightSideTab = ref('chapter') // 右侧悬浮面板选中态 ('chapter' | 'qa')
 
 const {
   loading,

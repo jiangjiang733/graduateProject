@@ -17,6 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,13 +31,13 @@ import java.util.UUID;
 @RequestMapping("/api/course/chapter")
 @CrossOrigin(origins = "*")
 public class CourseChapterController {
-    
+
     @Autowired
     private CourseChapterService courseChapterService;
-    
+
     @Autowired
     private CourseChapterMapper chapterMapper;
-    
+
     @Autowired
     private CourseMapper courseMapper;
 
@@ -45,7 +46,7 @@ public class CourseChapterController {
 
     @Value("${file.course.cover-dir}")
     private String coverUploadDir;
-    
+
     /**
      * 创建文件夹章节
      */
@@ -55,7 +56,7 @@ public class CourseChapterController {
             @RequestParam(value = "parentId", required = false) Long parentId,
             @RequestParam("title") String title,
             @RequestParam("order") Integer order) {
-        
+
         Map<String, Object> response = new HashMap<>();
         try {
             CourseChapter chapter = courseChapterService.createFolderChapter(courseId, parentId, title, order);
@@ -79,20 +80,45 @@ public class CourseChapterController {
             @RequestParam(value = "parentId", required = false) Long parentId,
             @RequestParam("title") String title,
             @RequestParam("order") Integer order,
-            @RequestParam(value = "video", required = true) MultipartFile video) {
-            Map<String, Object> response = new HashMap<>();
-            try {
-                CourseChapter chapter = courseChapterService.createVideoChapter(courseId, parentId, title, order, video);
-                response.put("success", true);
-                response.put("message", "视频章节创建成功");
-                response.put("data", chapter);
-                return ResponseEntity.ok(response);
-            } catch (Exception e) {
-                response.put("success", false);
-                response.put("message",  e.getMessage());
-                return ResponseEntity.internalServerError().body(response);
+            @RequestParam(value = "video", required = false) List<MultipartFile> videos) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            CourseChapter chapter;
+            if (videos != null && !videos.isEmpty() && !videos.get(0).isEmpty()) {
+                // 保存所有视频，用 & 拼接 URL
+                List<String> urls = new java.util.ArrayList<>();
+                for (MultipartFile v : videos) {
+                    if (v != null && !v.isEmpty()) {
+                        com.example.project.util.FileValidationUtil.validateVideoFile(v);
+                        urls.add(courseChapterService.saveUploadedVideo(v));
+                    }
+                }
+                // 用第一个视频创建章节，再更新 URL 为全部
+                chapter = courseChapterService.createVideoChapter(courseId, parentId, title, order, videos.get(0));
+                if (urls.size() > 0) {
+                    chapter.setVideoUrl(String.join("&", urls));
+                    chapterMapper.updateById(chapter);
+                }
+            } else {
+                chapter = new CourseChapter();
+                chapter.setCourseId(courseId);
+                chapter.setParentId(parentId);
+                chapter.setChapterTitle(title);
+                chapter.setChapterOrder(order);
+                chapter.setChapterType("VIDEO");
+                chapter = courseChapterService.createChapter(chapter);
             }
+            response.put("success", true);
+            response.put("message", "视频章节创建成功");
+            response.put("data", chapter);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
         }
+    }
+
     /**
      * 创建PDF章节
      */
@@ -103,7 +129,7 @@ public class CourseChapterController {
             @RequestParam("title") String title,
             @RequestParam("order") Integer order,
             @RequestParam(value = "pdf", required = false) MultipartFile pdf) {
-        
+
         Map<String, Object> response = new HashMap<>();
         try {
             CourseChapter chapter;
@@ -130,13 +156,13 @@ public class CourseChapterController {
             return ResponseEntity.internalServerError().body(response);
         }
     }
-    
+
     /**
      * 创建混合章节（支持同时上传视频和PDF）
      */
     @PostMapping("/mixed")
     public ResponseEntity<Map<String, Object>> createMixedChapter(
-//            获取参数请求头
+            // 获取参数请求头
             @RequestParam("courseId") String courseId,
             @RequestParam(value = "parentId", required = false) Long parentId,
             @RequestParam("title") String title,
@@ -144,24 +170,28 @@ public class CourseChapterController {
             @RequestParam(value = "video", required = false) MultipartFile video,
             @RequestParam(value = "pdf", required = false) MultipartFile pdf,
             @RequestParam(value = "content", required = false) String content) {
-        
+
         // ========== 详细日志 ==========
         System.out.println("\n=== 混合章节创建请求 ===");
         System.out.println("课程ID: " + courseId);
         System.out.println("章节标题: " + title);
-        System.out.println("视频文件: " + (video != null && !video.isEmpty() ? video.getOriginalFilename() + " (" + video.getSize() + " bytes)" : "无"));
-        System.out.println("PDF文件: " + (pdf != null && !pdf.isEmpty() ? pdf.getOriginalFilename() + " (" + pdf.getSize() + " bytes)" : "无"));
-        System.out.println("文本内容: " + (content != null && !content.isEmpty() ? "是 (" + content.length() + " 字符)" : "无"));
-        
+        System.out.println("视频文件: "
+                + (video != null && !video.isEmpty() ? video.getOriginalFilename() + " (" + video.getSize() + " bytes)"
+                        : "无"));
+        System.out.println("PDF文件: "
+                + (pdf != null && !pdf.isEmpty() ? pdf.getOriginalFilename() + " (" + pdf.getSize() + " bytes)" : "无"));
+        System.out
+                .println("文本内容: " + (content != null && !content.isEmpty() ? "是 (" + content.length() + " 字符)" : "无"));
+
         Map<String, Object> response = new HashMap<>();
         try {
             CourseChapter chapter = courseChapterService.createMixedChapter(
-                courseId, parentId, title, order, video, pdf, content);
+                    courseId, parentId, title, order, video, pdf, content);
             System.out.println("  - videoUrl: " + chapter.getVideoUrl());
             System.out.println("  - pdfUrl: " + chapter.getPdfUrl());
             System.out.println("  - textContent: " + (chapter.getTextContent() != null ? "有" : "无"));
             System.out.println("=== 请求处理完成 ===\n");
-            
+
             response.put("success", true);
             response.put("message", "章节创建成功");
             response.put("data", chapter);
@@ -174,7 +204,7 @@ public class CourseChapterController {
             return ResponseEntity.internalServerError().body(response);
         }
     }
-    
+
     /**
      * 创建文本章节
      */
@@ -185,7 +215,7 @@ public class CourseChapterController {
             @RequestParam("title") String title,
             @RequestParam("order") Integer order,
             @RequestParam(value = "content", required = false) String content) {
-        
+
         Map<String, Object> response = new HashMap<>();
         try {
             CourseChapter chapter = courseChapterService.createTextChapter(courseId, parentId, title, order, content);
@@ -199,7 +229,7 @@ public class CourseChapterController {
             return ResponseEntity.internalServerError().body(response);
         }
     }
-    
+
     /**
      * 获取课程章节列表
      */
@@ -217,7 +247,7 @@ public class CourseChapterController {
             return ResponseEntity.internalServerError().body(response);
         }
     }
-    
+
     /**
      * 获取章节详情
      */
@@ -235,7 +265,7 @@ public class CourseChapterController {
             return ResponseEntity.internalServerError().body(response);
         }
     }
-    
+
     /**
      * 删除章节
      */
@@ -245,10 +275,10 @@ public class CourseChapterController {
         try {
             System.out.println("\n=== 删除章节请求 ===");
             System.out.println("章节ID: " + chapterId);
-            
+
             // 调用递归删除方法,删除子章节和关联文件
             courseChapterService.deleteChapterRecursively(chapterId);
-            
+
             response.put("success", true);
             response.put("message", "删除成功");
             System.out.println("=== 删除成功 ===\n");
@@ -261,7 +291,141 @@ public class CourseChapterController {
             return ResponseEntity.internalServerError().body(response);
         }
     }
-    
+
+    /**
+     * 删除章节的视频文件（仅删除文件，不删除章节记录）
+     */
+    @DeleteMapping("/{chapterId}/video")
+    public ResponseEntity<Map<String, Object>> deleteChapterVideo(
+            @PathVariable Long chapterId,
+            @RequestParam String userId,
+            @RequestParam(required = false) String url) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            CourseChapter chapter = chapterMapper.selectById(chapterId);
+            if (chapter == null) {
+                response.put("success", false);
+                response.put("message", "章节不存在");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            }
+            com.example.project.entity.course.Course course = courseMapper.selectById(chapter.getCourseId());
+            if (course == null || !course.getTeacherId().equals(userId)) {
+                response.put("success", false);
+                response.put("message", "无权限操作此章节");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+            }
+
+            String existingUrls = chapter.getVideoUrl();
+            String newUrls = null;
+
+            if (url != null && !url.isEmpty() && existingUrls != null) {
+                // 删除指定 URL对应的物理文件
+                deletePhysicalFile(url, "video");
+                // 从 & 分隔列表中移除该 URL
+                List<String> parts = new java.util.ArrayList<>(java.util.Arrays.asList(existingUrls.split("&")));
+                parts.remove(url);
+                newUrls = parts.isEmpty() ? null : String.join("&", parts);
+            } else if (existingUrls != null) {
+                // 未指定 url 则删除所有
+                for (String u : existingUrls.split("&")) {
+                    if (!u.trim().isEmpty())
+                        deletePhysicalFile(u.trim(), "video");
+                }
+                newUrls = null;
+            }
+
+            UpdateWrapper<CourseChapter> wrapper = new UpdateWrapper<>();
+            wrapper.eq("chapter_id", chapterId)
+                    .set("video_url", newUrls)
+                    .set("update_time", LocalDateTime.now());
+            chapterMapper.update(null, wrapper);
+
+            response.put("success", true);
+            response.put("message", "视频文件已删除");
+            response.put("remainingUrl", newUrls);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "删除失败: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
+    /**
+     * 删除章节的PDF文件（仅删除文件，不删除章节记录）
+     */
+    @DeleteMapping("/{chapterId}/pdf")
+    public ResponseEntity<Map<String, Object>> deleteChapterPdf(
+            @PathVariable Long chapterId,
+            @RequestParam String userId,
+            @RequestParam(required = false) String url) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            CourseChapter chapter = chapterMapper.selectById(chapterId);
+            if (chapter == null) {
+                response.put("success", false);
+                response.put("message", "章节不存在");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            }
+            com.example.project.entity.course.Course course = courseMapper.selectById(chapter.getCourseId());
+            if (course == null || !course.getTeacherId().equals(userId)) {
+                response.put("success", false);
+                response.put("message", "无权限操作此章节");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+            }
+
+            String existingUrls = chapter.getPdfUrl();
+            String newUrls = null;
+
+            if (url != null && !url.isEmpty() && existingUrls != null) {
+                deletePhysicalFile(url, "pdf");
+                List<String> parts = new java.util.ArrayList<>(java.util.Arrays.asList(existingUrls.split("&")));
+                parts.remove(url);
+                newUrls = parts.isEmpty() ? null : String.join("&", parts);
+            } else if (existingUrls != null) {
+                for (String u : existingUrls.split("&")) {
+                    if (!u.trim().isEmpty())
+                        deletePhysicalFile(u.trim(), "pdf");
+                }
+                newUrls = null;
+            }
+
+            UpdateWrapper<CourseChapter> pdfWrapper = new UpdateWrapper<>();
+            pdfWrapper.eq("chapter_id", chapterId)
+                    .set("pdf_url", newUrls)
+                    .set("pdf_content", null)
+                    .set("update_time", LocalDateTime.now());
+            chapterMapper.update(null, pdfWrapper);
+
+            response.put("success", true);
+            response.put("message", "PDF文件已删除");
+            response.put("remainingUrl", newUrls);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "删除失败: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
+    /**
+     * 删除物理文件的辅助方法
+     */
+    private void deletePhysicalFile(String fileUrl, String type) {
+        try {
+            String filename = fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
+            String dir = "video".equals(type) ? "./uploads/course/video" : "./uploads/course/pdf";
+            Path dirPath = Paths.get(dir).toAbsolutePath().normalize();
+            Path filePath = dirPath.resolve(filename);
+            if (Files.exists(filePath)) {
+                Files.delete(filePath);
+                System.out.println("物理文件已删除: " + filePath);
+            }
+        } catch (Exception e) {
+            System.err.println("删除物理文件失败: " + e.getMessage());
+        }
+    }
+
     /**
      * 更新章节信息
      */
@@ -270,9 +434,9 @@ public class CourseChapterController {
             @PathVariable Long chapterId,
             @RequestParam String userId,
             @RequestBody ChapterUpdateDTO dto) {
-        
+
         Map<String, Object> response = new HashMap<>();
-        
+
         try {
             CourseChapter chapter = chapterMapper.selectById(chapterId);
             if (chapter == null) {
@@ -280,7 +444,7 @@ public class CourseChapterController {
                 response.put("message", "章节不存在");
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
             }
-            
+
             // 验证权限
             Course course = courseMapper.selectById(chapter.getCourseId());
             if (course == null || !course.getTeacherId().equals(userId)) {
@@ -288,13 +452,27 @@ public class CourseChapterController {
                 response.put("message", "无权限编辑此章节");
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
             }
-            
+
             // 更新字段
             if (dto.getChapterTitle() != null && !dto.getChapterTitle().isEmpty()) {
                 chapter.setChapterTitle(dto.getChapterTitle());
             }
             if (dto.getChapterOrder() != null) {
                 chapter.setChapterOrder(dto.getChapterOrder());
+            }
+            // 更新章节类型，并在类型变更时清理不适用的文件字段
+            // 注意：MyBatis-Plus updateById 默认跳过 null 值，需先构建 UpdateWrapper
+            UpdateWrapper<CourseChapter> typeWrapper = new UpdateWrapper<>();
+            typeWrapper.eq("chapter_id", chapterId);
+            boolean needTypeWrapper = false;
+
+            if (dto.getChapterType() != null && !dto.getChapterType().isEmpty()) {
+                String newType = dto.getChapterType();
+                chapter.setChapterType(newType);
+                // 仅更新章节类型字段，不清空任何文件URL或内容字段。
+                // 文件的增删由专用接口处理，防止误操作导致数据丢失。
+                typeWrapper.set("chapter_type", newType);
+                needTypeWrapper = true;
             }
             if (dto.getTextContent() != null) {
                 chapter.setTextContent(dto.getTextContent());
@@ -305,23 +483,121 @@ public class CourseChapterController {
             if (dto.getParentId() != null) {
                 chapter.setParentId(dto.getParentId());
             }
-            
+
             chapter.setUpdateTime(LocalDateTime.now());
-            chapterMapper.updateById(chapter);
-            
+
+            if (needTypeWrapper) {
+                // 先用 wrapper 清空 null 字段
+                typeWrapper.set("update_time", LocalDateTime.now());
+                chapterMapper.update(null, typeWrapper);
+                // 再用 updateById 更新其余非 null 字段（title, order, textContent 等）
+                chapterMapper.updateById(chapter);
+            } else {
+                chapterMapper.updateById(chapter);
+            }
+
             response.put("success", true);
             response.put("message", "章节更新成功");
             response.put("data", chapter);
-            
+
             return ResponseEntity.ok(response);
-            
+
         } catch (Exception e) {
             response.put("success", false);
             response.put("message", "更新失败: " + e.getMessage());
             return ResponseEntity.internalServerError().body(response);
         }
     }
-    
+
+    /**
+     * 更新章节（multipart）—— 含文件上传
+     * 当前端有新文件时调用此接口（updateChapterWithFiles）
+     */
+    @PutMapping(value = "/{chapterId}/files", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, Object>> updateChapterWithFiles(
+            @PathVariable Long chapterId,
+            @RequestParam String userId,
+            @RequestParam(required = false) String chapterTitle,
+            @RequestParam(required = false) Integer chapterOrder,
+            @RequestParam(required = false) String chapterType,
+            @RequestParam(required = false) String textContent,
+            @RequestParam(value = "video", required = false) java.util.List<MultipartFile> videos,
+            @RequestParam(value = "pdf", required = false) java.util.List<MultipartFile> pdfs) {
+
+        Map<String, Object> response = new HashMap<>();
+        try {
+            CourseChapter chapter = chapterMapper.selectById(chapterId);
+            if (chapter == null) {
+                response.put("success", false);
+                response.put("message", "章节不存在");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            }
+            Course course = courseMapper.selectById(chapter.getCourseId());
+            if (course == null || !course.getTeacherId().equals(userId)) {
+                response.put("success", false);
+                response.put("message", "无权限编辑此章节");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+            }
+
+            if (chapterTitle != null && !chapterTitle.isEmpty())
+                chapter.setChapterTitle(chapterTitle);
+            if (chapterOrder != null)
+                chapter.setChapterOrder(chapterOrder);
+            if (chapterType != null && !chapterType.isEmpty())
+                chapter.setChapterType(chapterType);
+            if (textContent != null)
+                chapter.setTextContent(textContent);
+
+            // 处理视频文件——新上传的文件与现有 URL 用 & 拼接，不覆盖
+            if (videos != null && !videos.isEmpty()) {
+                List<String> newUrls = new java.util.ArrayList<>();
+                for (MultipartFile v : videos) {
+                    if (v != null && !v.isEmpty()) {
+                        com.example.project.util.FileValidationUtil.validateVideoFile(v);
+                        newUrls.add(courseChapterService.saveUploadedVideo(v));
+                    }
+                }
+                if (!newUrls.isEmpty()) {
+                    String existing = chapter.getVideoUrl();
+                    String appended = (existing != null && !existing.isEmpty())
+                            ? existing + "&" + String.join("&", newUrls)
+                            : String.join("&", newUrls);
+                    chapter.setVideoUrl(appended);
+                }
+            }
+            // 处理 PDF 文件——同样用 & 拼接
+            if (pdfs != null && !pdfs.isEmpty()) {
+                List<String> newUrls = new java.util.ArrayList<>();
+                for (MultipartFile p : pdfs) {
+                    if (p != null && !p.isEmpty()) {
+                        com.example.project.util.FileValidationUtil.validatePdfFile(p);
+                        newUrls.add(courseChapterService.saveUploadedPdf(p));
+                    }
+                }
+                if (!newUrls.isEmpty()) {
+                    String existing = chapter.getPdfUrl();
+                    String appended = (existing != null && !existing.isEmpty())
+                            ? existing + "&" + String.join("&", newUrls)
+                            : String.join("&", newUrls);
+                    chapter.setPdfUrl(appended);
+                }
+            }
+
+            chapter.setUpdateTime(LocalDateTime.now());
+            chapterMapper.updateById(chapter);
+
+            response.put("success", true);
+            response.put("message", "章节更新成功");
+            response.put("data", chapter);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            e.printStackTrace();
+            response.put("success", false);
+            response.put("message", "更新失败: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
     /**
      * 更新章节封面
      */
@@ -330,9 +606,9 @@ public class CourseChapterController {
             @PathVariable Long chapterId,
             @RequestParam String userId,
             @RequestParam("cover") MultipartFile coverImage) {
-        
+
         Map<String, Object> response = new HashMap<>();
-        
+
         try {
             CourseChapter chapter = chapterMapper.selectById(chapterId);
             if (chapter == null) {
@@ -340,7 +616,7 @@ public class CourseChapterController {
                 response.put("message", "章节不存在");
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
             }
-            
+
             // 验证权限
             Course course = courseMapper.selectById(chapter.getCourseId());
             if (course == null || !course.getTeacherId().equals(userId)) {
@@ -348,35 +624,35 @@ public class CourseChapterController {
                 response.put("message", "无权限编辑此章节");
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
             }
-            
+
             // 验证图片文件
             com.example.project.util.FileValidationUtil.validateImageFile(coverImage);
-            
+
             // 删除旧封面
             if (chapter.getCoverImage() != null && !chapter.getCoverImage().isEmpty()) {
                 deleteOldCoverFile(chapter.getCoverImage());
             }
-            
+
             // 保存新图片
             String coverUrl = saveFile(coverImage, coverUploadDir, "cover");
-            
+
             chapter.setCoverImage(coverUrl);
             chapter.setUpdateTime(LocalDateTime.now());
             chapterMapper.updateById(chapter);
-            
+
             response.put("success", true);
             response.put("message", "封面更新成功");
             response.put("coverUrl", coverUrl);
-            
+
             return ResponseEntity.ok(response);
-            
+
         } catch (Exception e) {
             response.put("success", false);
             response.put("message", "更新失败: " + e.getMessage());
             return ResponseEntity.internalServerError().body(response);
         }
     }
-    
+
     /**
      * 删除旧封面文件
      */
@@ -391,7 +667,7 @@ public class CourseChapterController {
             System.err.println("删除旧封面失败: " + e.getMessage());
         }
     }
-    
+
     /**
      * 移动章节到新的父节点
      */
@@ -401,9 +677,9 @@ public class CourseChapterController {
             @RequestParam String userId,
             @RequestParam(required = false) Long newParentId,
             @RequestParam(required = false) Integer newOrder) {
-        
+
         Map<String, Object> response = new HashMap<>();
-        
+
         try {
             CourseChapter chapter = chapterMapper.selectById(chapterId);
             if (chapter == null) {
@@ -411,7 +687,7 @@ public class CourseChapterController {
                 response.put("message", "章节不存在");
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
             }
-            
+
             // 验证权限
             Course course = courseMapper.selectById(chapter.getCourseId());
             if (course == null || !course.getTeacherId().equals(userId)) {
@@ -419,7 +695,7 @@ public class CourseChapterController {
                 response.put("message", "无权限编辑此章节");
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
             }
-            
+
             // 更新父节点和顺序
             if (newParentId != null) {
                 chapter.setParentId(newParentId);
@@ -427,43 +703,43 @@ public class CourseChapterController {
             if (newOrder != null) {
                 chapter.setChapterOrder(newOrder);
             }
-            
+
             chapter.setUpdateTime(LocalDateTime.now());
             chapterMapper.updateById(chapter);
-            
+
             response.put("success", true);
             response.put("message", "章节移动成功");
             response.put("data", chapter);
-            
+
             return ResponseEntity.ok(response);
-            
+
         } catch (Exception e) {
             response.put("success", false);
             response.put("message", "移动失败: " + e.getMessage());
             return ResponseEntity.internalServerError().body(response);
         }
     }
-    
+
     /**
      * 批量更新章节顺序
      */
     @PostMapping("/batch-order")
     public ResponseEntity<Map<String, Object>> batchUpdateOrder(
             @RequestBody Map<String, Object> requestData) {
-        
+
         Map<String, Object> response = new HashMap<>();
-        
+
         try {
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> updates = (List<Map<String, Object>>) requestData.get("updates");
             String userId = (String) requestData.get("userId");
-            
+
             if (updates == null || updates.isEmpty()) {
                 response.put("success", false);
                 response.put("message", "更新数据不能为空");
                 return ResponseEntity.badRequest().body(response);
             }
-            
+
             // 验证权限（检查第一个章节的课程权限）
             Long firstChapterId = Long.valueOf(updates.get(0).get("chapterId").toString());
             CourseChapter firstChapter = chapterMapper.selectById(firstChapterId);
@@ -475,12 +751,12 @@ public class CourseChapterController {
                     return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
                 }
             }
-            
+
             // 批量更新
             for (Map<String, Object> update : updates) {
                 Long chapterId = Long.valueOf(update.get("chapterId").toString());
                 Integer newOrder = Integer.valueOf(update.get("order").toString());
-                
+
                 CourseChapter chapter = chapterMapper.selectById(chapterId);
                 if (chapter != null) {
                     chapter.setChapterOrder(newOrder);
@@ -488,19 +764,19 @@ public class CourseChapterController {
                     chapterMapper.updateById(chapter);
                 }
             }
-            
+
             response.put("success", true);
             response.put("message", "批量更新成功");
-            
+
             return ResponseEntity.ok(response);
-            
+
         } catch (Exception e) {
             response.put("success", false);
             response.put("message", "批量更新失败: " + e.getMessage());
             return ResponseEntity.internalServerError().body(response);
         }
     }
-    
+
     /**
      * 保存文件的辅助方法
      */
@@ -508,15 +784,15 @@ public class CourseChapterController {
         try {
             Path dirPath = Paths.get(directory).toAbsolutePath().normalize();
             Files.createDirectories(dirPath);
-            
+
             String originalFilename = file.getOriginalFilename();
             String extension = originalFilename.substring(originalFilename.lastIndexOf("."));
-            String filename = prefix + "_" + System.currentTimeMillis() + "_" + 
-                            UUID.randomUUID().toString().substring(0, 8) + extension;
-            
+            String filename = prefix + "_" + System.currentTimeMillis() + "_" +
+                    UUID.randomUUID().toString().substring(0, 8) + extension;
+
             Path filePath = dirPath.resolve(filename);
             Files.copy(file.getInputStream(), filePath);
-            
+
             return fileAccessBaseUrl + "/course/cover/" + filename;
         } catch (Exception e) {
             throw new RuntimeException("文件保存失败: " + e.getMessage(), e);

@@ -437,6 +437,18 @@ public class CourseChapterServiceImpl implements CourseChapterService {
         return filename.substring(lastDotIndex);
     }
 
+    @Override
+    public String saveUploadedVideo(MultipartFile file) {
+        FileValidationUtil.validateVideoFile(file);
+        return saveVideoFile(file);
+    }
+
+    @Override
+    public String saveUploadedPdf(MultipartFile file) {
+        FileValidationUtil.validatePdfFile(file);
+        return savePdfFile(file);
+    }
+
     /**
      * 提取PDF文本内容
      */

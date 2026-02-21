@@ -1,41 +1,71 @@
 <template>
   <div class="exam-detail-container">
     <!-- 页面头部 -->
-    <div class="page-header">
-      <el-button @click="goBack" icon="ArrowLeft">返回</el-button>
-      <h2>{{ exam.examTitle }}</h2>
+    <div class="page-header sticky-header">
+      <div class="header-left">
+        <el-button class="back-btn" @click="router.push('/teacher/exams')" icon="ArrowLeft" text></el-button>
+        <h2>{{ exam.examTitle }}</h2>
+      </div>
+      
+      <div class="segmented-control">
+        <div class="segment active">试卷综合预览</div>
+        <div class="segment" @click="manageQuestions">编辑试题内容</div>
+        <div class="segment" @click="viewScores">作答数据分析</div>
+      </div>
+
       <div class="header-actions">
-        <el-button type="success" @click="viewScores">查看成绩</el-button>
-        <el-button v-if="exam.status === 0 || String(exam.status).toUpperCase() === 'DRAFT'" type="primary" @click="publishExam">发布考试</el-button>
-        <el-button v-if="exam.status === 1 || String(exam.status).toUpperCase() === 'PUBLISHED'" type="warning" @click="unpublishExam">取消发布</el-button>
-        <el-button @click="editExam">编辑考试</el-button>
-        <el-button type="danger" @click="deleteExam">删除考试</el-button>
+        <el-button v-if="exam.status === 0 || String(exam.status).toUpperCase() === 'DRAFT'" type="primary" @click="publishExam" round>发布</el-button>
+        <el-button v-if="exam.status === 1 || String(exam.status).toUpperCase() === 'PUBLISHED'" type="warning" @click="unpublishExam" round>取消发布</el-button>
+        <el-button class="edit-btn" @click="editExam" icon="Edit" round>编辑试卷</el-button>
+        <el-button type="danger" @click="deleteExam" round plain>删除</el-button>
       </div>
     </div>
 
     <!-- 考试信息卡片 -->
     <el-card class="exam-info-card" v-loading="loading">
       <template #header>
-        <span>考试信息</span>
-        <el-tag :type="getStatusType(exam.status)" style="margin-left: 10px">
-          {{ getStatusText(exam.status) }}
-        </el-tag>
+        <div class="info-card-header">
+          <span class="card-title-text">考试信息</span>
+          <el-tag :type="getStatusType(exam.status)" round effect="light" class="status-tag">
+            {{ getStatusText(exam.status) }}
+          </el-tag>
+        </div>
       </template>
       
-      <el-descriptions :column="3" border>
-        <el-descriptions-item label="所属课程">{{ exam.courseName || '未分配课程' }}</el-descriptions-item>
-        <el-descriptions-item label="考试标题" :span="2">{{ exam.examTitle || '-' }}</el-descriptions-item>
-        <el-descriptions-item label="考试时长">{{ exam.duration }} 分钟</el-descriptions-item>
-        <el-descriptions-item label="分值设定" :span="2">
-          总分 {{ exam.totalScore }} 分 <el-tag size="small" type="info">及格 {{ Math.floor(exam.totalScore * 0.6) }} 分</el-tag>
-        </el-descriptions-item>
-        <el-descriptions-item label="有效时间" :span="2">
-          {{ formatDate(exam.startTime) }} 至 {{ formatDate(exam.endTime) }}
-        </el-descriptions-item>
-        <el-descriptions-item label="提交进度">
-          {{ exam.submittedCount }} / {{ exam.totalStudents }} 人
-        </el-descriptions-item>
-      </el-descriptions>
+      <div class="modern-info-grid">
+        <div class="info-item">
+          <div class="info-label">所属课程</div>
+          <div class="info-value">{{ exam.courseName || '未分配课程' }}</div>
+        </div>
+        <div class="info-item span-2">
+          <div class="info-label">考试标题</div>
+          <div class="info-value">{{ exam.examTitle || '-' }}</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">考试时长</div>
+          <div class="info-value">{{ exam.duration }} 分钟</div>
+        </div>
+        <div class="info-item span-2">
+          <div class="info-label">分值设定</div>
+          <div class="info-value">
+            <span class="score-text">总分 <span class="highlight">{{ exam.totalScore }}</span> 分</span>
+            <el-tag size="small" type="info" round class="pass-tag">及格 {{ Math.floor(exam.totalScore * 0.6) }} 分</el-tag>
+          </div>
+        </div>
+        <div class="info-item span-2">
+          <div class="info-label">有效时间</div>
+          <div class="info-value time-value">
+            <el-icon><Calendar /></el-icon>
+            {{ formatDate(exam.startTime) }} <span class="to-text">至</span> {{ formatDate(exam.endTime) }}
+          </div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">提交进度</div>
+          <div class="info-value">
+             <span class="highlight">{{ exam.submittedCount }}</span> / {{ exam.totalStudents }} 人
+          </div>
+        </div>
+      </div>
     </el-card>
 
     <!-- 试题列表 -->
@@ -153,7 +183,8 @@
 </template>
 
 <script setup>
-import { useRouter, useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { Calendar } from '@element-plus/icons-vue'
 import { useExamDetail } from '@/assets/js/teacher/exam-detail.js'
 
 const router = useRouter()

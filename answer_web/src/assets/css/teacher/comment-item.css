@@ -6,8 +6,9 @@
 
 /* 回复项的容器样式调整 */
 .comment-item-wrapper.is-reply .comment-item-container {
-    padding: 12px 0 8px 0;
-    border-bottom: 1px solid #f8f9fa;
+    padding: 8px 0;
+    border-bottom: none;
+    margin-bottom: 0;
 }
 
 .comment-item-wrapper.is-reply .comment-avatar {
@@ -16,19 +17,39 @@
 
 .comment-item-container {
     display: flex;
-    padding: 16px 0;
+    padding: 12px 0;
+    margin-bottom: 0px;
+    border-radius: 0px;
     border-bottom: 1px solid #f2f3f5;
     transition: background-color 0.2s;
 }
 
+.comment-item-container.is-teacher {
+    background-color: transparent;
+    border-left: none;
+}
+
+.comment-item-container.is-student {
+    background-color: transparent;
+    box-shadow: none;
+    border-left: none;
+}
+
 .comment-item-container:not(.is-reply):last-child {
     border-bottom: none;
+    margin-bottom: 0;
 }
 
 .comment-avatar {
     flex-shrink: 0;
     margin-right: 16px;
     cursor: pointer;
+    border-radius: 16px !important;
+}
+
+/* Fix Element UI avatar default shape */
+.comment-avatar :deep(img) {
+    border-radius: 16px !important;
 }
 
 .comment-body {
@@ -53,7 +74,7 @@
 .comment-author {
     font-weight: 600;
     color: #61666d;
-    font-size: 13px;
+    font-size: 12px;
     cursor: pointer;
 }
 
@@ -79,9 +100,9 @@
 }
 
 .comment-content {
-    font-size: 14px;
+    font-size: 13px;
     color: #18191c;
-    line-height: 1.6;
+    line-height: 1.5;
     word-break: break-word;
     margin: 4px 0;
 }
@@ -89,7 +110,7 @@
 .reply-target-text {
     color: #61666d;
     margin-right: 2px;
-    font-size: 14px;
+    font-size: 13px;
     display: inline-flex;
     align-items: center;
 }
@@ -164,11 +185,11 @@
 
 /* 只有顶级评论的replies-wrapper有缩进和边框 */
 .replies-wrapper {
-    margin-left: 56px;
+    margin-left: 32px;
     margin-top: 8px;
     padding-top: 8px;
-    border-left: 2px solid #f2f3f5;
-    padding-left: 16px;
+    border-left: 1px solid #f2f3f5;
+    padding-left: 12px;
 }
 
 /* 回复项内部的replies-wrapper不再有缩进，实现打平效果 */
@@ -183,8 +204,8 @@
 }
 
 .view-more-row {
-    padding: 4px 0 8px;
-    font-size: 13px;
+    padding: 2px 0 6px;
+    font-size: 12px;
     color: #9499a0;
 }
 
@@ -214,4 +235,82 @@
     animation: highlight-fade 2s ease-in-out;
     border-left: 4px solid #409eff !important;
     padding-left: 12px !important;
+}
+
+/* ===== 暗黑模式 ===== */
+html.dark .comment-item-container {
+    border-bottom-color: #1f2937;
+}
+
+html.dark .comment-author {
+    color: #9ca3af;
+}
+
+html.dark .comment-author:hover {
+    color: #60a5fa;
+}
+
+html.dark .comment-time {
+    color: #6b7280;
+}
+
+html.dark .comment-content {
+    color: #e5e7eb;
+}
+
+html.dark .comment-footer {
+    color: #6b7280;
+}
+
+html.dark .action-item {
+    color: #6b7280;
+}
+
+html.dark .action-item:hover {
+    color: #60a5fa;
+}
+
+html.dark .action-item.delete:hover {
+    color: #f87171;
+}
+
+html.dark .delete-mini {
+    color: #6b7280;
+}
+
+html.dark .delete-mini:hover {
+    color: #f87171;
+}
+
+html.dark .reply-form-wrapper {
+    background-color: #1f2937;
+    border: 1px solid #374151;
+}
+
+html.dark .reply-form-wrapper .el-textarea__inner {
+    background-color: #111827 !important;
+    color: #e5e7eb !important;
+    border-color: #374151 !important;
+    box-shadow: 0 0 0 1px #374151 inset !important;
+}
+
+html.dark .reply-form-wrapper .el-textarea__inner:focus {
+    box-shadow: 0 0 0 1px #3b82f6 inset !important;
+}
+
+html.dark .replies-wrapper {
+    border-left-color: #1f2937;
+}
+
+html.dark .reply-target-text {
+    color: #9ca3af;
+}
+
+html.dark .view-more-row,
+html.dark .view-more-btn {
+    color: #6b7280;
+}
+
+html.dark .view-more-btn:hover {
+    color: #60a5fa;
 }

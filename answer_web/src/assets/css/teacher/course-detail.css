@@ -168,26 +168,30 @@ html.dark .course-detail-page {
 html.dark .course-header,
 html.dark .course-main-card,
 html.dark .el-card,
+html.dark .el-card__body,
 html.dark .student-card,
-/* 班级成员卡片 */
 html.dark .resource-card,
 html.dark .comment-post-card {
     background-color: #111827 !important;
-    /* dark-900, darker than before */
     border-color: #1f2937 !important;
     color: #e5e7eb !important;
     box-shadow: none !important;
 }
 
-/* 强制修复所有文字颜色，防止 Tailwind text-gray-xxx 导致的不可见 */
-html.dark .course-detail-page p,
-html.dark .course-detail-page span,
-html.dark .course-detail-page div,
-html.dark .comment-list .comment-content,
+/* 强制修复标题文字颜色 */
+html.dark .course-title,
+html.dark .course-description,
+html.dark .course-description-full,
+html.dark .meta-item,
 html.dark .comment-user-name,
 html.dark .student-name,
 html.dark .student-id {
     color: #e5e7eb !important;
+}
+
+/* 次要信息文字 */
+html.dark .chapters-header {
+    border-bottom-color: #1f2937;
 }
 
 /* 专门针对 Tailwind 灰色文本的覆盖 */
@@ -223,17 +227,27 @@ html.dark .el-tabs--border-card>.el-tabs__header {
     border-bottom-color: #374151;
 }
 
-/* 评论区和输入框 */
-html.dark .el-input__wrapper,
-html.dark .el-textarea__inner {
-    background-color: #374151 !important;
-    box-shadow: 0 0 0 1px #4b5563 inset !important;
-    color: #fff !important;
+/* 评论区和输入框——仅限评论區内部的输入框，避免全局覆盖 */
+html.dark .comment-post-card .el-textarea__inner,
+html.dark .comment-post-card .el-input__wrapper {
+    background-color: #1f2937 !important;
+    box-shadow: 0 0 0 1px #374151 inset !important;
+    color: #e5e7eb !important;
+}
+
+html.dark .comment-post-card .el-textarea__inner:focus,
+html.dark .comment-post-card .el-input__wrapper.is-focus {
+    box-shadow: 0 0 0 1px #3b82f6 inset !important;
 }
 
 html.dark .comment-filter-header {
-    background-color: #1f2937 !important;
-    border-bottom: 1px solid #374151;
+    background-color: #1e293b !important;
+    border: 1px solid #374151 !important;
+}
+
+html.dark .resources-container,
+html.dark .comments-container {
+    background-color: transparent !important;
 }
 
 /* 班级成员卡片修复 */
@@ -249,7 +263,26 @@ html.dark .el-tree {
 
 html.dark .el-tree-node__content:hover,
 html.dark .el-tree-node:focus>.el-tree-node__content {
-    background-color: #374151 !important;
+    background-color: transparent !important;
+}
+
+html.dark .el-tree-node.is-current > .el-tree-node__content {
+    background-color: transparent !important;
+    color: #60a5fa !important;
+}
+
+html.dark .course-chapter-tree .el-tree-node__content {
+    background-color: transparent !important;
+}
+
+html.dark .course-chapter-tree .el-tree-node.is-current > .el-tree-node__content {
+    background-color: transparent !important;
+    color: #60a5fa !important;
+}
+
+html.dark .course-chapter-tree .custom-tree-node {
+    background-color: transparent !important;
+    color: #e5e7eb !important;
 }
 
 /* 课程封面 */

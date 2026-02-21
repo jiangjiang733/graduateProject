@@ -1,14 +1,17 @@
 <template>
   <div class="exam-questions modern-page">
-    <!-- Header -->
-    <div class="page-header animate-fade-in">
-      <div class="header-content">
-        <el-button icon="ArrowLeft" circle class="back-btn glass-btn" @click="$router.push('/teacher/exams')" />
-        <div>
-          <h1 class="page-title">{{ exam.examTitle || '加载中...' }}</h1>
-          <p class="page-subtitle">试题管理 & 配置</p>
-        </div>
+    <div class="page-header sticky-header animate-fade-in">
+      <div class="header-left">
+        <el-button class="back-btn" @click="$router.push('/teacher/exams')" icon="ArrowLeft" text></el-button>
+        <h2>{{ exam.examTitle || '加载中...' }}</h2>
       </div>
+
+      <div class="segmented-control">
+        <div class="segment" @click="$router.push(`/teacher/exam/${examId}`)">试卷综合预览</div>
+        <div class="segment active">编辑试题内容</div>
+        <div class="segment" @click="$router.push(`/teacher/exam/${examId}/scores`)">作答数据分析</div>
+      </div>
+
       <div class="header-actions">
         <el-button class="glass-btn" @click="openCreateDialog">
           <el-icon><Plus /></el-icon> 新建试题
@@ -17,9 +20,7 @@
           <el-icon><MagicStick /></el-icon> AI出题
         </el-button>
         <el-button class="glass-btn" @click="loadExamData" icon="Refresh">刷新</el-button>
-        <el-button class="glass-btn primary" @click="saveAll" :loading="saving">
-          <el-icon><CircleCheck /></el-icon> 保存配置
-        </el-button>
+       
       </div>
     </div>
 

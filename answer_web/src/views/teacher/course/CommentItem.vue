@@ -1,7 +1,11 @@
 <template>
   <div :class="['comment-item-wrapper', { 'is-reply': isReply }]">
     <div 
-      :class="['comment-item-container', { 'highlight-target': String(comment.commentId) === String(route.query.commentId) }]" 
+      :class="['comment-item-container', { 
+        'highlight-target': String(comment.commentId) === String(route.query.commentId),
+        'is-teacher': comment.userType === 'TEACHER',
+        'is-student': comment.userType !== 'TEACHER'
+      }]" 
       :id="'comment-' + comment.commentId"
     >
       <el-avatar :size="isReply ? 32 : 40" :src="getUserAvatar(comment.userAvatar)" class="comment-avatar" />

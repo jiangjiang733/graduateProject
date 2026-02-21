@@ -706,6 +706,162 @@ table {
 }
 
 /* =========================================
+   全局下拉框高度修复 (亮色和暗黑模式)
+   ========================================= */
+
+/* 通用下拉框高度修复 - 确保内容不被压缩 */
+body > .el-popper.el-select-dropdown,
+.el-select-dropdown {
+    height: auto !important;
+    min-height: 50px !important;
+    background-color: #ffffff !important;
+    border: 1px solid #dcdfe6 !important;
+    border-radius: 4px !important;
+    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1) !important;
+}
+
+.el-select-dropdown__wrap {
+    height: auto !important;
+    min-height: 50px !important;
+    background-color: #ffffff !important;
+}
+
+.el-select-dropdown__list {
+    background-color: #ffffff !important;
+    padding: 6px 0 !important;
+    height: auto !important;
+    min-height: 36px !important;
+}
+
+.el-select-dropdown .el-scrollbar {
+    height: auto !important;
+    min-height: 50px !important;
+    background-color: #ffffff !important;
+}
+
+.el-select-dropdown .el-scrollbar__wrap {
+    height: auto !important;
+    min-height: 50px !important;
+    overflow-x: hidden !important;
+}
+
+.el-select-dropdown .el-scrollbar__view {
+    height: auto !important;
+    min-height: 50px !important;
+}
+
+/* el-tree-select 中的 tree 组件高度修复 */
+.el-select-dropdown .el-tree {
+    height: auto !important;
+    min-height: 36px !important;
+    padding: 4px 0 !important;
+    background-color: #ffffff !important;
+}
+
+.el-select-dropdown .el-tree-node {
+    min-height: 36px !important;
+}
+
+.el-select-dropdown .el-tree-node__content {
+    height: 36px !important;
+    line-height: 36px !important;
+    display: flex !important;
+    align-items: center !important;
+    padding: 0 12px !important;
+    border-radius: 4px !important;
+    transition: background-color 0.2s !important;
+}
+
+.el-select-dropdown .el-tree-node__content:hover {
+    background-color: #f5f7fa !important;
+}
+
+/* 暗黑模式下禁用hover效果 */
+html.dark .el-select-dropdown .el-tree-node__content:hover {
+    background-color: transparent !important;
+}
+
+.el-select-dropdown .el-tree-node.is-current > .el-tree-node__content {
+    background-color: #ecf5ff !important;
+    color: #409eff !important;
+}
+
+/* 暗黑模式下选中项保持暗色调 */
+html.dark .el-select-dropdown .el-tree-node.is-current > .el-tree-node__content {
+    background-color: #1e293b !important;
+    color: #60a5fa !important;
+}
+
+/* 暗黑模式下拉框整体背景 */
+html.dark body > .el-popper.is-light.el-select-dropdown,
+html.dark .el-select-dropdown {
+    background-color: #111827 !important;
+    border: 1px solid #374151 !important;
+}
+
+html.dark .el-select-dropdown__wrap,
+html.dark .el-select-dropdown__list,
+html.dark .el-select-dropdown .el-scrollbar,
+html.dark .el-select-dropdown .el-scrollbar__wrap,
+html.dark .el-select-dropdown .el-scrollbar__view,
+html.dark .el-select-dropdown .el-tree {
+    background-color: #111827 !important;
+}
+
+html.dark .el-select-dropdown .el-tree-node__content {
+    background-color: #111827 !important;
+    color: #e5e7eb !important;
+}
+
+html.dark .el-select-dropdown .el-tree-node__content:hover {
+    background-color: #111827 !important;
+}
+
+html.dark .el-select-dropdown .el-tree-node__label {
+    color: #e5e7eb !important;
+}
+
+html.dark .el-select-dropdown .el-tree-node.is-current > .el-tree-node__content .el-tree-node__label {
+    color: #60a5fa !important;
+}
+
+.el-select-dropdown .el-tree-node__label {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    line-height: 36px !important;
+    height: 36px !important;
+    color: #606266 !important;
+    font-size: 14px !important;
+}
+
+.el-select-dropdown .el-tree-node__expand-icon {
+    color: #606266 !important;
+}
+
+.el-select-dropdown .el-scrollbar__thumb {
+    background-color: #c0c4cc !important;
+}
+
+.el-select-dropdown__item {
+    color: #606266 !important;
+    background-color: transparent !important;
+    padding: 0 20px !important;
+    height: 34px !important;
+    line-height: 34px !important;
+    font-size: 14px !important;
+}
+
+.el-select-dropdown__item:hover {
+    background-color: #f5f7fa !important;
+}
+
+.el-select-dropdown__item.selected {
+    color: #409eff !important;
+    font-weight: 500 !important;
+}
+
+/* =========================================
    强制覆盖所有下拉框暗黑模式样式 (全局)
    ========================================= */
 
@@ -722,11 +878,38 @@ table {
 .dark-theme .el-select-dropdown__wrap,
 .dark-theme .el-scrollbar__wrap {
     background: #1e293b !important;
+    height: auto !important;
+    min-height: 50px !important;
 }
 
 .dark-theme .el-select-dropdown__list {
     background: #1e293b !important;
     padding: 8px !important;
+    height: auto !important;
+    min-height: 36px !important;
+}
+
+.dark-theme .el-select-dropdown .el-tree {
+    background: #1e293b !important;
+    height: auto !important;
+    min-height: 36px !important;
+    padding: 4px 0 !important;
+}
+
+.dark-theme .el-select-dropdown .el-tree-node {
+    min-height: 36px !important;
+}
+
+.dark-theme .el-select-dropdown .el-tree-node__content {
+    height: 36px !important;
+    line-height: 36px !important;
+}
+
+.dark-theme .el-select-dropdown .el-tree-node__label {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    line-height: 36px !important;
 }
 
 .dark-theme .el-select-dropdown__item {
@@ -876,4 +1059,556 @@ table {
 .dark-theme .el-autocomplete-suggestion__list li:hover,
 .dark-theme .el-autocomplete-suggestion__list li.highlighted {
     background: #374151 !important;
+}
+
+/* =========================================
+   分页组件暗黑模式样式
+   ========================================= */
+
+.dark-theme .el-pager li,
+.dark-theme .el-pagination button,
+.dark-theme .el-pagination .el-pager li,
+.dark-theme .el-pagination .btn-prev,
+.dark-theme .el-pagination .btn-next,
+.dark-theme .el-pagination .el-pagination__jump,
+.dark-theme .el-pagination .el-pagination__total {
+    color: #94a3b8 !important;
+}
+
+.dark-theme .el-pager li:hover,
+.dark-theme .el-pagination button:not(:disabled):hover {
+    background-color: #334155 !important;
+    color: #e2e8f0 !important;
+}
+
+.dark-theme .el-pager li.is-active {
+    background-color: #3b82f6 !important;
+    color: #ffffff !important;
+}
+
+.dark-theme .el-pagination button:disabled {
+    color: #475569 !important;
+}
+
+.dark-theme .el-pagination .el-input__wrapper {
+    background-color: #1e293b !important;
+    box-shadow: 0 0 0 1px #334155 inset !important;
+}
+
+.dark-theme .el-pagination .el-input__inner {
+    color: #e2e8f0 !important;
+}
+
+.dark-theme .el-pagination .el-select .el-select__wrapper {
+    background-color: #1e293b !important;
+    box-shadow: 0 0 0 1px #334155 inset !important;
+    color: #e2e8f0 !important;
+}
+
+.dark-theme .el-pagination .el-select .el-input__inner {
+    color: #e2e8f0 !important;
+}
+
+/* =========================================
+   html.dark 版本 - 全局暗黑模式覆盖
+   ========================================= */
+
+/* 所有弹出框通用 */
+html.dark body > .el-popper.is-light:not(.el-popper--tooltip) {
+    background-color: #1e293b !important;
+    border: 1px solid #334155 !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.dark body > .el-popper.is-light:not(.el-popper--tooltip) #arrow {
+    display: none !important;
+}
+
+/* Select 下拉框 */
+html.dark body > .el-popper.is-light.el-select-dropdown {
+    background-color: #1e293b !important;
+    border: 1px solid #374151 !important;
+    height: auto !important;
+    min-height: 50px !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-scrollbar {
+    background-color: #111827 !important;
+    height: auto !important;
+    min-height: 50px !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-select-dropdown__wrap {
+    height: auto !important;
+    min-height: 50px !important;
+    background-color: #111827 !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-select-dropdown__list {
+    background-color: #111827 !important;
+    padding: 8px !important;
+    height: auto !important;
+    min-height: 36px !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-select-dropdown__item {
+    color: #e5e7eb !important;
+    background-color: #111827 !important;
+    border-radius: 6px !important;
+    margin: 2px 8px !important;
+    padding: 8px 12px !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-select-dropdown__item:hover,
+html.dark body > .el-popper.is-light.el-select-dropdown .el-select-dropdown__item.hover {
+    background-color: #111827 !important;
+    color: #e5e7eb !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-select-dropdown__item.selected {
+    background-color: #1e293b !important;
+    color: #60a5fa !important;
+    font-weight: 600 !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-select-dropdown__item.is-disabled {
+    color: #6b7280 !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-select-dropdown__empty {
+    background-color: #111827 !important;
+    color: #9ca3af !important;
+}
+
+/* el-tree-select 内部的 tree */
+html.dark body > .el-popper.is-light.el-select-dropdown .el-tree {
+    background-color: #111827 !important;
+    color: #e5e7eb !important;
+    height: auto !important;
+    min-height: 36px !important;
+    padding: 4px 0 !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-select-dropdown__wrap {
+    height: auto !important;
+    min-height: 50px !important;
+    background-color: #111827 !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-scrollbar {
+    height: auto !important;
+    min-height: 50px !important;
+    background-color: #111827 !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-scrollbar__wrap {
+    height: auto !important;
+    min-height: 50px !important;
+    background-color: #111827 !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-scrollbar__view {
+    height: auto !important;
+    min-height: 50px !important;
+    background-color: #111827 !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-tree-node {
+    min-height: 36px !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-tree-node__content {
+    height: 36px !important;
+    line-height: 36px !important;
+    padding: 0 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    border-radius: 4px !important;
+    background-color: #111827 !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-tree-node__label {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    line-height: 36px !important;
+    height: 36px !important;
+    color: #e5e7eb !important;
+    font-size: 14px !important;
+    display: inline-block !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-tree-node__content:hover {
+    background-color: #111827 !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-tree-node.is-current > .el-tree-node__content {
+    background-color: #1e293b !important;
+    color: #60a5fa !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-tree-node.is-current > .el-tree-node__content .el-tree-node__label {
+    color: #60a5fa !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-tree-node__expand-icon {
+    color: #9ca3af !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-scrollbar__thumb {
+    background-color: #4b5563 !important;
+}
+
+/* Dialog 弹窗 */
+html.dark .el-overlay-dialog .el-dialog {
+    background-color: #1e293b !important;
+    border: 1px solid #334155 !important;
+}
+
+html.dark .el-overlay-dialog .el-dialog__header {
+    background-color: #1e293b !important;
+    border-bottom: 1px solid #334155 !important;
+}
+
+html.dark .el-overlay-dialog .el-dialog__title {
+    color: #f1f5f9 !important;
+}
+
+html.dark .el-overlay-dialog .el-dialog__body {
+    background-color: #1e293b !important;
+    color: #e2e8f0 !important;
+}
+
+html.dark .el-overlay-dialog .el-dialog__footer {
+    background-color: #1e293b !important;
+    border-top: 1px solid #334155 !important;
+}
+
+html.dark .el-overlay-dialog .el-dialog__close {
+    color: #94a3b8 !important;
+}
+
+html.dark .el-overlay-dialog .el-dialog__close:hover {
+    color: #e2e8f0 !important;
+}
+
+/* Dialog 内的输入框 */
+html.dark .el-overlay-dialog .el-input__wrapper {
+    background-color: #0f172a !important;
+    box-shadow: 0 0 0 1px #334155 inset !important;
+}
+
+html.dark .el-overlay-dialog .el-input__inner {
+    color: #e2e8f0 !important;
+}
+
+html.dark .el-overlay-dialog .el-input__inner::placeholder {
+    color: #64748b !important;
+}
+
+html.dark .el-overlay-dialog .el-textarea__inner {
+    background-color: #0f172a !important;
+    box-shadow: 0 0 0 1px #334155 inset !important;
+    color: #e2e8f0 !important;
+}
+
+html.dark .el-overlay-dialog .el-textarea__inner::placeholder {
+    color: #64748b !important;
+}
+
+html.dark .el-overlay-dialog .el-textarea__inner:focus {
+    box-shadow: 0 0 0 1px #3b82f6 inset !important;
+}
+
+/* Dialog 内的按钮 */
+html.dark .el-overlay-dialog .el-button:not(.el-button--primary) {
+    background-color: #334155 !important;
+    border-color: #334155 !important;
+    color: #e2e8f0 !important;
+}
+
+html.dark .el-overlay-dialog .el-button:not(.el-button--primary):hover {
+    background-color: #475569 !important;
+    border-color: #475569 !important;
+}
+
+html.dark .el-overlay-dialog .el-button--primary {
+    background-color: #3b82f6 !important;
+    border-color: #3b82f6 !important;
+    color: #fff !important;
+}
+
+html.dark .el-overlay-dialog .el-button--primary:hover {
+    background-color: #2563eb !important;
+    border-color: #2563eb !important;
+}
+
+/* 日期/时间选择器 */
+html.dark body > .el-picker-panel,
+html.dark body > .el-date-picker,
+html.dark body > .el-time-picker {
+    background-color: #1e293b !important;
+    border: 1px solid #334155 !important;
+}
+
+html.dark body > .el-picker-panel .el-picker-panel__content,
+html.dark body > .el-date-picker .el-picker-panel__content {
+    background-color: #1e293b !important;
+}
+
+html.dark body > .el-picker-panel .el-date-table,
+html.dark body > .el-date-picker .el-date-table {
+    background-color: #1e293b !important;
+}
+
+html.dark body > .el-picker-panel .el-date-table th,
+html.dark body > .el-date-picker .el-date-table th {
+    color: #9ca3af !important;
+    border-bottom-color: #334155 !important;
+}
+
+html.dark body > .el-picker-panel .el-date-table td,
+html.dark body > .el-date-picker .el-date-table td {
+    color: #d1d5db !important;
+}
+
+html.dark body > .el-picker-panel .el-date-table td.available:hover,
+html.dark body > .el-date-picker .el-date-table td.available:hover {
+    background-color: #374151 !important;
+}
+
+html.dark body > .el-picker-panel .el-date-table td.current:not(.disabled) span,
+html.dark body > .el-date-picker .el-date-table td.current:not(.disabled) span {
+    color: #3b82f6 !important;
+    background-color: transparent !important;
+}
+
+html.dark body > .el-picker-panel .el-picker-panel__footer,
+html.dark body > .el-date-picker .el-picker-panel__footer {
+    background-color: #1e293b !important;
+    border-top-color: #334155 !important;
+}
+
+/* 时间选择器 */
+html.dark body > .el-time-panel {
+    background-color: #1e293b !important;
+    border: 1px solid #334155 !important;
+}
+
+html.dark body > .el-time-panel .el-time-spinner__wrapper {
+    background-color: #1e293b !important;
+}
+
+html.dark body > .el-time-panel .el-time-spinner__item {
+    color: #d1d5db !important;
+}
+
+html.dark body > .el-time-panel .el-time-spinner__item:hover:not(.disabled),
+html.dark body > .el-time-panel .el-time-spinner__item.active:not(.disabled) {
+    background-color: #374151 !important;
+}
+
+html.dark body > .el-time-panel .el-time-panel__footer {
+    background-color: #1e293b !important;
+    border-top-color: #334155 !important;
+}
+
+/* 级联选择器 */
+html.dark body > .el-cascader__dropdown,
+html.dark body > .el-cascader-panel {
+    background-color: #1e293b !important;
+    border: 1px solid #334155 !important;
+}
+
+html.dark body > .el-cascader__dropdown .el-cascader-menu,
+html.dark body > .el-cascader-panel .el-cascader-menu {
+    background-color: #1e293b !important;
+    border-right-color: #334155 !important;
+}
+
+html.dark body > .el-cascader__dropdown .el-cascader-menu__item,
+html.dark body > .el-cascader-panel .el-cascader-menu__item {
+    color: #d1d5db !important;
+}
+
+html.dark body > .el-cascader__dropdown .el-cascader-menu__item:hover,
+html.dark body > .el-cascader-panel .el-cascader-menu__item:hover {
+    background-color: #374151 !important;
+}
+
+html.dark body > .el-cascader__dropdown .el-cascader-menu__item.is-active,
+html.dark body > .el-cascader-panel .el-cascader-menu__item.is-active {
+    color: #3b82f6 !important;
+    background-color: rgba(59, 130, 246, 0.1) !important;
+}
+
+/* 自动补全 */
+html.dark body > .el-autocomplete-suggestion {
+    background-color: #1e293b !important;
+    border: 1px solid #334155 !important;
+}
+
+html.dark body > .el-autocomplete-suggestion .el-autocomplete-suggestion__wrap {
+    background-color: #1e293b !important;
+}
+
+html.dark body > .el-autocomplete-suggestion .el-autocomplete-suggestion__list li {
+    color: #d1d5db !important;
+}
+
+html.dark body > .el-autocomplete-suggestion .el-autocomplete-suggestion__list li:hover,
+html.dark body > .el-autocomplete-suggestion .el-autocomplete-suggestion__list li.highlighted {
+    background-color: #374151 !important;
+}
+
+/* el-table 暗黑模式全局样式 */
+html.dark .el-table {
+    background-color: #111827 !important;
+    color: #e5e7eb !important;
+}
+
+html.dark .el-table thead {
+    background-color: #000000 !important;
+}
+
+html.dark .el-table th.el-table__cell {
+    background-color: #000000 !important;
+    color: #e5e7eb !important;
+    border-bottom: 1px solid #1f2937 !important;
+}
+
+html.dark .el-table th.el-table__cell > .cell {
+    background-color: #000000 !important;
+    color: #e5e7eb !important;
+}
+
+html.dark .el-table td.el-table__cell {
+    background-color: #111827 !important;
+    color: #e5e7eb !important;
+    border-bottom: 1px solid #1f2937 !important;
+}
+
+html.dark .el-table tr.el-table__row {
+    background-color: #111827 !important;
+}
+
+html.dark .el-table tr.el-table__row:hover > td.el-table__cell {
+    background-color: #111827 !important;
+}
+
+html.dark .el-table__body-wrapper {
+    background-color: #111827 !important;
+}
+
+html.dark .el-table__inner-wrapper {
+    background-color: #111827 !important;
+}
+
+html.dark .el-table .cell {
+    color: #e5e7eb !important;
+}
+
+/* 字数统计暗黑模式 */
+html.dark .el-input__count {
+    background-color:transparent !important;
+    color: #9ca3af !important;
+}
+
+html.dark .el-input__count .el-input__count-inner {
+    background-color: #111827 !important;
+    color: #9ca3af !important;
+}
+
+/* 分页 */
+html.dark .el-pager li,
+html.dark .el-pagination button,
+html.dark .el-pagination .el-pager li,
+html.dark .el-pagination .btn-prev,
+html.dark .el-pagination .btn-next,
+html.dark .el-pagination .el-pagination__jump,
+html.dark .el-pagination .el-pagination__total {
+    color: #94a3b8 !important;
+}
+
+html.dark .el-pager li:hover,
+html.dark .el-pagination button:not(:disabled):hover {
+    background-color: #334155 !important;
+    color: #e2e8f0 !important;
+}
+
+html.dark .el-pager li.is-active {
+    background-color: #3b82f6 !important;
+    color: #ffffff !important;
+}
+
+html.dark .el-pagination button:disabled {
+    color: #475569 !important;
+}
+
+html.dark .el-pagination .el-input__wrapper {
+    background-color: #1e293b !important;
+    box-shadow: 0 0 0 1px #334155 inset !important;
+}
+
+html.dark .el-pagination .el-input__inner {
+    color: #e2e8f0 !important;
+}
+
+html.dark .el-pagination .el-select .el-select__wrapper {
+    background-color: #1e293b !important;
+    box-shadow: 0 0 0 1px #334155 inset !important;
+    color: #e2e8f0 !important;
+}
+
+/* MessageBox */
+html.dark .el-overlay-message-box .el-message-box {
+    background-color: #1e293b !important;
+    border: 1px solid #334155 !important;
+}
+
+html.dark .el-overlay-message-box .el-message-box__header {
+    border-bottom: 1px solid #334155 !important;
+}
+
+html.dark .el-overlay-message-box .el-message-box__title {
+    color: #f1f5f9 !important;
+}
+
+html.dark .el-overlay-message-box .el-message-box__content {
+    color: #e2e8f0 !important;
+}
+
+html.dark .el-overlay-message-box .el-message-box__message p {
+    color: #e2e8f0 !important;
+}
+
+html.dark .el-overlay-message-box .el-message-box__btns {
+    border-top: 1px solid #334155 !important;
+}
+
+/* Drawer */
+html.dark .el-drawer {
+    background-color: #1e293b !important;
+}
+
+html.dark .el-drawer__header {
+    border-bottom: 1px solid #334155 !important;
+    color: #f1f5f9 !important;
+}
+
+html.dark .el-drawer__body {
+    background-color: #1e293b !important;
+    color: #e2e8f0 !important;
+}
+
+html.dark .el-drawer__footer {
+    border-top: 1px solid #334155 !important;
+}
+
+html.dark .el-drawer__close-btn {
+    color: #94a3b8 !important;
+}
+
+html.dark .el-drawer__close-btn:hover {
+    color: #e2e8f0 !important;
 }

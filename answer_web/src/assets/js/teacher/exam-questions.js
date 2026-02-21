@@ -223,7 +223,15 @@ export function useExamQuestions(examId) {
         try {
             const opts = typeof optsJson === 'string' ? JSON.parse(optsJson) : optsJson
             if (!Array.isArray(opts)) return ''
-            return opts.map((o, i) => `${String.fromCharCode(65 + i)}: ${o.text}`).join(' | ')
+            return opts.map((o, i) => {
+                const letter = String.fromCharCode(65 + i)
+                if (typeof o === 'string') {
+                    return `${letter}: ${o}`
+                } else if (typeof o === 'object' && o !== null) {
+                    return `${letter}: ${o.text || o.content || JSON.stringify(o)}`
+                }
+                return `${letter}: ${o}`
+            }).join(' | ')
         } catch (e) {
             return ''
         }

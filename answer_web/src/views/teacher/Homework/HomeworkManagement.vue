@@ -1,72 +1,55 @@
 <template>
   <div class="homework-management modern-page">
     <!-- 页面头部 -->
-
-
-    <!-- 筛选和搜索控制栏 -->
-    <!-- 筛选和搜索控制栏 -->
-    <div class="filter-section animate-slide-up">
-      <div class="filter-wrapper">
-        <div class="filter-left">
-          <div class="filter-item">
-            <span class="filter-label">关联课程</span>
-            <el-select 
-              v-model="filterForm.courseId" 
-              placeholder="全部课程" 
-              class="ketangpai-select" 
-              @change="loadHomeworks"
-              clearable
-              style="width: 240px"
-            >
-              <el-option label="全部课程" value="" />
-              <el-option
-                v-for="course in courses"
-                :key="course.id"
-                :label="course.courseName || course.name"
-                :value="course.id"
-              />
-            </el-select>
-          </div>
-          <div class="filter-item">
-            <span class="filter-label">作业状态</span>
-            <el-select 
-              v-model="filterForm.status" 
-              placeholder="全部状态" 
-              class="ketangpai-select" 
-              @change="loadHomeworks"
-              clearable
-              style="width: 160px"
-            >
-              <el-option label="全部" value="" />
-              <el-option label="草稿" :value="0" />
-              <el-option label="进行中" :value="1" />
-              <el-option label="已截止" :value="2" />
-            </el-select>
-          </div>
-          <div class="search-input-wrap">
-            <el-input
-              v-model="filterForm.keyword"
-              placeholder="搜索作业标题..."
-              class="ketangpai-search"
-              clearable
-              @keyup.enter="loadHomeworks"
-            />
-            <el-button class="search-btn" @click="loadHomeworks">
-              搜索
-            </el-button>
-          </div>
+    <div class="page-header">
+      <div class="header-left">
+        <div class="header-icon">
+          <el-icon><EditPen /></el-icon>
         </div>
-        
-        <div class="filter-right">
-          <el-button class="create-btn" type="primary" @click="showCreateDialog">
-             <el-icon><Plus /></el-icon> 发布作业
-          </el-button>
+        <h1 class="page-title">作业管理</h1>
+      </div>
+      <div class="header-right">
+        <div class="header-search">
+          <el-input
+            v-model="filterForm.keyword"
+            placeholder="搜索作业名称..."
+            class="header-search-input"
+            clearable
+            @keyup.enter="loadHomeworks"
+            :prefix-icon="Search"
+          />
         </div>
+        <div class="status-tabs">
+          <span 
+            class="tab-item" 
+            :class="{active: filterForm.status === '' || filterForm.status === null || filterForm.status === undefined}" 
+            @click="setFilterStatus('')"
+          >
+            全部
+          </span>
+          <span 
+            class="tab-item" 
+            :class="{active: filterForm.status === 1 || filterForm.status === '1'}" 
+            @click="setFilterStatus(1)"
+          >
+            进行中
+          </span>
+          <span 
+            class="tab-item" 
+            :class="{active: filterForm.status === 2 || filterForm.status === '2'}" 
+            @click="setFilterStatus(2)"
+          >
+            已结束
+          </span>
+        </div>
+        <el-button class="create-homework-btn" @click="showCreateDialog">
+          <el-icon><Plus /></el-icon> 布置新作业
+        </el-button>
       </div>
     </div>
 
-    <!-- 作业列表 -->
-    <div v-loading="loading" class="content-list animate-slide-up">
+    <!-- 作业列表卡片网格 -->
+    <div class="homework-grid" v-loading="loading">
       <div v-if="homeworks.length === 0" class="empty-state">
         <el-empty description="暂无作业，点击上方发布作业" :image-size="120">
           <template #image>
@@ -74,54 +57,79 @@
           </template>
         </el-empty>
       </div>
-      
+
       <div
         v-for="homework in homeworks"
         :key="homework.id"
-        class="homework-card"
+        class="homework-card-new"
       >
-        <div class="card-main">
-          <div class="card-info">
-            <div class="title-wrap">
-              <h3 class="homework-title" @click="viewHomework(homework)">{{ homework.title }}</h3>
-              <span class="status-tag" :class="getStatusType(homework.status)">
-                {{ getStatusText(homework.status) }}
-              </span>
-            </div>
-            <div class="meta-info">
-              <span class="meta-item"><el-icon><Reading /></el-icon> {{ homework.courseName }}</span>
-              <span class="meta-item"><el-icon><Calendar /></el-icon> 截止: {{ formatDate(homework.deadline) }}</span>
-              <span class="meta-item"><el-icon><User /></el-icon> 提交: {{ homework.submittedCount }}/{{ homework.totalStudents }}</span>
+        <div class="card-header-row">
+          <h3 class="card-title" @click="viewHomework(homework)">{{ homework.title }}</h3>
+          <div class="card-header-right">
+            <span class="card-status-tag" :class="getStatusType(homework.status)">
+              {{ getStatusText(homework.status) }}
+            </span>
+            <div class="card-actions">
+              <el-tooltip content="编辑" placement="top">
+                <div class="action-btn" @click="editHomework(homework)">
+                  <el-icon><Edit /></el-icon>
+                </div>
+              </el-tooltip>
+              <el-tooltip content="删除" placement="top">
+                <div class="action-btn delete-btn" @click="deleteHomeworkItem(homework)">
+                  <el-icon><Delete /></el-icon>
+                </div>
+              </el-tooltip>
             </div>
           </div>
-          <div class="card-ops">
-            <el-tooltip content="详情" placement="top"><el-button link @click="viewHomework(homework)"><el-icon><Document /></el-icon></el-button></el-tooltip>
-            <el-tooltip content="编辑" placement="top"><el-button link @click="editHomework(homework)"><el-icon><Edit /></el-icon></el-button></el-tooltip>
-            <el-tooltip content="批改" placement="top"><el-button link type="primary" @click="gradeHomework(homework)"><el-icon><Checked /></el-icon></el-button></el-tooltip>
-            <el-tooltip content="删除" placement="top"><el-button link type="danger" @click="deleteHomeworkItem(homework)"><el-icon><Delete /></el-icon></el-button></el-tooltip>
-          </div>
         </div>
-        <div class="card-footer">
-           <div class="progress-wrap">
-              <span class="p-text">提交进度</span>
-              <el-progress :percentage="getSubmitProgress(homework)" :color="getProgressColor(homework)" :stroke-width="4" :show-text="false" />
-           </div>
-        </div>
-      </div>
 
-      <!-- 分页组件 -->
-      <div class="pagination-footer" v-if="pagination.total > 0">
-        <el-pagination
-          v-model:current-page="pagination.current"
-          v-model:page-size="pagination.size"
-          :total="pagination.total"
-          :page-sizes="[10, 20, 50]"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="handleSizeChange"
-          @current-change="handlePageChange"
-          background
-        />
+        <div class="card-course-tag">
+          {{ homework.courseName }}
+        </div>
+
+        <div class="card-progress-row">
+          <div class="progress-info">
+            <el-icon><Clock /></el-icon>
+            <span class="deadline-text">截止: {{ formatDate(homework.deadline) }}</span>
+          </div>
+          <div class="submitted-count">
+            {{ homework.submittedCount }} / {{ homework.totalStudents }}
+          </div>
+        </div>
+
+        <div class="progress-bar-container">
+          <el-progress 
+            :percentage="getSubmitProgress(homework)" 
+            :color="'#2563eb'" 
+            :stroke-width="8" 
+            :show-text="false" 
+          />
+        </div>
+
+        <div class="card-footer-buttons">
+          <el-button class="grade-btn" @click="gradeHomework(homework)">
+            批改
+          </el-button>
+          <el-button class="stats-btn" @click="viewHomework(homework)">
+            详情
+          </el-button>
+        </div>
       </div>
+    </div>
+
+    <!-- 分页组件 -->
+    <div class="pagination-container pagination-outside" v-if="pagination.total > 0">
+      <el-pagination
+        v-model:current-page="pagination.current"
+        v-model:page-size="pagination.size"
+        :total="pagination.total"
+        :page-sizes="[10, 20, 50]"
+        layout="total, sizes, prev, pager, next, jumper"
+        @size-change="handleSizeChange"
+        @current-change="handlePageChange"
+        class="premium-pagination"
+      />
     </div>
 
     <!-- 创建/编辑作业对话框 (Ketangpai Style) -->
@@ -468,7 +476,7 @@
 <script setup>
 import {
   Plus, Document, Search, Reading, Calendar, User, Check, List, Edit, Delete, Checked, MagicStick,
-  ArrowUp, ArrowDown
+  ArrowUp, ArrowDown, EditPen, Clock
 } from '@element-plus/icons-vue'
 import { useHomeworkManagement } from '@/assets/js/teacher/homework-management.js'
 import '@/assets/css/teacher/modern-theme.css'
@@ -512,6 +520,7 @@ const {
   bankPagination,
   selectedQuestions,
   loadHomeworks,
+  setFilterStatus,
   showCreateDialog,
   handleFileChange,
   saveAsDraft,

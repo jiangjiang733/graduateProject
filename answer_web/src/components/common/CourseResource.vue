@@ -26,8 +26,10 @@
         :data="filteredResources" 
         style="width: 100%"
         class="resource-table"
-        :header-cell-style="{ background: '#f8fafc', color: '#64748b' }"
       >
+        <template #empty>
+          <el-empty :description="searchQuery ? '未找到相关资料' : '暂无共享资料'" />
+        </template>
         <el-table-column label="名称" min-width="250">
           <template #default="{ row }">
             <div class="file-name-info">
@@ -41,8 +43,6 @@
             </div>
           </template>
         </el-table-column>
-        
-        <el-table-column prop="uploaderName" label="上传者" width="120" />
         
         <el-table-column label="大小" width="100">
           <template #default="{ row }">
@@ -62,7 +62,7 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="220" fixed="right">
+        <el-table-column label="操作" width="200">
           <template #default="{ row }">
             <el-button link type="primary" @click="handlePreview(row)">
               <el-icon><View /></el-icon> 预览
@@ -84,8 +84,6 @@
           </template>
         </el-table-column>
       </el-table>
-
-      <el-empty v-if="!loading && filteredResources.length === 0" :description="searchQuery ? '未找到相关资料' : '暂无共享资料'" />
     </el-card>
 
     <!-- 预览弹窗 -->
@@ -434,6 +432,11 @@ onMounted(() => {
   background-color: #f8fafc !important;
 }
 
+.resource-table :deep(.el-table th.el-table__cell) {
+  background-color: #f8fafc;
+  color: #64748b;
+}
+
 .resource-uploader :deep(.el-upload-dragger) {
   border-radius: 12px;
   padding: 40px 20px;
@@ -477,5 +480,144 @@ onMounted(() => {
 .header-actions {
   display: flex;
   align-items: center;
+}
+</style>
+
+<!-- 全局暗黑模式样式 -->
+<style>
+/* ===== 资料库暗黑模式 ===== */
+html.dark .course-resource-section .resource-header h3 {
+  color: #f1f5f9 !important;
+}
+
+html.dark .course-resource-section .resource-count,
+html.dark .course-resource-section .header-tip {
+  color: #94a3b8 !important;
+}
+
+html.dark .course-resource-section .resource-card-container {
+  background-color: #111827 !important;
+  border-color: #1f2937 !important;
+}
+
+html.dark .course-resource-section .resource-card-container .el-card__body {
+  background-color: #111827 !important;
+}
+
+html.dark .course-resource-section .resource-table,
+html.dark .course-resource-section .resource-table .el-table,
+html.dark .course-resource-section .resource-table .el-table__inner-wrapper,
+html.dark .course-resource-section .resource-table .el-table__inner-wrapper::before,
+html.dark .course-resource-section .resource-table .el-table__body,
+html.dark .course-resource-section .resource-table .el-table__body-wrapper {
+  background-color: #111827 !important;
+}
+
+html.dark .course-resource-section .resource-table .el-table th.el-table__cell,
+html.dark .course-resource-section .resource-table .el-table th.el-table__cell > .cell,
+html.dark .course-resource-section .resource-table .el-table thead.is-group th.el-table__cell {
+  background-color: #1e293b !important;
+  color: #94a3b8 !important;
+  border-bottom: 1px solid #374151 !important;
+  border-right: 1px solid #374151 !important;
+}
+
+html.dark .course-resource-section .resource-table .el-table thead,
+html.dark .course-resource-section .resource-table .el-table thead tr,
+html.dark .course-resource-section .resource-table .el-table thead tr.el-table__row {
+  background-color: #1e293b !important;
+}
+
+html.dark .course-resource-section .resource-table .el-table tbody,
+html.dark .course-resource-section .resource-table .el-table tbody tr,
+html.dark .course-resource-section .resource-table .el-table tbody tr.el-table__row {
+  background-color: #111827 !important;
+}
+
+/* 暗黑模式下移除hover效果 */
+html.dark .course-resource-section .resource-table .el-table tr.el-table__row:hover > td.el-table__cell {
+  background-color: #111827 !important;
+}
+
+html.dark .course-resource-section .resource-table .el-table td.el-table__cell {
+  background-color: #111827 !important;
+  border-bottom: 1px solid #1f2937 !important;
+  border-right: 1px solid #1f2937 !important;
+  color: #e5e7eb !important;
+}
+
+html.dark .course-resource-section .resource-table .el-table td.el-table__cell > .cell {
+  background-color: transparent !important;
+}
+
+html.dark .course-resource-section .el-table__fixed,
+html.dark .course-resource-section .el-table__fixed-right,
+html.dark .course-resource-section .el-table__fixed-right-patch,
+html.dark .course-resource-section .el-table__fixed-header-wrapper,
+html.dark .course-resource-section .el-table__fixed-body-wrapper {
+  background-color: transparent !important;
+}
+
+html.dark .course-resource-section .file-name-info .file-icon {
+  background: #1e3a5f;
+  color: #60a5fa;
+}
+
+html.dark .course-resource-section .file-detail .file-title {
+  color: #f1f5f9;
+}
+
+html.dark .course-resource-section .file-detail .file-sub {
+  color: #64748b;
+}
+
+html.dark .course-resource-section .search-input .el-input__wrapper {
+  background-color: #1e293b !important;
+  box-shadow: 0 0 0 1px #374151 inset !important;
+}
+
+html.dark .course-resource-section .search-input .el-input__inner {
+  color: #e5e7eb !important;
+}
+
+html.dark .course-resource-section .search-input .el-input__inner::placeholder {
+  color: #64748b !important;
+}
+
+html.dark .course-resource-section .search-input .el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 1px #3b82f6 !important;
+}
+
+html.dark .course-resource-section .el-empty__description p {
+  color: #94a3b8 !important;
+}
+
+html.dark .course-resource-section .el-empty .el-icon,
+html.dark .course-resource-section .el-empty__image {
+  color: #475569 !important;
+  fill: #475569 !important;
+}
+
+html.dark .course-resource-section .el-table__empty-block {
+  background-color: #111827 !important;
+}
+
+html.dark .course-resource-section .el-table__empty-text {
+  color: #94a3b8 !important;
+}
+
+html.dark .course-resource-section .el-table__empty-wrapper .el-empty {
+  background-color: #111827 !important;
+}
+
+html.dark .course-resource-section .el-table--border .el-table__cell,
+html.dark .course-resource-section .el-table--border .el-table__cell.is-leaf {
+  border-right-color: #1f2937 !important;
+}
+
+html.dark .course-resource-section .el-table--border::after,
+html.dark .course-resource-section .el-table--group::after,
+html.dark .course-resource-section .el-table::before {
+  background-color: #1f2937 !important;
 }
 </style>

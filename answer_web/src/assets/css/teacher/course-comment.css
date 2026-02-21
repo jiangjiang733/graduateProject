@@ -13,6 +13,8 @@
     background-color: #f8fafc;
     border-radius: 8px;
     border: 1px solid #e2e8f0;
+    position: relative;
+    z-index: 10;
 }
 
 .filter-left {
@@ -29,6 +31,164 @@
 
 .chapter-select {
     width: 250px;
+}
+
+/* 章节选择下拉框自定义样式 */
+.chapter-select-popper {
+    min-width: 300px !important;
+    width: auto !important;
+    min-height: 60px !important;
+    height: auto !important;
+    background-color: #ffffff !important;
+    border: 1px solid #dcdfe6 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.chapter-select-popper.el-select-dropdown {
+    min-height: 60px !important;
+    height: auto !important;
+}
+
+.chapter-select-popper .el-popper__arrow {
+    display: none !important;
+}
+
+.chapter-select-popper .el-select-dropdown__wrap {
+    max-height: 300px !important;
+    min-height: 50px !important;
+    height: auto !important;
+}
+
+.chapter-select-popper .el-select-dropdown__list {
+    height: auto !important;
+    min-height: 50px !important;
+    padding: 8px !important;
+}
+
+.chapter-select-popper .el-scrollbar {
+    min-width: 300px !important;
+    height: auto !important;
+    min-height: 50px !important;
+}
+
+.chapter-select-popper .el-scrollbar__wrap {
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    height: auto !important;
+    min-height: 50px !important;
+}
+
+.chapter-select-popper .el-scrollbar__view {
+    height: auto !important;
+    min-height: 50px !important;
+}
+
+.chapter-select-popper .el-tree {
+    min-width: 280px !important;
+    padding: 4px 0 !important;
+    height: auto !important;
+    min-height: 36px !important;
+    background-color: #ffffff !important;
+}
+
+.chapter-select-popper .el-tree-node {
+    min-height: 36px !important;
+}
+
+.chapter-select-popper .el-tree-node__content {
+    height: 36px !important;
+    line-height: 36px !important;
+    padding: 0 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    border-radius: 4px !important;
+    transition: background-color 0.2s !important;
+}
+
+.chapter-select-popper .el-tree-node__content:hover {
+    background-color: #f5f7fa !important;
+}
+
+.chapter-select-popper .el-tree-node.is-current > .el-tree-node__content {
+    background-color: #ecf5ff !important;
+    color: #409eff !important;
+}
+
+.chapter-select-popper .el-tree-node__label {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 240px !important;
+    line-height: 36px !important;
+    height: 36px !important;
+    display: inline-block !important;
+    color: #606266 !important;
+    font-size: 14px !important;
+}
+
+.chapter-select-popper .el-tree-node__expand-icon {
+    color: #606266 !important;
+    font-size: 12px !important;
+}
+
+.chapter-select-popper .el-scrollbar__thumb {
+    background-color: #c0c4cc !important;
+    border-radius: 4px !important;
+}
+
+.chapter-select-popper .el-scrollbar__thumb:hover {
+    background-color: #909399 !important;
+}
+
+/* 暗黑模式下的章节下拉框样式 - 参考亮色模式设计 */
+html.dark .chapter-select-popper {
+    background-color: #111827 !important;
+    border: 1px solid #374151 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.dark .chapter-select-popper .el-select-dropdown__wrap,
+html.dark .chapter-select-popper .el-select-dropdown__list,
+html.dark .chapter-select-popper .el-scrollbar,
+html.dark .chapter-select-popper .el-scrollbar__wrap,
+html.dark .chapter-select-popper .el-scrollbar__view,
+html.dark .chapter-select-popper .el-tree {
+    background-color: #111827 !important;
+}
+
+html.dark .chapter-select-popper .el-tree-node__content {
+    color: #e5e7eb !important;
+    background-color: #111827 !important;
+}
+
+html.dark .chapter-select-popper .el-tree-node__content:hover {
+    background-color: #111827 !important;
+}
+
+html.dark .chapter-select-popper .el-tree-node.is-current > .el-tree-node__content {
+    background-color: #1e293b !important;
+    color: #60a5fa !important;
+}
+
+html.dark .chapter-select-popper .el-tree-node__label {
+    color: #e5e7eb !important;
+}
+
+html.dark .chapter-select-popper .el-tree-node.is-current > .el-tree-node__content .el-tree-node__label {
+    color: #60a5fa !important;
+}
+
+html.dark .chapter-select-popper .el-tree-node__expand-icon {
+    color: #9ca3af !important;
+}
+
+html.dark .chapter-select-popper .el-scrollbar__thumb {
+    background-color: #4b5563 !important;
+}
+
+html.dark .chapter-select-popper .el-scrollbar__thumb:hover {
+    background-color: #4b5563 !important;
 }
 
 .targeting-chapter {
@@ -148,4 +308,190 @@ html.dark .comment-time {
 html.dark .reply-btn,
 html.dark .delete-btn {
     color: #60a5fa !important;
+}
+
+/* ===== 补充暗黑模式 ===== */
+
+/* el-card 的内部 body 区域（Element Plus 组件默认白色）*/
+html.dark .comment-post-card .el-card__body,
+html.dark .comment-post-card.el-card {
+    background-color: #111827 !important;
+    border-color: #1f2937 !important;
+}
+
+/* 筛选栏 select / input 占位符文字 */
+html.dark .comment-filter-header .el-input__inner,
+html.dark .comment-filter-header .el-select__placeholder {
+    color: #9ca3af !important;
+}
+
+/* tag 章节标签 */
+html.dark .tag-chapter {
+    background-color: #1f2937;
+    border-color: #374151;
+    color: #9ca3af;
+}
+
+/* 评论列表标题 */
+html.dark .comment-list-container h3 {
+    color: #f3f4f6;
+    border-bottom-color: #1f2937;
+}
+
+/* 搜索输入框 */
+html.dark .comment-filter-header .el-input__wrapper {
+    background-color: #1f2937 !important;
+    box-shadow: 0 0 0 1px #374151 inset !important;
+}
+
+html.dark .comment-filter-header .el-input__inner {
+    color: #e5e7eb !important;
+}
+
+/* ===== el-tree-select 暗黑模式修复 (使用 popper-class 或全局样式) ===== */
+/* 全局修复 select 下拉框 (挂载在body上) */
+html.dark body > .el-popper.is-light.el-select-dropdown {
+    background-color: #1e293b !important;
+    border: 1px solid #475569 !important;
+    z-index: 9999 !important;
+    min-width: 280px !important;
+    width: auto !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-scrollbar {
+    background-color: #1e293b !important;
+    min-width: 280px !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-scrollbar__wrap {
+    overflow-x: hidden !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-select-dropdown__wrap {
+    max-height: 300px !important;
+    min-width: 280px !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-select-dropdown__list {
+    padding: 8px !important;
+    min-width: 260px !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-select-dropdown__item {
+    color: #e5e7eb !important;
+    padding: 8px 12px !important;
+    height: auto !important;
+    line-height: 1.5 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-select-dropdown__item:hover {
+    background-color: #374151 !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-select-dropdown__item.is-selected {
+    color: #60a5fa !important;
+    background-color: #1e3a5f !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-select-dropdown__empty {
+    color: #9ca3af !important;
+    background-color: #1e293b !important;
+}
+
+/* el-tree-select 内部的 tree 节点样式 */
+html.dark body > .el-popper.is-light.el-select-dropdown .el-tree {
+    background-color: #1e293b !important;
+    color: #e5e7eb !important;
+    min-width: 260px !important;
+    padding: 4px 0 !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-tree .el-tree-node {
+    width: 100% !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-tree .el-tree-node__content {
+    color: #e5e7eb !important;
+    background-color: transparent !important;
+    height: 36px !important;
+    line-height: 36px !important;
+    padding: 0 12px !important;
+    width: 100% !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-tree-node__content:hover {
+    background-color: #374151 !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-tree-node.is-current > .el-tree-node__content {
+    background-color: #1e3a5f !important;
+    color: #60a5fa !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-tree-node__label {
+    color: #e5e7eb !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    flex: 1 !important;
+    padding-right: 8px !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-tree-node__expand-icon {
+    color: #9ca3af !important;
+    font-size: 16px !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-scrollbar__bar.is-vertical {
+    right: 0 !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-scrollbar__thumb {
+    background-color: #4b5563 !important;
+}
+
+html.dark body > .el-popper.is-light.el-select-dropdown .el-scrollbar__thumb:hover {
+    background-color: #6b7280 !important;
+}
+
+/* 亮色模式下的下拉框样式也需要调整 */
+body > .el-popper.is-light.el-select-dropdown {
+    min-width: 280px !important;
+    width: auto !important;
+}
+
+body > .el-popper.is-light.el-select-dropdown .el-tree {
+    min-width: 260px !important;
+    padding: 4px 0 !important;
+}
+
+body > .el-popper.is-light.el-select-dropdown .el-tree-node__content {
+    height: 36px !important;
+    line-height: 36px !important;
+    padding: 0 12px !important;
+}
+
+body > .el-popper.is-light.el-select-dropdown .el-tree-node__label {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+/* 输入框占位符 */
+html.dark .comment-filter-header .el-input__inner::placeholder,
+html.dark .comment-post-card .el-textarea__inner::placeholder {
+    color: #64748b !important;
+}
+
+/* 字数统计 */
+html.dark .el-input__count {
+    color: #64748b !important;
+    background-color: transparent !important;
+}
+
+html.dark .el-input__count .el-input__count-inner {
+    color: #64748b !important;
 }

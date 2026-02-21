@@ -1,8 +1,8 @@
-/* 教师仪表盘样式 - 扁平版 (完全匹配图片) */
 .dashboard-container {
     min-height: 100vh;
     position: relative;
     background-color: transparent;
+    padding-left: 10px;
 }
 
 .dashboard-content {

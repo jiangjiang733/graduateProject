@@ -1,40 +1,91 @@
 /* 管理试卷题目页面样式 - 双面板布局 (匹配图片0) */
 .exam-questions.modern-page {
-    padding: 24px;
+    padding: 32px 24px;
     background-color: #f8fafc;
     min-height: calc(100vh - 64px);
+    font-family: 'Inter', -apple-system, sans-serif;
 }
 
-.page-header {
+.sticky-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(24px);
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    margin-bottom: 24px;
+    justify-content: space-between;
+    padding: 16px 24px;
+    margin: -32px -24px 32px -24px;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+    width: calc(100% + 48px);
 }
 
-.header-content {
+.header-left {
     display: flex;
     align-items: center;
     gap: 16px;
+    flex: 1;
 }
 
-.back-btn {
-    border: none;
-    background: white;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.page-title {
-    font-size: 24px;
-    font-weight: 700;
-    color: #1e293b;
+.header-left h2 {
+    font-size: 18px;
+    font-weight: 800;
+    color: #0f172a;
     margin: 0;
 }
 
-.page-subtitle {
+.back-btn {
+    border-radius: 12px !important;
+    background: #f8fafc !important;
+    border: none !important;
+    color: #64748b !important;
+    width: 40px;
+    height: 40px;
+    transition: all 0.2s;
+}
+
+.back-btn:hover {
+    background: #eff6ff !important;
+    color: #2563eb !important;
+}
+
+/* 标签切换器 */
+.segmented-control {
+    display: flex;
+    background: rgba(241, 245, 249, 0.8);
+    border-radius: 1rem;
+    padding: 6px;
+    gap: 4px;
+}
+
+.segmented-control .segment {
+    padding: 8px 20px;
     font-size: 14px;
+    font-weight: 700;
     color: #64748b;
-    margin: 4px 0 0 0;
+    border-radius: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.segmented-control .segment:hover {
+    color: #334155;
+}
+
+.segmented-control .segment.active {
+    background: white;
+    color: #2563eb;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+    flex: 1;
+    justify-content: flex-end;
+    padding-right: 56px;
+    /* 给悬浮在右上角的暗黑模式切换按钮留出空间 */
 }
 
 .main-content {
@@ -574,9 +625,15 @@
 
 /* ========== 暗黑模式完整适配 ========== */
 .dark-theme .exam-questions.modern-page {
-    background-color: #0f172a;
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
 }
 
+.dark-theme .sticky-header {
+    background: rgba(30, 41, 59, 0.7);
+    border-bottom-color: rgba(71, 85, 105, 0.6);
+}
+
+.dark-theme .header-left h2,
 .dark-theme .page-title {
     color: #f1f5f9;
 }
@@ -586,14 +643,36 @@
 }
 
 .dark-theme .back-btn {
-    background: #1e293b;
+    background: #1e293b !important;
     border-color: #334155;
-    color: #94a3b8;
+    color: #94a3b8 !important;
 }
 
 .dark-theme .back-btn:hover {
-    background: #334155;
+    background: #334155 !important;
+    color: #f1f5f9 !important;
+}
+
+.dark-theme .header-left h2 {
     color: #f1f5f9;
+}
+
+.dark-theme .segmented-control {
+    background: rgba(15, 23, 42, 0.8);
+}
+
+.dark-theme .segmented-control .segment {
+    color: #94a3b8;
+}
+
+.dark-theme .segmented-control .segment:hover {
+    color: #cbd5e1;
+}
+
+.dark-theme .segmented-control .segment.active {
+    background: #1e293b;
+    color: #60a5fa;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 .dark-theme .panel {

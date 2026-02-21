@@ -11,9 +11,13 @@ import {
     createPdfChapter,
     createTextChapter,
     createMixedChapter,
+    createMixedChapterMulti,
     getChapterDetail,
     updateChapter,
-    deleteChapter as deleteChapterApi
+    updateChapterWithFiles,
+    deleteChapter as deleteChapterApi,
+    deleteChapterVideo,
+    deleteChapterPdf
 } from '@/api/course.js'
 import {
     addSchedule,
@@ -112,9 +116,53 @@ export function useCourseForm() {
         type: 'MIXED',
         title: '',
         order: 1,
-        video: null,
-        pdf: null,
-        content: ''
+        // New file(s) selected by user this session
+        videos: [],   // Array<File> for multi-video
+        pdfs: [],     // Array<File> for multi-pdf
+        video: null,  // legacy single-file (kept for compat)
+        pdf: null,    // legacy single-file (kept for compat)
+        content: '',
+        // Existing file metadata from server (shown in edit mode)
+        videoUrl: '',
+        pdfUrl: '',
+        existingVideos: [], // [{name, size, url, uploadTime}]
+        existingPdfs: []    // [{name, size, url, uploadTime}]
+    })
+
+    watch(() => chapterForm.value.type, (newType, oldType) => {
+        if (!oldType || newType === oldType) return
+        if (newType === 'FOLDER') {
+            chapterForm.value.existingVideos = []
+            chapterForm.value.existingPdfs = []
+            chapterForm.value.videos = []
+            chapterForm.value.pdfs = []
+            chapterForm.value.video = null
+            chapterForm.value.pdf = null
+            chapterForm.value.videoUrl = ''
+            chapterForm.value.pdfUrl = ''
+            chapterForm.value.content = ''
+        } else if (newType === 'VIDEO') {
+            chapterForm.value.existingPdfs = []
+            chapterForm.value.pdfs = []
+            chapterForm.value.pdf = null
+            chapterForm.value.pdfUrl = ''
+            chapterForm.value.content = ''
+        } else if (newType === 'PDF') {
+            chapterForm.value.existingVideos = []
+            chapterForm.value.videos = []
+            chapterForm.value.video = null
+            chapterForm.value.videoUrl = ''
+            chapterForm.value.content = ''
+        } else if (newType === 'TEXT') {
+            chapterForm.value.existingVideos = []
+            chapterForm.value.existingPdfs = []
+            chapterForm.value.videos = []
+            chapterForm.value.pdfs = []
+            chapterForm.value.video = null
+            chapterForm.value.pdf = null
+            chapterForm.value.videoUrl = ''
+            chapterForm.value.pdfUrl = ''
+        }
     })
 
     // ==================== 课程时间表相关 ====================
@@ -575,9 +623,15 @@ export function useCourseForm() {
             type: 'MIXED',
             title: '',
             order: parent ? (parent.children?.length || 0) + 1 : treeData.value.length + 1,
+            videos: [],
+            pdfs: [],
             video: null,
             pdf: null,
-            content: ''
+            content: '',
+            videoUrl: '',
+            pdfUrl: '',
+            existingVideos: [],
+            existingPdfs: []
         }
         if (videoUploadRef.value) {
             videoUploadRef.value.clearFiles()
@@ -589,35 +643,52 @@ export function useCourseForm() {
         isEditChapter.value = true
         currentParent.value = null
 
-        // 初始化基础数据
         const form = {
             chapterId: chapter.chapterId,
             type: chapter.chapterType,
             title: chapter.chapterTitle,
             order: chapter.chapterOrder || chapter.order || 1,
+            videos: [],
+            pdfs: [],
             video: null,
             pdf: null,
             videoUrl: '',
             pdfUrl: '',
-            content: chapter.textContent || ''
+            content: chapter.textContent || '',
+            existingVideos: [],
+            existingPdfs: []
         }
 
-        // 本地章节特殊处理
         if (chapter.chapterId && String(chapter.chapterId).startsWith('temp_')) {
             form.video = chapter.video
             form.pdf = chapter.pdf
+            form.videos = chapter.videos || (chapter.video ? [chapter.video] : [])
+            form.pdfs = chapter.pdfs || (chapter.pdf ? [chapter.pdf] : [])
 
-            // Generate visual feedback URLs if needed
             if (chapter.video instanceof File) {
-                form.videoUrl = URL.createObjectURL(chapter.video)
+                form.existingVideos = [{ name: chapter.video.name, size: chapter.video.size, url: URL.createObjectURL(chapter.video), isLocal: true }]
             }
             if (chapter.pdf instanceof File) {
-                form.pdfUrl = URL.createObjectURL(chapter.pdf)
+                form.existingPdfs = [{ name: chapter.pdf.name, size: chapter.pdf.size, url: URL.createObjectURL(chapter.pdf), isLocal: true }]
             }
         } else {
-            // normal remote chapter
-            form.videoUrl = chapter.videoUrl
-            form.pdfUrl = chapter.pdfUrl
+            const serverVideoUrl = chapter.videoUrl || ''
+            const serverPdfUrl = chapter.pdfUrl || ''
+
+            form.videoUrl = serverVideoUrl
+            form.pdfUrl = serverPdfUrl
+
+            // 支持 & 分隔的多文件 URL
+            if (serverVideoUrl && serverVideoUrl.trim() !== '') {
+                form.existingVideos = serverVideoUrl.split('&')
+                    .filter(u => u.trim())
+                    .map(u => ({ name: extractFileName(u.trim()), url: u.trim(), isLocal: false }))
+            }
+            if (serverPdfUrl && serverPdfUrl.trim() !== '') {
+                form.existingPdfs = serverPdfUrl.split('&')
+                    .filter(u => u.trim())
+                    .map(u => ({ name: extractFileName(u.trim()), url: u.trim(), isLocal: false }))
+            }
         }
 
         chapterForm.value = form
@@ -628,29 +699,99 @@ export function useCourseForm() {
         addDialogVisible.value = true
     }
 
-    // 文件选择
-    const handleVideoChange = (file) => {
-        console.log('视频文件选择事件触发')
-        console.log('  file参数:', file)
-        console.log('  file.raw:', file.raw)
-        console.log('  file.raw类型:', file.raw instanceof File)
+    // Helper: extract filename from URL path
+    const extractFileName = (url) => {
+        if (!url) return ''
+        const parts = url.split('/')
+        const last = parts[parts.length - 1]
+        return decodeURIComponent(last.split('?')[0])
+    }
 
-        if (file.raw) {
-            chapterForm.value.video = file.raw
-            console.log('视频文件已保存到chapterForm.value.video')
-            console.log('  文件名:', chapterForm.value.video.name)
-            console.log('  文件大小:', chapterForm.value.video.size, 'bytes')
-            console.log('  文件类型:', chapterForm.value.video.type)
-        } else {
-            console.error('file.raw 为空!')
+    // Helper: format bytes to human-readable
+    const formatFileSize = (bytes) => {
+        if (!bytes) return ''
+        if (bytes < 1024) return bytes + ' B'
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB'
+        return (bytes / 1024 / 1024).toFixed(1) + ' MB'
+    }
+
+    // 文件选择 - 支持多文件
+    const handleVideoChange = (file, fileList) => {
+        // fileList contains all selected files
+        chapterForm.value.videos = fileList.map(f => f.raw).filter(Boolean)
+        // Also keep single-file compat
+        chapterForm.value.video = chapterForm.value.videos[0] || null
+    }
+
+    const handleVideoRemove = (file, fileList) => {
+        chapterForm.value.videos = fileList.map(f => f.raw).filter(Boolean)
+        chapterForm.value.video = chapterForm.value.videos[0] || null
+    }
+
+    const removeNewVideo = (index) => {
+        chapterForm.value.videos.splice(index, 1)
+        chapterForm.value.video = chapterForm.value.videos[0] || null
+        if (videoUploadRef.value) {
+            const currentFiles = videoUploadRef.value.uploadFiles || []
+            currentFiles.splice(index, 1)
         }
     }
 
-    const handlePdfChange = (file) => {
-        if (file.raw) {
-            chapterForm.value.pdf = file.raw
-            console.log('PDF文件已保存:', file.raw.name)
+    const handlePdfChange = (file, fileList) => {
+        chapterForm.value.pdfs = fileList.map(f => f.raw).filter(Boolean)
+        chapterForm.value.pdf = chapterForm.value.pdfs[0] || null
+    }
+
+    const handlePdfRemove = (file, fileList) => {
+        chapterForm.value.pdfs = fileList.map(f => f.raw).filter(Boolean)
+        chapterForm.value.pdf = chapterForm.value.pdfs[0] || null
+    }
+
+    const removeNewPdf = (index) => {
+        chapterForm.value.pdfs.splice(index, 1)
+        chapterForm.value.pdf = chapterForm.value.pdfs[0] || null
+    }
+
+    // 移除已有文件——仅标记待删除，实际操作在点击「保存修改」时执行
+    const removeExistingVideo = (index) => {
+        const file = chapterForm.value.existingVideos[index]
+        if (!file) return
+        // 本地未保存的临时文件直接删除
+        if (file.isLocal) {
+            chapterForm.value.existingVideos.splice(index, 1)
+            if (chapterForm.value.existingVideos.length === 0) chapterForm.value.videoUrl = ''
+            return
         }
+        // 服务器文件：标记待删除（保留 url 以便保存时传给后端）
+        chapterForm.value.existingVideos[index] = { ...file, pendingDelete: true }
+        ElMessage.info('已标记待删除，请点击「保存修改」生效')
+    }
+
+    const removeExistingPdf = (index) => {
+        const file = chapterForm.value.existingPdfs[index]
+        if (!file) return
+        if (file.isLocal) {
+            chapterForm.value.existingPdfs.splice(index, 1)
+            if (chapterForm.value.existingPdfs.length === 0) chapterForm.value.pdfUrl = ''
+            return
+        }
+        chapterForm.value.existingPdfs[index] = { ...file, pendingDelete: true }
+        ElMessage.info('已标记待删除，请点击「保存修改」生效')
+    }
+
+    // 辅助：更新本地 treeData 中指定章节的某个字段
+    const updateTreeNodeField = (chapterId, field, value) => {
+        const walk = (nodes) => {
+            for (const node of nodes) {
+                if (String(node.chapterId) === String(chapterId)) {
+                    node[field] = value
+                    return true
+                }
+                if (node.children && walk(node.children)) return true
+            }
+            return false
+        }
+        walk(treeData.value)
     }
 
     // 提交章节
@@ -660,59 +801,70 @@ export function useCourseForm() {
             return
         }
 
+        const hasNewVideos = chapterForm.value.videos && chapterForm.value.videos.length > 0
+        const hasNewPdfs = chapterForm.value.pdfs && chapterForm.value.pdfs.length > 0
+        // 没有标记待删除的已保存视频才算“有”
+        const hasExistingVideo = chapterForm.value.existingVideos &&
+            chapterForm.value.existingVideos.some(f => !f.pendingDelete)
+        const hasExistingPdf = chapterForm.value.existingPdfs &&
+            chapterForm.value.existingPdfs.some(f => !f.pendingDelete)
+
         // ========== 文件验证 ==========
         if (chapterForm.value.type === 'VIDEO') {
-            if (!chapterForm.value.video) {
-                ElMessage.warning('视频章节必须上传视频文件')
+            if (!hasNewVideos && !hasExistingVideo && !chapterForm.value.videoUrl) {
+                ElMessage.warning('视频章节必须包含视频文件')
                 return
             }
         }
 
         if (chapterForm.value.type === 'MIXED') {
-            const hasVideo = !!chapterForm.value.video
-            const hasPdf = !!chapterForm.value.pdf
+            const hasVideo = hasNewVideos || hasExistingVideo || !!chapterForm.value.videoUrl
+            const hasPdf = hasNewPdfs || hasExistingPdf || !!chapterForm.value.pdfUrl
             const hasContent = !!chapterForm.value.content
 
             if (!hasVideo && !hasPdf && !hasContent) {
-                ElMessage.warning('混合内容至少需要上传一种内容(视频/PDF/文本)')
+                ElMessage.warning('混合内容至少需要包含一种内容(视频/PDF/文本)')
                 return
             }
         }
 
         if (!isEdit.value) {
-            // ========== 创建课程模式：本地暂存 ==========
-            const tempId = chapterForm.value.chapterId || `temp_chap_${Date.now()} `
+            // ========== 创建课程模式：本地暂存（支持多文件） ==========
+            const tempId = chapterForm.value.chapterId || `temp_chap_${Date.now()}`
             const newChapter = {
                 chapterId: tempId,
                 parentId: currentParent.value ? currentParent.value.chapterId : null,
                 chapterTitle: chapterForm.value.title,
                 chapterType: chapterForm.value.type,
                 chapterOrder: chapterForm.value.order,
-                video: chapterForm.value.video, // Store File objects
-                pdf: chapterForm.value.pdf,     // Store File objects
+                video: chapterForm.value.videos.length > 0 ? chapterForm.value.videos[0] : chapterForm.value.video,
+                pdf: chapterForm.value.pdfs.length > 0 ? chapterForm.value.pdfs[0] : chapterForm.value.pdf,
+                videos: [...(chapterForm.value.videos || [])],
+                pdfs: [...(chapterForm.value.pdfs || [])],
                 textContent: chapterForm.value.content,
                 children: []
             }
 
             if (isEditChapter.value) {
-                // 编辑现有本地章节
                 const updateNode = (nodes) => {
                     for (let node of nodes) {
                         if (node.chapterId === tempId) {
-                            // 仅更新变更的字段，保留原有File对象如果不为空
-                            // 如果用户没选新文件(chapterForm.video为null)，但原node有文件(node.video)，则保留node.video
-                            // 反之，如果用户选了新文件，chapterForm.video有值，newChapter.video也有值，覆盖原node.video
-
                             const mergedChapter = { ...newChapter }
 
-                            // 视频处理
-                            if (!mergedChapter.video && node.video) {
-                                mergedChapter.video = node.video // 保留原文件
+                            // 保留原视频（若用户未选择新文件）
+                            if (mergedChapter.videos.length === 0 && node.videos && node.videos.length > 0) {
+                                mergedChapter.videos = node.videos
+                                mergedChapter.video = node.video
+                            } else if (!mergedChapter.video && node.video) {
+                                mergedChapter.video = node.video
                             }
 
-                            // PDF处理
-                            if (!mergedChapter.pdf && node.pdf) {
-                                mergedChapter.pdf = node.pdf // 保留原文件
+                            // 保留原PDF（若用户未选择新文件）
+                            if (mergedChapter.pdfs.length === 0 && node.pdfs && node.pdfs.length > 0) {
+                                mergedChapter.pdfs = node.pdfs
+                                mergedChapter.pdf = node.pdf
+                            } else if (!mergedChapter.pdf && node.pdf) {
+                                mergedChapter.pdf = node.pdf
                             }
 
                             Object.assign(node, mergedChapter)
@@ -725,7 +877,6 @@ export function useCourseForm() {
                 updateNode(treeData.value)
                 ElMessage.success('已更新本地章节')
             } else {
-                // 新增本地章节
                 if (currentParent.value) {
                     if (!currentParent.value.children) currentParent.value.children = []
                     currentParent.value.children.push(newChapter)
@@ -741,51 +892,102 @@ export function useCourseForm() {
         // ========== 编辑课程模式：直接提交到后端 ==========
         chaptersLoading.value = true
         try {
-            const data = {
-                courseId: courseId.value,
-                parentId: currentParent.value?.chapterId,
-                title: chapterForm.value.title,
-                order: chapterForm.value.order
+            const userId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
+
+            // ① 先处理标记为 pendingDelete 的文件（在保存时才真正删除）
+            if (isEditChapter.value && chapterForm.value.chapterId && isEdit.value) {
+                const videoPending = chapterForm.value.existingVideos.filter(f => f.pendingDelete && !f.isLocal)
+                const pdfPending = chapterForm.value.existingPdfs.filter(f => f.pendingDelete && !f.isLocal)
+
+                for (const f of videoPending) {
+                    try {
+                        // 传递具体的 url，后端只删这一个
+                        await deleteChapterVideo(chapterForm.value.chapterId, userId, f.url)
+                        updateTreeNodeField(chapterForm.value.chapterId, 'videoUrl', null)
+                    } catch (e) { console.error('删除视频失败:', e) }
+                }
+                for (const f of pdfPending) {
+                    try {
+                        await deleteChapterPdf(chapterForm.value.chapterId, userId, f.url)
+                        updateTreeNodeField(chapterForm.value.chapterId, 'pdfUrl', null)
+                    } catch (e) { console.error('删除PDF失败:', e) }
+                }
+
+                // 删除完成后从列表移除待删元素
+                chapterForm.value.existingVideos = chapterForm.value.existingVideos.filter(f => !f.pendingDelete)
+                chapterForm.value.existingPdfs = chapterForm.value.existingPdfs.filter(f => !f.pendingDelete)
             }
 
             let response
             if (isEditChapter.value) {
-                const userId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
+                // ② 更新章节内容
+                const hasNewVids = chapterForm.value.videos && chapterForm.value.videos.length > 0
+                const hasNewPdfsNow = chapterForm.value.pdfs && chapterForm.value.pdfs.length > 0
+
                 const updateData = {
                     chapterTitle: chapterForm.value.title,
                     chapterOrder: chapterForm.value.order,
                     chapterType: chapterForm.value.type,
-                    textContent: chapterForm.value.content || ''
+                    textContent: chapterForm.value.content || '',
+                    videos: chapterForm.value.videos || [],
+                    pdfs: chapterForm.value.pdfs || []
                 }
-                response = await updateChapter(chapterForm.value.chapterId, userId, updateData)
-                const result = response
-                if (result.success || result.code === 200) {
-                    ElMessage.success('章节更新成功')
-                    addDialogVisible.value = false
-                    fetchChapters()
+
+                if (hasNewVids || hasNewPdfsNow) {
+                    response = await updateChapterWithFiles(chapterForm.value.chapterId, userId, updateData)
+                    const result = response.data || response
+                    if (result.success || result.code === 200) {
+                        ElMessage.success('章节及文件更新成功')
+                        addDialogVisible.value = false
+                        fetchChapters()
+                    } else {
+                        ElMessage.error(result.message || '更新失败')
+                    }
                 } else {
-                    ElMessage.error(result.message || '更新失败')
+                    const plainData = {
+                        chapterTitle: chapterForm.value.title,
+                        chapterOrder: chapterForm.value.order,
+                        chapterType: chapterForm.value.type,
+                        textContent: chapterForm.value.content || ''
+                    }
+                    response = await updateChapter(chapterForm.value.chapterId, userId, plainData)
+                    const result = response
+                    if (result.success || result.code === 200) {
+                        ElMessage.success('章节更新成功')
+                        addDialogVisible.value = false
+                        fetchChapters()
+                    } else {
+                        ElMessage.error(result.message || '更新失败')
+                    }
                 }
-                return
             } else {
-                switch (chapterForm.value.type) {
-                    case 'FOLDER': response = await createFolderChapter(data); break;
-                    case 'VIDEO':
-                        data.video = chapterForm.value.video;
-                        response = await createVideoChapter(data); break;
-                    case 'PDF':
-                        data.pdf = chapterForm.value.pdf;
-                        response = await createPdfChapter(data); break;
-                    case 'TEXT':
-                        data.content = chapterForm.value.content;
-                        response = await createTextChapter(data); break;
-                    case 'MIXED':
-                        data.video = chapterForm.value.video;
-                        data.pdf = chapterForm.value.pdf;
-                        data.content = chapterForm.value.content;
-                        response = await createMixedChapter(data); break;
+                // ③ 新建章节
+                const data = {
+                    courseId: courseId.value,
+                    parentId: currentParent.value?.chapterId,
+                    title: chapterForm.value.title,
+                    order: chapterForm.value.order
                 }
-                const result = response.data
+                switch (chapterForm.value.type) {
+                    case 'FOLDER': response = await createFolderChapter(data); break
+                    case 'VIDEO':
+                        data.video = chapterForm.value.videos.length > 0 ? chapterForm.value.videos[0] : chapterForm.value.video
+                        response = await createVideoChapter(data); break
+                    case 'PDF':
+                        data.pdf = chapterForm.value.pdfs.length > 0 ? chapterForm.value.pdfs[0] : chapterForm.value.pdf
+                        response = await createPdfChapter(data); break
+                    case 'TEXT':
+                        data.content = chapterForm.value.content
+                        response = await createTextChapter(data); break
+                    case 'MIXED':
+                        data.videos = chapterForm.value.videos || []
+                        data.pdfs = chapterForm.value.pdfs || []
+                        data.video = data.videos[0] || chapterForm.value.video
+                        data.pdf = data.pdfs[0] || chapterForm.value.pdf
+                        data.content = chapterForm.value.content
+                        response = await createMixedChapterMulti(data); break
+                }
+                const result = response.data || response
                 if (result.success || result.code === 200) {
                     ElMessage.success('章节创建成功')
                     addDialogVisible.value = false
@@ -795,8 +997,8 @@ export function useCourseForm() {
                 }
             }
         } catch (error) {
-            console.error('创建失败:', error)
-            ElMessage.error('创建失败: ' + (error.response?.data?.message || error.message))
+            console.error('操作失败:', error)
+            ElMessage.error('操作失败: ' + (error.response?.data?.message || error.message))
         } finally {
             chaptersLoading.value = false
         }
@@ -1053,7 +1255,14 @@ export function useCourseForm() {
         openAddDialog,
         editChapter,
         handleVideoChange,
+        handleVideoRemove,
+        removeNewVideo,
         handlePdfChange,
+        handlePdfRemove,
+        removeNewPdf,
+        removeExistingVideo,
+        removeExistingPdf,
+        formatFileSize,
         submitChapter,
         viewChapter,
         deleteChapter,

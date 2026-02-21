@@ -460,6 +460,12 @@ export function useHomeworkManagement(autoLoad = true, onSuccess = null) {
         loadHomeworks()
     }
 
+    // 设置筛选状态
+    const setFilterStatus = (status) => {
+        filterForm.status = status
+        loadHomeworks()
+    }
+
     // 显示创建对话框
     const showCreateDialog = () => {
         isEdit.value = false
@@ -777,6 +783,7 @@ export function useHomeworkManagement(autoLoad = true, onSuccess = null) {
         selectedQuestions,
         loadCourses,
         loadHomeworks,
+        setFilterStatus,
         showCreateDialog,
         handleFileChange,
         saveAsDraft,

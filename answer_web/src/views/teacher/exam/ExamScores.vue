@@ -1,61 +1,64 @@
 <template>
   <div class="exam-scores-container">
     <!-- 页面头部 -->
-    <div class="page-header">
-      <el-button @click="goBack" :icon="ArrowLeft">返回</el-button>
-      <h2>{{ exam.examTitle }} - 成绩分析</h2>
+    <div class="page-header sticky-header">
+      <div class="header-left">
+        <el-button class="back-btn" @click="router.push('/teacher/exams')" :icon="ArrowLeft" text></el-button>
+        <h2>{{ exam.examTitle }}</h2>
+      </div>
+
+      <div class="segmented-control">
+        <div class="segment" @click="viewExamDetail">试卷综合预览</div>
+        <div class="segment" @click="manageQuestions">编辑试题内容</div>
+        <div class="segment active" @click="refreshData">作答数据分析</div>
+      </div>
+
       <div class="header-actions">
-        <el-button @click="viewExamDetail">查看试题</el-button>
-        <el-button type="primary" @click="refreshData">刷新数据</el-button>
+        <el-button type="primary" class="refresh-btn" @click="refreshData" round>刷新数据</el-button>
       </div>
     </div>
 
-    <!-- 考试基本信息 -->
-    <el-card class="info-summary" v-loading="loading">
-      <el-descriptions :column="4" border size="small">
-        <el-descriptions-item label="考试名称">{{ exam.examTitle }}</el-descriptions-item>
-        <el-descriptions-item label="所属课程">{{ exam.courseName }}</el-descriptions-item>
-        <el-descriptions-item label="总分">{{ exam.totalScore }} 分</el-descriptions-item>
-        <el-descriptions-item label="及格分">{{ exam.passScore }} 分</el-descriptions-item>
-      </el-descriptions>
-    </el-card>
+    <!-- 核心指标四卡片布局 -->
+    <div class="metrics-dashboard" v-loading="loading">
+      <div class="metric-block">
+        <div class="metric-title">参考人数</div>
+        <div class="metric-value">
+          {{ statistics?.totalStudents || exam.submittedCount || 0 }}
+          <span class="metric-sub">/ {{ exam.totalStudents || 0 }}</span>
+        </div>
+      </div>
+      
+      <div class="metric-block">
+        <div class="metric-title">平均分</div>
+        <div class="metric-value text-blue">{{ statistics?.averageScore || '0' }}</div>
+      </div>
+      
+      <div class="metric-block">
+        <div class="metric-title">最高分</div>
+        <div class="metric-value text-green">{{ statistics?.maxScore || '0' }}</div>
+      </div>
+      
+      <div class="metric-block donut-block">
+        <div class="donut-info">
+           <div class="metric-title">及格率</div>
+           <div class="metric-desc">成绩 ≥ {{ exam.passScore }}</div>
+        </div>
+        <div class="donut-chart-container">
+           <el-progress type="circle" :percentage="Number(actualPassRate)" color="#2563eb" :width="70" :stroke-width="6" />
+        </div>
+      </div>
+    </div>
 
-    <!-- 成绩统计图表 -->
+    <!-- 成绩统计图表 & 备用信息 -->
     <el-row :gutter="20" style="margin-top: 20px" v-if="statistics">
-      <el-col :span="16">
-        <el-card class="statistics-card">
+      <el-col :span="24">
+        <el-card class="statistics-card glass-panel">
           <template #header>
             <div class="card-header">
               <span>考试成绩分布分析</span>
-              <el-tag type="info">共 {{ statistics.totalStudents || 0 }} 人参考</el-tag>
             </div>
           </template>
           <div ref="chartRef" style="width: 100%; height: 350px;"></div>
-        </el-card>
-      </el-col>
-      <el-col :span="8">
-        <el-card class="summary-card">
-          <template #header>
-            <span>成绩汇总</span>
-          </template>
-          <div class="summary-items">
-            <div class="summary-item">
-              <div class="label">平均分</div>
-              <div class="value">{{ statistics.averageScore || '0' }}</div>
-            </div>
-            <div class="summary-item">
-              <div class="label">最高分</div>
-              <div class="value success">{{ statistics.maxScore || '0' }}</div>
-            </div>
-            <div class="summary-item">
-              <div class="label">及格率</div>
-              <div class="value primary">{{ actualPassRate }}%</div>
-            </div>
-            <div class="summary-item">
-              <div class="label">待批改</div>
-              <div class="value warning">{{ (statistics.submittedCount || 0) - (statistics.gradedCount || 0) }}</div>
-            </div>
-          </div>
         </el-card>
       </el-col>
     </el-row>
@@ -131,21 +134,21 @@
           </template>
         </el-table-column>
       </el-table>
-      
-      <!-- 分页 -->
-      <div class="pagination-wrapper">
-        <el-pagination
-          v-model:current-page="currentPage"
-          v-model:page-size="pageSize"
-          :page-sizes="[10, 20, 50, 100]"
-          :total="filteredStudents.length"
-          layout="total, sizes, prev, pager, next, jumper"
-          background
-          @size-change="handlePageSizeChange"
-          @current-change="handlePageChange"
-        />
-      </div>
     </el-card>
+
+    <!-- 独立的分页块 - 位于列表外部底部中间 -->
+    <div class="pagination-container pagination-outside" v-if="filteredStudents.length > 0">
+      <el-pagination
+        v-model:current-page="currentPage"
+        v-model:page-size="pageSize"
+        :page-sizes="[10, 20, 50, 100]"
+        layout="total, sizes, prev, pager, next, jumper"
+        :total="filteredStudents.length"
+        @size-change="handlePageSizeChange"
+        @current-change="handlePageChange"
+        class="premium-pagination"
+      />
+    </div>
   </div>
 </template>
 
@@ -435,20 +438,34 @@ const initCharts = () => {
     { name: `优秀(${goodMax+1}-${totalScore}分)`, value: excellentCount }
   ]
 
+  const isDarkMode = document.documentElement.classList.contains('dark')
+
   const option = {
+    backgroundColor: 'transparent',
     title: {
       text: `分数等级分布 (总分${totalScore}分)`,
       left: 'center',
-      top: '10'
+      top: '10',
+      textStyle: {
+        color: isDarkMode ? '#f1f5f9' : '#1e293b'
+      }
     },
     tooltip: {
       trigger: 'item',
-      formatter: '{b}: {c}人 ({d}%)'
+      formatter: '{b}: {c}人 ({d}%)',
+      backgroundColor: isDarkMode ? '#1e293b' : 'rgba(255, 255, 255, 0.95)',
+      borderColor: isDarkMode ? '#334155' : '#e5e7eb',
+      textStyle: {
+        color: isDarkMode ? '#f1f5f9' : '#1e293b'
+      }
     },
     legend: {
       orient: 'vertical',
       left: 'left',
-      top: 'center'
+      top: 'center',
+      textStyle: {
+        color: isDarkMode ? '#94a3b8' : '#64748b'
+      }
     },
     series: [
       {
@@ -458,7 +475,7 @@ const initCharts = () => {
         avoidLabelOverlap: false,
         itemStyle: {
           borderRadius: 10,
-          borderColor: '#fff',
+          borderColor: isDarkMode ? '#1e293b' : '#fff',
           borderWidth: 2
         },
         label: {
@@ -469,7 +486,8 @@ const initCharts = () => {
           label: {
             show: true,
             fontSize: '18',
-            fontWeight: 'bold'
+            fontWeight: 'bold',
+            color: isDarkMode ? '#f1f5f9' : '#1e293b'
           }
         },
         labelLine: {
@@ -539,10 +557,15 @@ const returnStudentExam = async (studentExamId) => {
 }
 
 // 返回
-const goBack = () => router.back()
+const goBack = () => router.push('/teacher/exams')
 
 // 查看考试详情（试题）
 const viewExamDetail = () => {
+  router.push(`/teacher/exam/${route.params.id}`)
+}
+
+// 编辑考试（试题管理）
+const manageQuestions = () => {
   router.push(`/teacher/exam/${route.params.id}/questions`)
 }
 
@@ -670,213 +693,534 @@ onMounted(async () => {
   align-items: center;
 }
 
-.pagination-wrapper {
+/* 外部分页容器样式 */
+.pagination-outside {
   display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid #e4e7ed;
+  justify-content: center;
+  margin-top: 24px;
+  padding: 20px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
 }
 
+.premium-pagination {
+  --el-pagination-bg-color: #f8fafc;
+}
+
+/* ========== 高阶 SaaS 仪表盘风格 CSS ========== */
+.exam-scores-container {
+  padding: 32px;
+  max-width: 1200px;
+  margin: 0 auto;
+  min-height: calc(100vh - 60px);
+  background: #f8fafc;
+  font-family: 'Inter', -apple-system, sans-serif;
+}
+
+/* 顶部导航与分段控制器 */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(24px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  margin: -32px -32px 32px -32px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.6);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.header-left h2 {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.back-btn {
+  border-radius: 12px !important;
+  background: #f8fafc !important;
+  border: none !important;
+  color: #64748b !important;
+  width: 40px;
+  height: 40px;
+  transition: all 0.2s;
+}
+
+.back-btn:hover {
+  background: #eff6ff !important;
+  color: #2563eb !important;
+}
+
+/* Segmented Control */
+.segmented-control {
+  display: flex;
+  background: rgba(241, 245, 249, 0.8);
+  border-radius: 1rem;
+  padding: 6px;
+  gap: 4px;
+}
+
+.segmented-control .segment {
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #64748b;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.segmented-control .segment:hover {
+  color: #334155;
+}
+
+.segmented-control .segment.active {
+  background: white;
+  color: #2563eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* 4格核心指标卡片 */
+.metrics-dashboard {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.metric-block {
+  background: white;
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.metric-title {
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: #94a3b8;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.metric-value {
+  font-weight: 900;
+  font-size: 42px;
+  letter-spacing: -0.05em;
+  color: #0f172a;
+  line-height: 1;
+}
+
+.metric-sub {
+  font-size: 16px;
+  color: #94a3b8;
+  font-weight: 700;
+  letter-spacing: normal;
+}
+
+.text-blue {
+  color: #2563eb;
+}
+
+.text-green {
+  color: #10b981;
+}
+
+.donut-block {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.donut-desc {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+:deep(.el-progress-circle__track) {
+  stroke: #f1f5f9;
+}
+
+:deep(.el-progress__text) {
+  font-weight: 900 !important;
+  font-size: 16px !important;
+  color: var(--progress-text-color, #0f172a) !important;
+}
+
+/* 卡片玻璃态基础样式 */
+.glass-panel {
+  background: white;
+  border-radius: 24px;
+  border: 1px solid rgba(241, 245, 249, 0.8);
+  box-shadow: 0 20px 40px -15px rgba(0,0,0,0.05);
+  margin-bottom: 24px;
+}
+
+/* 表格样式升级 */
+.students-card {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+:deep(.el-table) {
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
+  border: 1px solid #f1f5f9;
+}
+
+:deep(.el-table th.el-table__cell) {
+  background-color: #f8fafc !important;
+  font-size: 12px;
+  font-weight: 900;
+  color: #64748b;
+  text-transform: uppercase;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+:deep(.el-table__row) {
+  transition: all 0.2s;
+}
+
+:deep(.el-table__row:hover > td.el-table__cell) {
+  background-color: rgba(239, 246, 255, 0.4) !important;
+}
+
+
 /* ========== 暗黑模式完整适配 ========== */
-.dark-theme .exam-scores-container {
+html.dark .exam-scores-container {
   background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
 }
 
-.dark-theme .page-header h2 {
+html.dark .sticky-header {
+  background: rgba(30, 41, 59, 0.7);
+  border-bottom-color: rgba(71, 85, 105, 0.6);
+}
+
+html.dark .header-left h2 {
   color: #f1f5f9;
 }
 
-.dark-theme .card-header {
+html.dark .back-btn {
+  background: #1e293b !important;
+  color: #94a3b8 !important;
+}
+
+html.dark .back-btn:hover {
+  background: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+html.dark .header-left h2 {
   color: #f1f5f9;
 }
 
-.dark-theme .summary-item .label {
+html.dark .segmented-control {
+  background: rgba(15, 23, 42, 0.8);
+}
+
+html.dark .segmented-control .segment {
+  color: #94a3b8;
+}
+
+html.dark .segmented-control .segment:hover {
+  color: #cbd5e1;
+}
+
+html.dark .segmented-control .segment.active {
+  background: #1e293b;
+  color: #60a5fa;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+html.dark .metric-block {
+  background: #1e293b;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+html.dark .metric-title {
   color: #64748b;
 }
 
-.dark-theme .summary-item .value {
+html.dark .metric-value {
   color: #f1f5f9;
 }
 
-.dark-theme .summary-item .value.success {
+html.dark .metric-sub {
+  color: #64748b;
+}
+
+/* ========== 暗黑模式完整适配 ========== */
+html.dark .exam-scores-container {
+  --progress-text-color: #ffffff;
+}
+
+html.dark .glass-panel {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 20px 40px -15px rgba(0,0,0,0.3);
+}
+
+html.dark :deep(.el-progress-circle__track) {
+  stroke: #334155;
+}
+
+html.dark :deep(.el-progress__text) {
+  color: #ffffff !important;
+}
+
+html.dark :deep(.el-progress .el-progress__text) {
+  color: #ffffff !important;
+}
+
+html.dark :deep(.el-progress) span {
+  color: #ffffff !important;
+}
+
+html.dark .card-header {
+  color: #f1f5f9;
+}
+
+html.dark .summary-item .label {
+  color: #64748b;
+}
+
+html.dark .summary-item .value {
+  color: #f1f5f9;
+}
+
+html.dark .summary-item .value.success {
   color: #34d399;
 }
 
-.dark-theme .summary-item .value.primary {
+html.dark .summary-item .value.primary {
   color: #60a5fa;
 }
 
-.dark-theme .summary-item .value.warning {
+html.dark .summary-item .value.warning {
   color: #fbbf24;
 }
 
-.dark-theme .score-fail {
+html.dark .score-fail {
   color: #f87171;
 }
 
-.dark-theme .score-pass {
+html.dark .score-pass {
   color: #34d399;
 }
 
-.dark-theme .not-available {
+html.dark .not-available {
   color: #64748b;
 }
 
-.dark-theme .pagination-wrapper {
-  border-top-color: #334155;
-}
-
 /* Element Plus 组件暗黑模式 */
-.dark-theme :deep(.el-card) {
+html.dark :deep(.el-card) {
   background: #1e293b;
   border-color: #334155;
 }
 
-.dark-theme :deep(.el-card__header) {
+html.dark :deep(.el-card__header) {
   background: #0f172a;
   border-bottom-color: #334155;
 }
 
-.dark-theme :deep(.el-descriptions__label) {
+html.dark :deep(.el-descriptions__label) {
   color: #94a3b8;
 }
 
-.dark-theme :deep(.el-descriptions__content) {
+html.dark :deep(.el-descriptions__content) {
   color: #f1f5f9;
 }
 
-.dark-theme :deep(.el-descriptions__cell) {
+html.dark :deep(.el-descriptions__cell) {
   border-color: #334155;
 }
 
-.dark-theme :deep(.el-table) {
+html.dark :deep(.el-table) {
   background-color: #1e293b;
   color: #f1f5f9;
-}
-
-.dark-theme :deep(.el-table th.el-table__cell) {
-  background-color: #0f172a;
-  color: #94a3b8;
   border-color: #334155;
 }
 
-.dark-theme :deep(.el-table td.el-table__cell) {
-  background-color: #1e293b;
-  border-color: #334155;
-  color: #f1f5f9;
+html.dark :deep(.el-table th.el-table__cell) {
+  background-color: #0f172a !important;
+  color: #94a3b8 !important;
+  border-color: #334155 !important;
 }
 
-.dark-theme :deep(.el-table tr) {
-  background-color: #1e293b;
+html.dark :deep(.el-table td.el-table__cell) {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
 }
 
-.dark-theme :deep(.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell) {
-  background-color: #0f172a;
+html.dark :deep(.el-table tr) {
+  background-color: #1e293b !important;
 }
 
-.dark-theme :deep(.el-table__body tr:hover > td.el-table__cell) {
+html.dark :deep(.el-table--striped .el-table__body tr.el-table__row--striped td.el-table__cell) {
+  background-color: #0f172a !important;
+}
+
+html.dark :deep(.el-table__body tr:hover > td.el-table__cell) {
   background-color: #334155 !important;
 }
 
-.dark-theme :deep(.el-input__wrapper) {
+html.dark :deep(.el-table__empty-block) {
+  background-color: #1e293b !important;
+}
+
+html.dark :deep(.el-table__inner-wrapper::before) {
+  display: none;
+}
+
+html.dark :deep(.el-input__wrapper) {
   background-color: #0f172a;
   border-color: #334155;
 }
 
-.dark-theme :deep(.el-input__inner) {
+html.dark :deep(.el-input__inner) {
   color: #f1f5f9;
 }
 
-.dark-theme :deep(.el-pagination) {
+html.dark :deep(.el-pagination) {
+  --el-pagination-bg-color: #1e293b;
+  --el-pagination-text-color: #94a3b8;
+  --el-pagination-button-color: #94a3b8;
+  --el-pagination-button-disabled-bg-color: #0f172a;
+  --el-pagination-hover-color: #60a5fa;
   color: #94a3b8;
 }
 
-.dark-theme :deep(.el-pagination button) {
-  background-color: #1e293b;
-  color: #94a3b8;
+html.dark :deep(.el-pagination button) {
+  background-color: #1e293b !important;
+  color: #94a3b8 !important;
 }
 
-.dark-theme :deep(.el-pagination .el-pager li) {
-  background-color: #1e293b;
-  color: #94a3b8;
-  border: 1px solid #334155;
+html.dark :deep(.el-pagination .el-pager li) {
+  background-color: #1e293b !important;
+  color: #94a3b8 !important;
+  border: 1px solid #334155 !important;
 }
 
-.dark-theme :deep(.el-pagination .el-pager li.is-active) {
-  background-color: #3b82f6;
-  color: #fff;
+html.dark :deep(.el-pagination .el-pager li.is-active) {
+  background-color: #3b82f6 !important;
+  border-color: #3b82f6 !important;
+  color: #fff !important;
 }
 
-.dark-theme :deep(.el-pagination .el-pager li:hover) {
-  color: #3b82f6;
+html.dark :deep(.el-pagination .el-pager li:hover) {
+  color: #60a5fa !important;
+  border-color: #60a5fa !important;
 }
 
-.dark-theme :deep(.el-button) {
+html.dark :deep(.el-button) {
   background-color: #1e293b;
   border-color: #334155;
   color: #f1f5f9;
 }
 
-.dark-theme :deep(.el-button:hover) {
+html.dark :deep(.el-button:hover) {
   background-color: #334155;
   border-color: #475569;
 }
 
-.dark-theme :deep(.el-button--primary) {
+html.dark :deep(.el-button--primary) {
   background-color: #3b82f6;
   border-color: #3b82f6;
   color: #fff;
 }
 
-.dark-theme :deep(.el-button--primary:hover) {
+html.dark :deep(.el-button--primary:hover) {
   background-color: #2563eb;
   border-color: #2563eb;
 }
 
-.dark-theme :deep(.el-tag) {
+html.dark :deep(.el-tag) {
   background-color: #1e293b;
   border-color: #334155;
   color: #94a3b8;
 }
 
-.dark-theme :deep(.el-tag--success) {
+html.dark :deep(.el-tag--success) {
   background-color: rgba(52, 211, 153, 0.2);
   border-color: #34d399;
   color: #34d399;
 }
 
-.dark-theme :deep(.el-tag--info) {
+html.dark :deep(.el-tag--info) {
   background-color: rgba(96, 165, 250, 0.2);
   border-color: #60a5fa;
   color: #60a5fa;
 }
 
-.dark-theme :deep(.el-tag--warning) {
+html.dark :deep(.el-tag--warning) {
   background-color: rgba(251, 191, 36, 0.2);
   border-color: #fbbf24;
   color: #fbbf24;
 }
 
-.dark-theme :deep(.el-tag--danger) {
+html.dark :deep(.el-tag--danger) {
   background-color: rgba(248, 113, 113, 0.2);
   border-color: #f87171;
   color: #f87171;
 }
 
-.dark-theme :deep(.el-select .el-input__wrapper) {
+html.dark :deep(.el-select .el-input__wrapper) {
   background-color: #0f172a;
   border-color: #334155;
 }
 
-.dark-theme :deep(.el-loading-mask) {
+html.dark :deep(.el-loading-mask) {
   background-color: rgba(15, 23, 42, 0.8);
 }
 
 /* 图表容器暗黑模式 */
-.dark-theme .statistics-card :deep(canvas),
-.dark-theme .statistics-card div[_echarts_instance_] {
+html.dark .statistics-card :deep(canvas),
+html.dark .statistics-card div[_echarts_instance_] {
   background-color: transparent !important;
+}
+
+/* 图表标题和图例暗黑模式 */
+html.dark .statistics-card {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+html.dark .students-card {
+  background: transparent !important;
+}
+
+html.dark .pagination-outside {
+  background: #1e293b;
+  border: 1px solid #334155;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+html.dark .premium-pagination {
+  --el-pagination-bg-color: #1e293b;
+}
+
+/* 搜索区域暗黑模式 */
+html.dark .search-area {
+  background: transparent;
 }
 
 </style>
