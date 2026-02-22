@@ -2,6 +2,9 @@
     padding: 20px;
     background: #fff;
     border-radius: 8px;
+    min-height: calc(100vh - 400px);
+    display: flex;
+    flex-direction: column;
 }
 
 .comment-header {
@@ -35,6 +38,7 @@
 .comment-list {
     display: flex;
     flex-direction: column;
+    flex: 1;
 }
 
 .comment-item {

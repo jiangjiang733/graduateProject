@@ -14,7 +14,7 @@ export function useCourseList() {
     const loading = ref(false)
     const searchQuery = ref('')
     const currentPage = ref(1)
-    const pageSize = ref(12)
+    const pageSize = ref(6)
     const total = ref(0)
 
     // 筛选条件

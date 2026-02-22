@@ -16,17 +16,16 @@ public interface CourseMapper extends BaseMapper<Course> {
             "t.teacher_username as teacher_name, " +
             "t.teacher_head as teacher_avatar " +
             "FROM course c " +
-            "LEFT JOIN teacher_user t ON c.teacher_id = CAST(t.teacher_id AS CHAR)")
+            "LEFT JOIN teacher_user t ON CAST(c.teacher_id AS UNSIGNED) = t.teacher_id")
     List<Course> selectAllWithTeacherInfo();
 
     /**
      * 根据教师ID查询课程（关联教师信息）
      */
-    @Select("SELECT c.*, " +
-            "t.teacher_username as teacher_name, " +
+    @Select("SELECTt.teacher_username as teacher_name, c.*, " +
             "t.teacher_head as teacher_avatar " +
             "FROM course c " +
-            "LEFT JOIN teacher_user t ON c.teacher_id = CAST(t.teacher_id AS CHAR) " +
+            "LEFT JOIN teacher_user t ON CAST(c.teacher_id AS UNSIGNED) = t.teacher_id " +
             "WHERE c.teacher_id = #{teacherId}")
     List<Course> selectByTeacherIdWithInfo(@Param("teacherId") String teacherId);
 
@@ -37,7 +36,7 @@ public interface CourseMapper extends BaseMapper<Course> {
             "t.teacher_username as teacher_name, " +
             "t.teacher_head as teacher_avatar " +
             "FROM course c " +
-            "LEFT JOIN teacher_user t ON c.teacher_id = CAST(t.teacher_id AS CHAR) " +
+            "LEFT JOIN teacher_user t ON CAST(c.teacher_id AS UNSIGNED) = t.teacher_id " +
             "WHERE c.id = #{courseId}")
     Course selectByIdWithTeacherInfo(@Param("courseId") String courseId);
 }

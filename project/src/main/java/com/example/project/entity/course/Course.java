@@ -31,8 +31,8 @@ public class Course implements Serializable {
 
     private String teacherId;
 
-    // 教师用户名（可能来自数据库teacher_name字段或关联查询）
-    @TableField(value = "teacher_name")
+    // 教师用户名 - 通过关联查询获取，不映射到数据库列
+    @TableField(exist = false)
     private String teacherName;
 
     // 创建人用户名，如果数据库没有此列，使用teacherName

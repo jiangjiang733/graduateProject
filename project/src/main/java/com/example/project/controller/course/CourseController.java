@@ -230,27 +230,37 @@ public class CourseController {
         Map<String, Object> response = new HashMap<>();
 
         try {
-            QueryWrapper<Course> wrapper = new QueryWrapper<>();
+            // 使用关联查询获取课程及教师信息
+            List<Course> courses = courseMapper.selectAllWithTeacherInfo();
 
             // 筛选类型
             if ("MY".equals(searchDTO.getFilterType()) && searchDTO.getTeacherId() != null) {
-                wrapper.eq("teacher_id", searchDTO.getTeacherId());
+                courses = courses.stream()
+                        .filter(c -> searchDTO.getTeacherId().equals(c.getTeacherId()))
+                        .toList();
             }
 
-            // 关键词搜索（使用数据库实际列名）
+            // 关键词搜索
             if (searchDTO.getKeyword() != null && !searchDTO.getKeyword().isEmpty()) {
-                wrapper.and(w -> w
-                        .like("name", searchDTO.getKeyword())
-                        .or()
-                        .like("course_code", searchDTO.getKeyword()));
+                String keyword = searchDTO.getKeyword().toLowerCase();
+                courses = courses.stream()
+                        .filter(c -> (c.getCourseName() != null && c.getCourseName().toLowerCase().contains(keyword))
+                                || (c.getCourseCode() != null && c.getCourseCode().toLowerCase().contains(keyword)))
+                        .toList();
             }
 
-            wrapper.eq("state", 1).orderByDesc("create_time");
-
-            List<Course> courses = courseMapper.selectList(wrapper);
+            // 只显示公开课程并按创建时间排序
+            final List<Course> finalCourses = courses.stream()
+                    .filter(c -> c.getState() != null && c.getState() == 1)
+                    .sorted((a, b) -> {
+                        if (a.getCreateTime() == null) return 1;
+                        if (b.getCreateTime() == null) return -1;
+                        return b.getCreateTime().compareTo(a.getCreateTime());
+                    })
+                    .toList();
 
             response.put("success", true);
-            response.put("data", courses);
+            response.put("data", finalCourses);
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {

@@ -191,9 +191,13 @@ html.dark .rich-text-content {
 .content-wrapper {
     background: #fff;
     border-radius: 20px;
-    padding: 40px;
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
     border: 1px solid #f1f5f9;
+    min-height: calc(100vh - 400px);
+}
+
+.content-wrapper > :deep(.el-tabs) {
+    padding: 40px;
 }
 
 /* Tabs 优化 */
