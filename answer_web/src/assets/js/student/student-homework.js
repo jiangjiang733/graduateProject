@@ -54,12 +54,12 @@ export function useStudentHomework() {
     }
 
     const getStatusType = (status) => {
-        const map = { 0: 'info', 1: 'warning', 2: 'success' }
+        const map = { 0: 'info', 1: 'warning', 2: 'success', 3: 'danger' }
         return map[status] || 'info'
     }
 
     const getStatusText = (status) => {
-        const map = { 0: '待提交', 1: '待批改', 2: '已批改' }
+        const map = { 0: '待提交', 1: '待批改', 2: '已完成', 3: '被退回' }
         return map[status] || '待提交'
     }
 

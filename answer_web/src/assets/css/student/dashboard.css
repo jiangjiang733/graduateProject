@@ -330,17 +330,32 @@ html.dark .welcome-header {
 }
 
 .action-icon {
-    width: 50px;
-    height: 50px;
-    background: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(4px);
-    border-radius: 12px;
+    width: 52px;
+    height: 52px;
+    background: rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 14px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    font-size: 26px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.quick-action:hover .action-icon {
+    transform: scale(1.05);
+    background: rgba(255, 255, 255, 0.6);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.06);
+}
+
+html.dark .action-icon {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff !important;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: none;
 }
 
 .quick-action span {

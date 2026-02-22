@@ -39,11 +39,6 @@ public class QuestionBank implements Serializable {
     private String type;
 
     /**
-     * 难度等级(1-简单, 2-中等, 3-困难)
-     */
-    private Integer difficulty;
-
-    /**
      * 题目题干内容
      */
     private String content;

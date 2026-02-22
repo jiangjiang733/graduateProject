@@ -46,6 +46,9 @@ public class ExamServiceImpl implements ExamService {
     @Autowired
     private com.example.project.mapper.StudentUserMapper studentUserMapper;
 
+    @Autowired
+    private com.example.project.service.notification.MessageService messageService;
+
     @Override
     @Transactional
     public Long createExam(ExamCreateDTO examDTO) {
@@ -389,32 +392,57 @@ public class ExamServiceImpl implements ExamService {
             return new ArrayList<>();
         }
 
-        // 1. 获取所有已选该课程并审核通过的学生
+        // 1. 从 CourseEnrollment 获取审核通过的学生
         QueryWrapper<com.example.project.entity.enrollment.CourseEnrollment> enrollmentWrapper = new QueryWrapper<>();
         enrollmentWrapper.eq("course_id", exam.getCourseId());
         enrollmentWrapper.eq("status", "approved");
         List<com.example.project.entity.enrollment.CourseEnrollment> enrollments = courseEnrollmentMapper
                 .selectList(enrollmentWrapper);
 
-        // 2. 获取现有的考试记录
+        // 使用 Set 去重，避免重复的学生ID
+        java.util.Set<String> studentIdSet = new java.util.LinkedHashSet<>();
+        for (com.example.project.entity.enrollment.CourseEnrollment e : enrollments) {
+            if (e.getStudentId() != null)
+                studentIdSet.add(e.getStudentId());
+        }
+
+        // 2. 也从 StudentCourse 获取直接加入的学生 (status=1)
+        QueryWrapper<StudentCourse> scWrapper = new QueryWrapper<>();
+        scWrapper.eq("course_id", exam.getCourseId());
+        scWrapper.eq("status", 1);
+        List<StudentCourse> studentCourses = studentCourseMapper.selectList(scWrapper);
+        for (StudentCourse sc : studentCourses) {
+            if (sc.getStudentId() != null) {
+                studentIdSet.add(String.valueOf(sc.getStudentId()));
+            }
+        }
+
+        // 3. 获取现有的考试记录
         QueryWrapper<StudentExam> wrapper = new QueryWrapper<>();
         wrapper.eq("exam_id", examId);
         List<StudentExam> studentExams = studentExamMapper.selectList(wrapper);
         Map<String, StudentExam> examMap = studentExams.stream()
                 .collect(Collectors.toMap(StudentExam::getStudentId, se -> se, (v1, v2) -> v1));
 
-        // 3. 合并信息
-        return enrollments.stream().map(enrollment -> {
-            String studentId = enrollment.getStudentId();
+        // 4. 合并信息
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (String studentId : studentIdSet) {
             Map<String, Object> map = new HashMap<>();
             map.put("studentId", studentId);
 
-            // 获取学生姓名
+            // 获取学生信息（用户名 + 头像）
             try {
                 com.example.project.entity.Student student = studentUserMapper.selectById(Integer.parseInt(studentId));
-                map.put("studentName", student != null ? student.getStudentsUsername() : "未知学生");
+                if (student != null) {
+                    map.put("studentName", student.getStudentsUsername());
+                    map.put("studentAvatar", student.getStudentsHead());
+                } else {
+                    map.put("studentName", "学生" + studentId);
+                    map.put("studentAvatar", null);
+                }
             } catch (Exception e) {
                 map.put("studentName", "学生" + studentId);
+                map.put("studentAvatar", null);
             }
 
             StudentExam se = examMap.get(studentId);
@@ -430,8 +458,9 @@ public class ExamServiceImpl implements ExamService {
                 map.put("submitTime", null);
             }
 
-            return map;
-        }).collect(Collectors.toList());
+            result.add(map);
+        }
+        return result;
     }
 
     @Override
@@ -594,6 +623,22 @@ public class ExamServiceImpl implements ExamService {
 
         if (hasSubjective) {
             studentExam.setStatus(2);
+            // SEND NOTIFICATION TO TEACHER
+            try {
+                String teacherId = exam.getTeacherId();
+                if (teacherId != null && !teacherId.isEmpty()) {
+                    String title = "需要手动批改试卷";
+                    String content = "您发布的考试《" + exam.getExamTitle() + "》有学生提交了答卷，包含了简答题等主观题，需要您前往系统进行手动批改。学生ID: "
+                            + studentId;
+                    messageService.sendMessage(
+                            "SYSTEM", "SYSTEM",
+                            teacherId, "TEACHER",
+                            "SYSTEM_NOTIFICATION",
+                            title, content, String.valueOf(studentExam.getStudentExamId()));
+                }
+            } catch (Exception e) {
+                System.err.println("发送答卷批改通知失败: " + e.getMessage());
+            }
         } else {
             studentExam.setStatus(3); // 自动批改完成
         }

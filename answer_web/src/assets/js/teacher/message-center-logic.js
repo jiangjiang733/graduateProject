@@ -1,6 +1,6 @@
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
 import { getMessageList, markAsRead, getUnreadCount, deleteMessage } from '@/api/message.js'
 import { getTeacherNotifications } from '@/api/notification.js'
 import {
@@ -9,12 +9,15 @@ import {
 } from '@/api/chat'
 import { addComment, deleteComment } from '@/api/comment'
 import { useUserInfo } from '@/stores/user'
+import { useTeacherStore } from '@/stores/teacher.js'
 import { getProfile } from '@/api/student.js'
+import { useEnrollmentManagement } from '@/assets/js/teacher/enrollment-management.js'
 
 const DEFAULT_AVATAR = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
 
 export function useMessageCenter() {
     const userStore = useUserInfo()
+    const teacherStore = useTeacherStore()
     const router = useRouter()
 
     const activeTab = ref('chat')
@@ -32,6 +35,52 @@ export function useMessageCenter() {
     const interactionList = ref([])
     const chatUnreadTotal = ref(0)
     const interactionUnread = ref(0)
+
+    const commentUnreadTotal = computed(() => {
+        return interactionList.value.filter(i => i.type === 'COMMENT' && !i.isRead).length
+    })
+    const systemUnreadTotal = computed(() => {
+        return interactionList.value.filter(i => i.type === 'SYSTEM' && !i.isRead).length
+    })
+
+    // Enrollment logic integration
+    const {
+        loading: enrollmentLoading,
+        courses,
+        enrollments,
+        selectedCourseId,
+        currentStatus,
+        statistics,
+        paginatedEnrollments,
+        loadEnrollments,
+        handleApprove,
+        handleReject,
+        getStatusType,
+        getStatusText,
+        formatTimeAgo,
+        getStudentAvatar,
+        inviteDialogVisible,
+        handleRemoveStudent,
+        loadCourses: loadEnrollmentCourses,
+        inviteForm,
+        inviteRules,
+        inviteFormRef,
+        inviteSubmitting,
+        submitInvite,
+        rejectDialogVisible,
+        rejectForm,
+        rejectRules,
+        rejectFormRef,
+        submitting,
+        submitReject,
+        currentEnrollment,
+        currentPage,
+        pageSize,
+        filteredEnrollments,
+        handlePageChange,
+        handleSizeChange,
+        searchKeyword: enrollmentSearchKeyword
+    } = useEnrollmentManagement()
 
     // Computed
     const filteredUserList = computed(() => {
@@ -54,11 +103,19 @@ export function useMessageCenter() {
         // 2. 如果是评论模式，再根据子Tab过滤
         if (activeInteractionType.value === 'comment') {
             if (commentSubTab.value === 'discussion') {
-                // 过滤"新课程讨论"：通常依据标题判断
-                return list.filter(item => item.actionText && item.actionText.includes('新课程讨论'))
+                // 过滤"新课程讨论"：依据标题判断或显示所有课程讨论类型
+                return list.filter(item => {
+                    if (!item.actionText) return false
+                    return item.actionText.includes('新课程讨论') || 
+                           item.actionText.includes('讨论') ||
+                           item.type === 'COMMENT'
+                })
             } else {
-                // 过滤"收到的回复"
-                return list.filter(item => !item.actionText || !item.actionText.includes('新课程讨论'))
+                // 过滤"收到的回复" - 回复消息
+                return list.filter(item => {
+                    if (!item.actionText) return true
+                    return !item.actionText.includes('新课程讨论')
+                })
             }
         }
 
@@ -75,6 +132,10 @@ export function useMessageCenter() {
     // Methods
     const loadContacts = async (showLoading = true) => {
         if (showLoading) loadingContacts.value = true
+        
+        // 保存当前选中用户引用
+        const savedCurrentUserId = currentChatUser.value?.contactId
+        
         try {
             const teacherId = userStore.userId
             const teacherType = 'TEACHER'
@@ -85,22 +146,54 @@ export function useMessageCenter() {
                 const activeContacts = activeRes.data || []
                 const chatSummaries = chatRes.code === 200 ? chatRes.data : []
 
-                userList.value = activeContacts.map(ac => {
-                    const summary = chatSummaries.find(cs => cs.contactId === ac.contactId)
+                const newList = activeContacts.map(ac => {
+                    const targetId = ac.contactId || ac.userId || ac.id
+                    const summary = chatSummaries.find(cs =>
+                        (cs.contactId == targetId) ||
+                        (cs.userId == targetId) ||
+                        (cs.id == targetId)
+                    )
                     return {
                         ...ac,
-                        lastMessage: summary?.lastMessage || '',
-                        lastTime: summary?.lastTime || null,
-                        unreadCount: summary?.unreadCount || 0
+                        contactId: targetId,
+                        lastMessage: summary?.lastMessage || ac.lastMessage || '',
+                        lastTime: summary?.lastTime || ac.lastTime || null,
+                        unreadCount: summary?.unreadCount || ac.unreadCount || 0
                     }
                 })
 
-                userList.value.sort((a, b) => {
+                // 核心逻辑：精准未读定位，静默处理活跃窗口
+                newList.forEach(newUser => {
+                    const isCurrent = currentChatUser.value && (currentChatUser.value.contactId == newUser.contactId)
+
+                    if (isCurrent && activeTab.value === 'chat') {
+                        // 活跃聊天窗口中，强制隐藏红点
+                        newUser.unreadCount = 0
+                    }
+                })
+
+                newList.sort((a, b) => {
                     if (!a.lastTime && !b.lastTime) return 0
                     if (!a.lastTime) return 1
                     if (!b.lastTime) return -1
                     return new Date(b.lastTime) - new Date(a.lastTime)
                 })
+
+                userList.value = newList
+                
+                // 恢复当前选中用户引用
+                if (savedCurrentUserId && !currentChatUser.value) {
+                    const found = newList.find(u => u.contactId === savedCurrentUserId)
+                    if (found) {
+                        currentChatUser.value = found
+                    }
+                } else if (currentChatUser.value) {
+                    // 更新当前聊天用户的数据
+                    const found = newList.find(u => u.contactId === currentChatUser.value.contactId)
+                    if (found) {
+                        currentChatUser.value = found
+                    }
+                }
             }
             await updateUnreadCounts()
         } catch (e) { console.error(e) } finally { loadingContacts.value = false }
@@ -110,12 +203,23 @@ export function useMessageCenter() {
         try {
             const teacherId = userStore.userId
             const teacherType = 'TEACHER'
+            let totalUnread = 0
+
             const chatRes = await getChatUnreadCount(teacherType.toLowerCase(), teacherId)
-            if (chatRes.code === 200) chatUnreadTotal.value = chatRes.data
+            if (chatRes.code === 200) {
+                chatUnreadTotal.value = chatRes.data
+                totalUnread += chatRes.data
+            }
 
             const sysRes = await getUnreadCount(teacherId, teacherType)
-            if (sysRes.code === 200) interactionUnread.value = sysRes.data.unreadCount
-        } catch (e) { }
+            if (sysRes.code === 200) {
+                interactionUnread.value = sysRes.data.unreadCount
+                totalUnread += sysRes.data.unreadCount
+            }
+
+            // 实时更新全局未读数
+            teacherStore.setUnreadCount(totalUnread)
+        } catch (e) { console.error('更新未读数失败:', e) }
     }
 
     const loadInteractions = async (showLoading = true) => {
@@ -196,7 +300,6 @@ export function useMessageCenter() {
             // 3. 排序：按时间倒序
             combinedList.sort((a, b) => new Date(b.time) - new Date(a.time))
             interactionList.value = combinedList
-
         } catch (e) {
             console.error('加载消息失败:', e)
         } finally {
@@ -280,46 +383,7 @@ export function useMessageCenter() {
         return sId === tId && (msg.senderType === 'TEACHER' || msg.senderRole === 'TEACHER')
     }
 
-    const handleInteractionDetail = async (item) => {
-        // 1. 标记已读
-        if (!item.isRead) {
-            try {
-                await markAsRead(item.id, userStore.userId, 'TEACHER')
-                item.isRead = true
-                updateUnreadCounts()
-            } catch (e) { }
-        }
-
-        // 如果是课程评论，跳转到课程详情页的评论部分
-        if (item.courseId && (item.type === 'COMMENT' || item.type === 'INTERACTION')) {
-            router.push({
-                path: `/teacher/course/detail/${item.courseId}`,
-                query: {
-                    tab: 'comments', // 对应 el-tab-pane 的 name
-                    commentId: item.relatedId
-                }
-            })
-            return
-        }
-
-        // 2. 如果是其它类型，或者没有relatedId，尝试跳转到私信
-        if (item.senderId) {
-            const student = userList.value.find(u => String(u.contactId) === String(item.senderId))
-            if (student) {
-                activeTab.value = 'chat'
-                selectChatUser(student)
-            } else {
-                ElMessage.info('正在为您打开对话框...')
-                activeTab.value = 'chat'
-                selectChatUser({
-                    contactId: item.senderId,
-                    contactName: item.userName,
-                    contactAvatar: item.userAvatar,
-                    contactType: 'STUDENT'
-                })
-            }
-        }
-    }
+    // 移除未使用的 handleInteractionDetail 函数以精简代码
 
     const toggleQuickReply = async (item) => {
         item.showReply = !item.showReply
@@ -389,6 +453,8 @@ export function useMessageCenter() {
                     ElMessage.error(res.message || '回复失败')
                 }
             }
+            // 实时更新页面内容，无需等待定时器
+            loadInteractions(false)
         } catch (error) {
             console.error(error)
             ElMessage.error('发送失败')
@@ -398,9 +464,11 @@ export function useMessageCenter() {
     // 删除通知消息
     const handleDeleteMessage = async (item) => {
         try {
+            const isComment = item.type === 'COMMENT'
+
             // 确认删除通知
             await ElMessageBox.confirm(
-                '确定要删除这条通知消息吗？',
+                isComment ? '确定要删除这条评论吗？' : '确定要删除这条通知消息吗？',
                 '删除确认',
                 {
                     confirmButtonText: '确定',
@@ -409,7 +477,21 @@ export function useMessageCenter() {
                 }
             )
 
-            const res = await deleteMessage(item.id, userStore.userId, 'TEACHER')
+            let res;
+            if (isComment) {
+                // 如果是评论类型，除了需要删除实际评论，自身对应的通知也要彻底物理删除
+                if (item.relatedId) {
+                    try {
+                        await deleteComment(item.relatedId)
+                    } catch (ignoredError) {
+                        // 即使评论早被删除了，依然要删掉当前的这一条通知
+                    }
+                }
+            }
+
+            // 执行所有类型消息的通知物理删除
+            res = await deleteMessage(item.id, userStore.userId, 'TEACHER')
+
             if (res.code === 200) {
                 ElMessage.success('删除成功')
                 // 从列表中移除该项
@@ -472,6 +554,14 @@ export function useMessageCenter() {
             date.getDate().toString().padStart(2, '0')
     }
 
+    const getSaasStatusClass = (status) => {
+        const s = String(status).toLowerCase()
+        if (s === 'pending') return 'badge-pending'
+        if (s === 'approved' || s === 'success') return 'badge-approved'
+        if (s === 'rejected' || s === 'fail') return 'badge-rejected'
+        return 'badge-default'
+    }
+
     const getAvatarUrl = (path) => {
         const defaultAvatar = 'https://cube.elemecdn.com/3/7c/3ea6beec64369c2642b92c6726f1epng.png'
         if (!path) return defaultAvatar
@@ -492,18 +582,30 @@ export function useMessageCenter() {
                 user2Type: currentChatUser.value.contactType || 'STUDENT'
             })
             if (res.code === 200 && res.data) {
-                // 如果有新消息才更新
-                if (Array.isArray(res.data) && res.data.length > currentMessages.value.length) {
-                    currentMessages.value = res.data
+                const newMessagesList = res.data
+                const currentLen = currentMessages.value.length
+
+                // 检查是否有实质性的新消息
+                const hasNew = newMessagesList.length > currentLen ||
+                    (currentLen > 0 && newMessagesList.length > 0 &&
+                        newMessagesList[newMessagesList.length - 1].createTime > currentMessages.value[currentLen - 1].createTime)
+
+                if (hasNew) {
+                    currentMessages.value = newMessagesList
                     scrollToBottom()
-                } else if (Array.isArray(res.data)) {
-                    // 检查最后一条消息是否不同
-                    const hasNewMessage = currentMessages.value.length > 0 &&
-                        res.data.length > 0 &&
-                        res.data[res.data.length - 1].createTime > currentMessages.value[currentMessages.value.length - 1].createTime
-                    if (hasNewMessage) {
-                        currentMessages.value = res.data
-                        scrollToBottom()
+
+                    // 核心逻辑：如果在聊天窗口且收到新消息，立即标记已读
+                    if (activeTab.value === 'chat') {
+                        try {
+                            await markChatRead({
+                                currentUserId: userStore.userId,
+                                currentUserType: 'TEACHER',
+                                senderId: currentChatUser.value.contactId,
+                                senderType: currentChatUser.value.contactType || 'STUDENT'
+                            })
+                            // 标记成功后更新一下全局计数
+                            updateUnreadCounts()
+                        } catch (e) { /* silent fail */ }
                     }
                 }
             }
@@ -518,6 +620,8 @@ export function useMessageCenter() {
         userStore.initUserInfo()
         loadContacts()
         loadInteractions()
+        loadEnrollmentCourses()
+        loadEnrollments()
         timer = setInterval(() => {
             updateUnreadCounts()
 
@@ -525,13 +629,23 @@ export function useMessageCenter() {
             loadContacts(false)
 
             // 2. 刷新互动通知 (不显示 loading)
+            // 保存当前选中用户，避免刷新后丢失
+            const savedChatUser = currentChatUser.value
             loadInteractions(false)
+            
+            // 恢复选中用户
+            if (savedChatUser && activeTab.value === 'chat') {
+                const found = userList.value.find(u => u.contactId === savedChatUser.contactId)
+                if (found && !currentChatUser.value) {
+                    currentChatUser.value = found
+                }
+            }
 
             // 3. 如果在聊天窗口，刷新历史
             if (currentChatUser.value && activeTab.value === 'chat') {
                 refreshChatHistory()
             }
-        }, 3000)
+        }, 5000)
     }
 
     const cleanupMessageCenter = () => {
@@ -558,6 +672,8 @@ export function useMessageCenter() {
         interactionList,
         chatUnreadTotal,
         interactionUnread,
+        commentUnreadTotal,
+        systemUnreadTotal,
 
         // Computed
         filteredUserList,
@@ -572,7 +688,6 @@ export function useMessageCenter() {
         selectChatUser,
         handleSendMessage,
         isMyMessage,
-        handleInteractionDetail,
         toggleQuickReply,
         handleQuickReply,
         handleDeleteMessage,
@@ -580,9 +695,48 @@ export function useMessageCenter() {
         scrollToBottom,
         formatTime,
         formatDetailedTime,
+        getSaasStatusClass,
         getAvatarUrl,
         refreshChatHistory,
         initMessageCenter,
-        cleanupMessageCenter
+        cleanupMessageCenter,
+
+        // Enrollment Exports
+        loading: enrollmentLoading,
+        courses,
+        enrollments,
+        selectedCourseId,
+        currentStatus,
+        statistics,
+        paginatedEnrollments,
+        loadEnrollments,
+        handleApprove,
+        handleReject,
+        getStatusType,
+        getStatusText,
+        formatTimeAgo,
+        getStudentAvatar,
+        inviteDialogVisible,
+        handleRemoveStudent,
+
+        // Dialog state and methods
+        inviteForm,
+        inviteRules,
+        inviteFormRef,
+        inviteSubmitting,
+        submitInvite,
+        rejectDialogVisible,
+        rejectForm,
+        rejectRules,
+        rejectFormRef,
+        submitting,
+        submitReject,
+        currentEnrollment,
+        currentPage,
+        pageSize,
+        filteredEnrollments,
+        handlePageChange,
+        handleSizeChange,
+        enrollmentSearchKeyword
     }
 }

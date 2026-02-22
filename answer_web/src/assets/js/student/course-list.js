@@ -1,7 +1,8 @@
 import { ref, onMounted, reactive, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getStudentJoinedCourses } from '@/api/course.js'
+import { searchCourses, getStudentJoinedCourses } from '@/api/course.js'
+import { applyEnrollment } from '@/api/enrollment.js'
 
 export function useCourseList() {
     const router = useRouter()
@@ -9,7 +10,7 @@ export function useCourseList() {
 
     // 状态
     const courses = ref([])
-    const allJoinedCourses = ref([]) // 存储从后端获取的所有已加入课程，用于提取分类
+    const allJoinedCourses = ref([]) // 存储从后端获取的所有课程，用于提取分类
     const loading = ref(false)
     const searchQuery = ref('')
     const currentPage = ref(1)
@@ -34,11 +35,11 @@ export function useCourseList() {
     ])
 
     const sortOptions = [
-        { label: '最近学习', value: 'newest' },
+        { label: '最新发布', value: 'newest' },
         { label: '课程名称', value: 'name' }
     ]
 
-    // 方法：加载已加入的课程
+    // 方法：加载所有发布的课程
     const loadCourses = async () => {
         const studentId = localStorage.getItem('s_id') || localStorage.getItem('studentId') || localStorage.getItem('userId')
         if (!studentId) {
@@ -49,39 +50,48 @@ export function useCourseList() {
 
         loading.value = true
         try {
-            const response = await getStudentJoinedCourses(studentId)
+            // 并行获取：全部课程 + 已加入课程
+            const [allRes, joinedRes] = await Promise.all([
+                searchCourses({ filterType: 'ALL' }),
+                getStudentJoinedCourses(studentId).catch(() => ({ data: [] }))
+            ])
 
-            if (response.success && response.data) {
-                const rawCourses = Array.isArray(response.data) ? response.data : []
+            // 构建已加入课程ID集合
+            const joinedIds = new Set()
+            const rawJoined = Array.isArray(joinedRes) ? joinedRes
+                : (Array.isArray(joinedRes?.data) ? joinedRes.data : [])
+            rawJoined.forEach(c => {
+                const cid = c.courseId || c.course_id || c.id
+                if (cid) joinedIds.add(String(cid))
+            })
 
-                // 转换数据格式，确保字段一致，兼容后端 Map 可能返回的 snake_case 键
+            if (allRes.success && allRes.data) {
+                const rawCourses = Array.isArray(allRes.data) ? allRes.data : []
+
                 allJoinedCourses.value = rawCourses.map(item => {
-                    // 优先获取真实的课程ID（长字符串），而不是选课关联表的自增ID
-                    const cId = item.courseId || item.course_id || item.id;
+                    const cId = item.courseId || item.course_id || item.id
+                    const isJoined = joinedIds.has(String(cId))
                     return {
                         id: cId,
                         courseName: item.courseName || item.course_name || item.name,
                         image: item.courseImage || item.course_image || item.image,
                         teacherName: item.teacherName || item.teacher_name,
                         teacherAvatar: item.teacherAvatar || item.teacher_avatar,
+                        teacherId: item.teacherId || item.teacher_id,
                         major: item.major || '通用',
                         classification: item.classification || '专业课',
                         progress: item.progress || 0,
                         lastStudyTime: item.updateTime || item.update_time || item.createTime || item.create_time,
-                        enrollmentStatus: 'approved'
+                        isJoined,
+                        enrollmentStatus: isJoined ? 'approved' : null
                     }
                 })
-                // 1. 动态提取专业分类
                 extractMajors()
-
-                // 2. 动态提取课程类型
                 extractClassifications()
-
-                // 执行过滤和分页
                 applyFilters()
             }
         } catch (error) {
-            console.error('获取已加入课程失败:', error)
+            console.error('获取课程失败:', error)
             ElMessage.error('加载课程列表失败')
         } finally {
             loading.value = false
@@ -175,6 +185,33 @@ export function useCourseList() {
         router.push(`/student/learn/${courseId}`)
     }
 
+    // 申请加入课程
+    const applyToCourse = async (course) => {
+        const studentId = localStorage.getItem('s_id') || localStorage.getItem('studentId')
+        const studentName = localStorage.getItem('studentName') || ''
+        const studentEmail = localStorage.getItem('studentEmail') || ''
+        try {
+            const res = await applyEnrollment({
+                studentId,
+                studentName,
+                studentEmail,
+                courseId: course.id,
+                courseName: course.courseName,
+                teacherId: course.teacherId || ''
+            })
+            if (res.success || res.code === 200) {
+                ElMessage.success('申请已提交，请等待教师审核')
+                // 更新本地状态
+                course.enrollmentStatus = 'pending'
+            } else {
+                ElMessage.error(res.message || '申请失败')
+            }
+        } catch (e) {
+            console.error(e)
+            ElMessage.error('申请失败，请重试')
+        }
+    }
+
     // 获取课程图片
     const getCourseImage = (image) => {
         if (!image) return 'https://via.placeholder.com/300x200?text=Course'
@@ -223,6 +260,7 @@ export function useCourseList() {
         handlePageChange,
         goToCourseDetail,
         goToLearn,
+        applyToCourse,
         getCourseImage,
         getTeacherAvatar,
         formatDate

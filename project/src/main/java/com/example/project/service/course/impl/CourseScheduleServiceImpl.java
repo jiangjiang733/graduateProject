@@ -71,8 +71,7 @@ public class CourseScheduleServiceImpl implements CourseScheduleService {
                 schedule.getStartSection(),
                 schedule.getEndSection(),
                 schedule.getStartWeek(),
-                schedule.getEndWeek()
-        );
+                schedule.getEndWeek());
 
         // 过滤掉自己
         conflicts.removeIf(s -> s.getScheduleId().equals(schedule.getScheduleId()));
@@ -94,10 +93,8 @@ public class CourseScheduleServiceImpl implements CourseScheduleService {
             throw new IllegalArgumentException("课程时间不存在");
         }
 
-        // 软删除
-        schedule.setStatus(0);
-        schedule.setUpdateTime(LocalDateTime.now());
-        scheduleMapper.updateById(schedule);
+        // 物理删除
+        scheduleMapper.deleteById(scheduleId);
     }
 
     @Override
@@ -105,7 +102,7 @@ public class CourseScheduleServiceImpl implements CourseScheduleService {
         System.out.println("Service: 查询学生课程表");
         System.out.println("  学生ID: " + studentId);
         System.out.println("  周数: " + week);
-        
+
         // 获取学生的课程表
         List<CourseSchedule> schedules = scheduleMapper.findStudentSchedule(studentId, week);
         System.out.println("  查询到 " + schedules.size() + " 条课程时间记录");
@@ -114,17 +111,17 @@ public class CourseScheduleServiceImpl implements CourseScheduleService {
         Map<Integer, Map<Integer, Map<String, Object>>> scheduleMap = new HashMap<>();
 
         for (CourseSchedule schedule : schedules) {
-            System.out.println("  处理课程: " + schedule.getCourseId() + 
-                             ", 星期" + schedule.getDayOfWeek() + 
-                             ", 第" + schedule.getStartSection() + "-" + schedule.getEndSection() + "节");
-            
+            System.out.println("  处理课程: " + schedule.getCourseId() +
+                    ", 星期" + schedule.getDayOfWeek() +
+                    ", 第" + schedule.getStartSection() + "-" + schedule.getEndSection() + "节");
+
             // 获取课程信息
             Course course = courseMapper.selectById(schedule.getCourseId());
             if (course == null) {
                 System.out.println("    警告: 课程不存在，跳过");
                 continue;
             }
-            
+
             System.out.println("    课程名称: " + course.getCourseName());
 
             // 为每个节次创建课程信息
@@ -147,8 +144,7 @@ public class CourseScheduleServiceImpl implements CourseScheduleService {
                 schedule.getStartSection(),
                 schedule.getEndSection(),
                 schedule.getStartWeek(),
-                schedule.getEndWeek()
-        );
+                schedule.getEndWeek());
         return !conflicts.isEmpty();
     }
 

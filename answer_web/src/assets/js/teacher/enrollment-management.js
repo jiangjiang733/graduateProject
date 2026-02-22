@@ -389,6 +389,7 @@ export function useEnrollmentManagement() {
         submitInvite,
         handleRemoveStudent,
         getStudentAvatar,
-        getStudentInitial
+        getStudentInitial,
+        loadCourses
     }
 }

@@ -2,7 +2,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getCourseList } from '@/api/course.js'
-import { getQuestionList } from '@/api/question.js'
+import { getQuestionList, createQuestion } from '@/api/question.js'
 import { generateQuestionsWithAi } from '@/api/exam.js'
 import {
     getCourseLabReportList,
@@ -151,9 +151,22 @@ export function useHomeworkManagement(autoLoad = true, onSuccess = null) {
         questionOptions: '',
         options: [], // 用于编辑的数组格式
         correctAnswer: '',
+        correctAnswers: [], // 多选使用数组
         score: 5,
         analysis: ''
     })
+
+    const openCreateQuestion = () => {
+        editingQuestionIndex.value = -1
+        editingQuestion.questionType = 'SINGLE'
+        editingQuestion.questionContent = ''
+        editingQuestion.score = 5
+        editingQuestion.analysis = ''
+        editingQuestion.correctAnswer = ''
+        editingQuestion.correctAnswers = []
+        editingQuestion.options = [{ text: '' }, { text: '' }, { text: '' }, { text: '' }]
+        editQuestionDialogVisible.value = true
+    }
 
     const openEditQuestion = (index) => {
         const q = homeworkForm.questions[index]
@@ -164,12 +177,20 @@ export function useHomeworkManagement(autoLoad = true, onSuccess = null) {
         editingQuestion.questionContent = q.questionContent
         editingQuestion.score = q.score || 5
         editingQuestion.analysis = q.analysis || ''
-        editingQuestion.correctAnswer = q.correctAnswer || q.answer
+
+        const ans = q.correctAnswer || q.answer || ''
+        if (q.questionType === 'MULTIPLE') {
+            editingQuestion.correctAnswers = ans ? ans.split(/[,\s]+/).filter(Boolean) : []
+            editingQuestion.correctAnswer = ''
+        } else {
+            editingQuestion.correctAnswer = ans
+            editingQuestion.correctAnswers = []
+        }
 
         // 处理选项
         if (['SINGLE', 'MULTIPLE'].includes(q.questionType)) {
-            const opts = typeof q.questionOptions === 'string' ? JSON.parse(q.questionOptions) : q.questionOptions
-            editingQuestion.options = Array.isArray(opts) ? JSON.parse(JSON.stringify(opts)) : [{ text: '' }, { text: '' }, { text: '' }, { text: '' }]
+            const opts = typeof q.questionOptions === 'string' ? (q.questionOptions ? JSON.parse(q.questionOptions) : []) : q.questionOptions
+            editingQuestion.options = (Array.isArray(opts) && opts.length > 0) ? JSON.parse(JSON.stringify(opts)) : [{ text: '' }, { text: '' }, { text: '' }, { text: '' }]
         } else {
             editingQuestion.options = []
         }
@@ -182,21 +203,30 @@ export function useHomeworkManagement(autoLoad = true, onSuccess = null) {
             return ElMessage.warning('请输入题目内容')
         }
 
-        const q = homeworkForm.questions[editingQuestionIndex.value]
-        q.questionContent = editingQuestion.questionContent
-        q.questionType = editingQuestion.questionType
-        q.score = editingQuestion.score
-        q.analysis = editingQuestion.analysis
-        q.correctAnswer = editingQuestion.correctAnswer
+        const questionData = {
+            questionContent: editingQuestion.questionContent,
+            questionType: editingQuestion.questionType,
+            score: editingQuestion.score,
+            analysis: editingQuestion.analysis,
+            correctAnswer: editingQuestion.questionType === 'MULTIPLE' ? editingQuestion.correctAnswers.sort().join(',') : editingQuestion.correctAnswer
+        }
 
-        if (['SINGLE', 'MULTIPLE'].includes(q.questionType)) {
-            q.questionOptions = JSON.stringify(editingQuestion.options)
+        if (['SINGLE', 'MULTIPLE'].includes(questionData.questionType)) {
+            questionData.questionOptions = JSON.stringify(editingQuestion.options)
         } else {
-            q.questionOptions = null
+            questionData.questionOptions = null
+        }
+
+        if (editingQuestionIndex.value === -1) {
+            homeworkForm.questions.push(questionData)
+            ElMessage.success('已添加新题目')
+        } else {
+            const q = homeworkForm.questions[editingQuestionIndex.value]
+            Object.assign(q, questionData)
+            ElMessage.success('题目已修改')
         }
 
         editQuestionDialogVisible.value = false
-        ElMessage.success('题目已修改')
         calculateHomeworkTotalScore()
     }
 
@@ -418,25 +448,74 @@ export function useHomeworkManagement(autoLoad = true, onSuccess = null) {
         }
 
         // 转换数据格式以匹配UI
-        let mappedReports = reports.map(report => ({
-            id: report.reportId || report.id,
-            title: report.reportTitle || report.title,
-            courseId: report.courseId,
-            courseName: report.courseName || '未知课程',
-            description: report.reportDescription || report.description,
-            deadline: report.deadline,
-            totalScore: report.totalScore,
-            status: (report.status === 0 || report.status === '0') ? 0 : (report.status || 1),
-            submittedCount: report.submittedCount || 0,
-            gradedCount: report.gradedCount || 0,
-            totalStudents: report.totalStudents || 0
-        }))
+        let mappedReports = reports.map(report => {
+            let actualGradedCount = report.gradedCount || 0;
+
+            // 如果存在题目且全是客观题，则提交即视为已批改
+            try {
+                if (report.questionList) {
+                    const qList = typeof report.questionList === 'string' ? JSON.parse(report.questionList) : report.questionList;
+                    if (Array.isArray(qList) && qList.length > 0) {
+                        const isOnlyObjective = qList.every(q => {
+                            const type = (q.questionType || q.type || '').toString().toUpperCase()
+                            return ['SINGLE', 'MULTIPLE', 'JUDGE', 'FILL', 'SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE', '1', '2', '3', '4'].includes(type) ||
+                                ['单选', '多选', '判断', '填空'].includes(type) ||
+                                type.includes('CHOICE') || type.includes('SINGLE') || type.includes('MULTIPLE')
+                        })
+
+                        if (isOnlyObjective) {
+                            // 纯客观题的情况下，计算除去被退回后的有效批改量
+                            actualGradedCount = (report.submittedCount || 0) - (report.returnedCount || 0);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('解析题目异常:', e)
+            }
+
+            return {
+                id: report.reportId || report.id,
+                title: report.reportTitle || report.title,
+                courseId: report.courseId,
+                courseName: report.courseName || '未知课程',
+                description: report.reportDescription || report.description,
+                deadline: report.deadline,
+                totalScore: report.totalScore,
+                status: (() => {
+                    // 0-草稿
+                    if (report.status === 0 || report.status === '0') return 0;
+
+                    // 如果已经过了截止日期，强制为 2-已截止 (除非是草稿)
+                    if (report.deadline) {
+                        const deadlineTime = new Date(report.deadline).getTime();
+                        if (!isNaN(deadlineTime) && deadlineTime < Date.now()) {
+                            return 2;
+                        }
+                    }
+
+                    // 默认遵循数据库状态或进行中
+                    return (report.status === 2 || report.status === '2') ? 2 : 1;
+                })(),
+                submittedCount: report.submittedCount || 0,
+                gradedCount: actualGradedCount,
+                returnedCount: report.returnedCount || 0,
+                totalStudents: report.totalStudents || 0
+            }
+        })
 
         console.log('映射后的数据:', mappedReports)
 
         // 应用状态筛选
         if (filterForm.status !== '' && filterForm.status !== null) {
-            mappedReports = mappedReports.filter(h => h.status == filterForm.status)
+            if (filterForm.status === 'UNGRADED') {
+                // 待批改 = (总提交 - 已批改进度) -> 其中已批改进度已经排除了退回。所以这里包含了 status=1 和 status=3
+                mappedReports = mappedReports.filter(h => h.submittedCount > (h.gradedCount || 0))
+            } else if (filterForm.status === 'GRADED') {
+                // 已批改 = 所有提交都已经变成 status=2 状态（不包含 status=3）
+                mappedReports = mappedReports.filter(h => h.submittedCount > 0 && (h.submittedCount - (h.returnedCount || 0)) === (h.gradedCount || 0) && (h.returnedCount || 0) === 0)
+            } else {
+                mappedReports = mappedReports.filter(h => h.status == filterForm.status)
+            }
         }
 
         // 更新总条目数
@@ -745,12 +824,26 @@ export function useHomeworkManagement(autoLoad = true, onSuccess = null) {
         return Math.round((homework.submittedCount / homework.totalStudents) * 100)
     }
 
-    // 获取进度条颜色
     const getProgressColor = (homework) => {
         const progress = getSubmitProgress(homework)
         if (progress >= 80) return '#67c23a'
         if (progress >= 50) return '#e6a23c'
         return '#f56c6c'
+    }
+
+    // 获取批改进度
+    const getGradeProgress = (homework) => {
+        if (!homework.submittedCount || homework.submittedCount === 0) return 0
+        // 进度 = 已批改 / 总提交 -> 退回的不算“已完成”
+        return Math.round(((homework.gradedCount || 0) / homework.submittedCount) * 100)
+    }
+
+    // 获取批改进度颜色
+    const getGradeProgressColor = (homework) => {
+        const progress = getGradeProgress(homework)
+        if (progress === 100) return '#10b981' // 绿色 (全部批改完)
+        if (progress > 0) return '#f59e0b'     // 橙黄 (批改中)
+        return '#e5e7eb'                       // 灰 (未批改)
     }
 
     onMounted(async () => {
@@ -798,6 +891,8 @@ export function useHomeworkManagement(autoLoad = true, onSuccess = null) {
         formatDate,
         getSubmitProgress,
         getProgressColor,
+        getGradeProgress,
+        getGradeProgressColor,
         openQuestionBank,
         searchBank,
         handleBankSelection,
@@ -816,7 +911,9 @@ export function useHomeworkManagement(autoLoad = true, onSuccess = null) {
         moveHomeworkQuestion,
         calculateHomeworkTotalScore,
         editQuestionDialogVisible,
+        editingQuestionIndex,
         editingQuestion,
+        openCreateQuestion,
         openEditQuestion,
         saveEditQuestion,
         addOption,

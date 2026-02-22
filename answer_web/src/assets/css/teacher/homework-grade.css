@@ -61,7 +61,7 @@
 }
 
 .save-next-btn {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    background: transparent;
     border: none;
     border-radius: 12px;
     padding: 10px 20px;
@@ -137,6 +137,44 @@
     padding: 8px;
 }
 
+/* 筛选与搜索样式 */
+.filter-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.status-filters {
+    display: flex;
+    gap: 8px;
+    background: #f8fafc;
+    padding: 4px;
+    border-radius: 8px;
+}
+
+.filter-tag {
+    flex: 1;
+    text-align: center;
+    font-size: 13px;
+    color: #64748b;
+    padding: 6px 0;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.filter-tag:hover {
+    color: #3b82f6;
+    background: white;
+}
+
+.filter-tag.active {
+    background: white;
+    color: #2563eb;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
 /* 学生列表项 */
 .student-item {
     display: flex;
@@ -159,18 +197,6 @@
     background: white;
     border-color: #3b82f6;
     box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
-}
-
-.student-item.active::after {
-    content: '';
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 8px;
-    height: 8px;
-    background: #fb923c;
-    border-radius: 50%;
 }
 
 .student-item.graded {
@@ -341,10 +367,10 @@
 }
 
 .q-ans-item {
-    background: #f8fafc;
-    border-radius: 12px;
-    padding: 20px;
-    border-left: 4px solid #3b82f6;
+    background: transparent;
+    border-radius: 8px;
+    padding: 10px 0;
+    border: none;
 }
 
 .q-title {
@@ -386,6 +412,28 @@
     font-weight: 600;
 }
 
+/* 选项显示区 */
+.q-options-container {
+    margin: 12px 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding-left: 36px;
+}
+
+.q-option-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #64748b;
+}
+
+.opt-label {
+    font-weight: 700;
+    color: #475569;
+}
+
 .ans-comparison {
     display: flex;
     flex-direction: column;
@@ -395,11 +443,11 @@
 
 .ans-unit {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 12px;
-    padding: 12px 14px;
-    border-radius: 8px;
-    background: white;
+    padding: 4px 0;
+    border-radius: 0;
+    background: transparent;
 }
 
 .ans-unit .label {
@@ -430,10 +478,8 @@
 /* 题目解析 */
 .q-analysis {
     margin-top: 16px;
-    padding: 14px;
-    background: #fef3c7;
+    padding: 5px;
     border-radius: 8px;
-    border-left: 4px solid #f59e0b;
 }
 
 .analysis-label {
@@ -774,6 +820,24 @@ html.dark .student-item.active {
     border-color: #3b82f6;
 }
 
+html.dark .status-filters {
+    background: #1e293b;
+}
+
+html.dark .filter-tag {
+    color: #94a3b8;
+}
+
+html.dark .filter-tag:hover {
+    background: #334155;
+    color: #cbd5e1;
+}
+
+html.dark .filter-tag.active {
+    background: #334155;
+    color: #60a5fa;
+}
+
 html.dark .name {
     color: #f1f5f9;
 }
@@ -820,21 +884,30 @@ html.dark .image-preview-area {
     color: #475569;
 }
 
+html.dark .grade-detail-section,
+html.dark .grade-detail-section .detail-content,
+html.dark .grade-detail-section .content-scroll,
+html.dark .content-block,
+html.dark .structured-ans-list,
 html.dark .q-ans-item {
-    background: #1e293b;
-    border-color: #3b82f6;
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
 }
 
 html.dark .q-text {
     color: #f1f5f9;
 }
 
-html.dark .ans-unit {
-    background: #334155;
+html.dark .ans-unit,
+html.dark .ans-comparison {
+    background: transparent !important;
+    background-color: transparent !important;
 }
 
 html.dark .ans-unit .label {
-    color: #64748b;
+    color: #94a3b8;
 }
 
 html.dark .ans-unit .val {
@@ -842,8 +915,8 @@ html.dark .ans-unit .val {
 }
 
 html.dark .q-analysis {
-    background: rgba(251, 191, 36, 0.15);
-    border-color: #f59e0b;
+    background: transparent !important;
+    /* border: 1px solid rgba(245, 158, 11, 0.3) !important; */
 }
 
 html.dark .analysis-label {

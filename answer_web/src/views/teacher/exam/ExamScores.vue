@@ -69,6 +69,19 @@
         <div class="card-header">
           <span>全班学生成绩名单 (包含未参加学生)</span>
           <div class="search-area">
+            <el-select
+              v-model="statusFilter"
+              placeholder="参与状态"
+              clearable
+              style="width: 120px; margin-right: 10px"
+              @change="handleSearch"
+            >
+              <el-option label="全部状态" value="" />
+              <el-option label="未参加" :value="0" />
+              <el-option label="进行中" :value="1" />
+              <el-option label="待批改" :value="2" />
+              <el-option label="已批改" :value="3" />
+            </el-select>
             <el-input
               v-model="searchKeyword"
               placeholder="搜索学号/姓名"
@@ -83,8 +96,15 @@
       </template>
       
       <el-table :data="paginatedStudents" stripe border style="width: 100%" v-loading="studentsLoading">
-        <el-table-column prop="studentId" label="学号" width="120" sortable />
-        <el-table-column prop="studentName" label="学生姓名" width="150" />
+        <el-table-column label="头像" width="70" align="center">
+          <template #default="{ row }">
+            <el-avatar :size="36" :src="getAvatarUrl(row.studentAvatar)" style="background:#e0e7ff;color:#4f46e5;">
+              {{ row.studentName ? row.studentName.charAt(0) : 'S' }}
+            </el-avatar>
+          </template>
+        </el-table-column>
+        <el-table-column prop="studentId" label="学号" width="100" sortable />
+        <el-table-column prop="studentName" label="学生姓名" width="130" />
         <el-table-column label="参与状态" width="120">
           <template #default="{ row }">
             <el-tag :type="getExamStatusType(row.status)">
@@ -115,20 +135,13 @@
         </el-table-column>
         <el-table-column label="操作" min-width="150">
           <template #default="{ row }">
-            <el-button 
-              v-if="row.status >= 2" 
-              type="primary" 
-              link
-              @click="viewStudentAnswer(row)"
-            >
+            <el-button v-if="row.status === 2" type="warning" link @click="viewStudentAnswer(row)">
+              批改简答题
+            </el-button>
+            <el-button v-else-if="row.status >= 2" type="primary" link @click="viewStudentAnswer(row)">
               查看详情
             </el-button>
-            <el-button 
-              v-if="row.status >= 1" 
-              type="danger" 
-              link
-              @click="returnStudentExam(row.studentExamId)"
-            >
+            <el-button v-if="row.status >= 1" type="danger" link @click="returnStudentExam(row.studentExamId)">
               重置/退回
             </el-button>
           </template>
@@ -174,17 +187,27 @@ let scoreChart = null
 
 // 搜索和分页
 const searchKeyword = ref('')
+const statusFilter = ref('')
 const currentPage = ref(1)
 const pageSize = ref(10)
 
 // 过滤后的学生列表
 const filteredStudents = computed(() => {
-  if (!searchKeyword.value) return studentExams.value
-  const keyword = searchKeyword.value.toLowerCase()
-  return studentExams.value.filter(student => 
-    (student.studentId && String(student.studentId).toLowerCase().includes(keyword)) ||
-    (student.studentName && student.studentName.toLowerCase().includes(keyword))
-  )
+  let result = studentExams.value
+
+  if (statusFilter.value !== '') {
+    result = result.filter(student => student.status === statusFilter.value)
+  }
+
+  if (searchKeyword.value) {
+    const keyword = searchKeyword.value.toLowerCase()
+    result = result.filter(student => 
+      (student.studentId && String(student.studentId).toLowerCase().includes(keyword)) ||
+      (student.studentName && student.studentName.toLowerCase().includes(keyword))
+    )
+  }
+
+  return result
 })
 
 // 分页后的学生列表
@@ -579,13 +602,21 @@ const formatDate = (date) => {
 }
 
 const getExamStatusType = (status) => {
-  const types = { 0: 'info', 1: 'warning', 2: 'success', 3: 'success' }
+  const types = { 0: 'info', 1: 'warning', 2: 'danger', 3: 'success' }
   return types[status] || 'info'
 }
 
 const getExamStatusText = (status) => {
-  const texts = { 0: '未开始', 1: '进行中', 2: '已提交', 3: '已批改' }
+  const texts = { 0: '未参加', 1: '进行中', 2: '待批改', 3: '已批改' }
   return texts[status] || '未知'
+}
+
+const getAvatarUrl = (path) => {
+  if (!path || path.trim() === '') {
+    return 'https://cube.elemecdn.com/9/c2/f0ee8a3c7c9636ef921315944d5671d8.png'
+  }
+  if (path.startsWith('http://') || path.startsWith('https://')) return path
+  return `http://localhost:8088${path}`
 }
 
 onMounted(async () => {
@@ -699,9 +730,8 @@ onMounted(async () => {
   justify-content: center;
   margin-top: 24px;
   padding: 20px;
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  background: transparent;
+
 }
 
 .premium-pagination {
@@ -1209,9 +1239,8 @@ html.dark .students-card {
 }
 
 html.dark .pagination-outside {
-  background: #1e293b;
-  border: 1px solid #334155;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  background:transparent;
+
 }
 
 html.dark .premium-pagination {

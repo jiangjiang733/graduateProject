@@ -9,15 +9,15 @@
       <div class="header-right">
         <!-- Quick Actions -->
         <div class="quick-action" @click="$router.push('/student/courses')">
-          <div class="action-icon bg-blue-50 text-blue-500"><el-icon><Reading /></el-icon></div>
+          <div class="action-icon bg-blue-100/80 text-blue-600 shadow-sm"><el-icon><Reading /></el-icon></div>
           <span>课程中心</span>
         </div>
         <div class="quick-action" @click="$router.push('/student/homework')">
-          <div class="action-icon bg-green-50 text-green-500"><el-icon><EditPen /></el-icon></div>
+          <div class="action-icon bg-green-100/80 text-green-600 shadow-sm"><el-icon><EditPen /></el-icon></div>
           <span>我的作业</span>
         </div>
         <div class="quick-action" @click="$router.push('/student/exams')">
-          <div class="action-icon bg-purple-50 text-purple-500"><el-icon><Timer /></el-icon></div>
+          <div class="action-icon bg-purple-100/80 text-purple-600 shadow-sm"><el-icon><Timer /></el-icon></div>
           <span>考试安排</span>
         </div>
       </div>

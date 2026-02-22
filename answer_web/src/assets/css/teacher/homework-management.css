@@ -3,6 +3,8 @@
   padding: 32px;
   background: linear-gradient(180deg, #f0f4ff 0%, #f5f7fa 100%);
   min-height: 100vh;
+  overflow: visible !important;
+  padding-bottom: 100px;
 }
 
 /* ========== 页面头部 ========== */
@@ -334,18 +336,17 @@
 /* ========== 分页样式 ========== */
 .pagination-outside {
   position: fixed;
-  bottom: 0;
-  left: 55%;
+  bottom: 0px;
+  left: calc(55% + 100px);
   transform: translateX(-50%);
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 5px 16px;
-  background-color: rgba(255, 255, 255, 0.95);
-  border-radius: 10px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
-  z-index: 100;
-  width: 100%;
+  padding: 8px 20px;
+  background-color: transparent;
+  border-radius: 12px;
+  z-index: 999;
+  width: auto;
 }
 
 .premium-pagination {
@@ -410,16 +411,6 @@
   padding: 0;
 }
 
-.questions-management-section .section-header .ai-btn {
-  font-weight: 600;
-  background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  border: 1px solid #10b981;
-  padding: 2px 10px;
-  border-radius: 4px;
-}
 
 .questions-list {
   padding: 16px;
@@ -432,7 +423,185 @@
   padding: 30px 0;
 }
 
-/* 暗黑模式对话框样式 */
+/* ========== 单个问题条目样式 (新加入修复结构混乱) ========== */
+.q-manage-item {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.q-manage-item:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.q-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border-bottom: 1px solid #f1f5f9;
+  flex-wrap: wrap;
+}
+
+.q-idx {
+  font-size: 16px;
+  font-weight: 700;
+  color: #334155;
+  width: 24px;
+}
+
+.q-score-set {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 12px;
+}
+
+.q-score-set .unit {
+  font-size: 13px;
+  color: #64748b;
+}
+
+.q-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.q-actions .el-button {
+  margin-left: 0 !important;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.q-actions .el-button .el-icon {
+  margin-right: 2px;
+}
+
+.q-body {
+  padding: 16px;
+}
+
+.q-content-preview {
+  font-size: 14px;
+  color: #1e293b;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.q-options-preview {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.opt-preview-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 14px;
+  color: #475569;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: #f8fafc;
+  border: 1px solid transparent;
+}
+
+.opt-preview-item.correct {
+  background: #f0fdf4;
+  color: #16a34a;
+  border-color: #bbf7d0;
+}
+
+.opt-label {
+  font-weight: 600;
+}
+
+/* 强制 Ketangpai Footer 的布局 */
+.ketangpai-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  padding: 10px 0;
+}
+
+.k-btn {
+  border-radius: 20px !important;
+  padding: 10px 24px !important;
+  font-weight: 600 !important;
+}
+
+.k-btn.cancel {
+  border-color: #e2e8f0;
+  color: #64748b;
+}
+
+.k-btn.draft {
+  background: #f1f5f9;
+  border: none;
+  color: #475569;
+}
+
+.k-btn.submit {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+  border: none !important;
+  color: white !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.questions-management-section .section-header .h-right .el-button {
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: white;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  font-weight: 500;
+  gap: 4px;
+  transition: all 0.2s;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.questions-management-section .section-header .h-right .import-link {
+  color: #10b981;
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.questions-management-section .section-header .h-right .import-link:hover {
+  background: #dcfce7;
+  color: #059669;
+}
+
+.questions-management-section .section-header .h-right .ai-btn {
+  color: #3b82f6;
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  font-weight: 600;
+}
+
+.tip-text {
+  margin-left: 10px;
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.questions-management-section .section-header .h-right .ai-btn:hover {
+  background: #dbeafe;
+  color: #2563eb;
+  border-color: #93c5fd;
+}
+
+/* 暗黑模式适配 */
 html.dark .questions-management-section {
   background: #1e293b;
   border-color: #334155;
@@ -587,9 +756,7 @@ html.dark .stats-btn:hover {
 }
 
 html.dark .pagination-outside {
-  background-color: rgba(30, 41, 59, 0.95);
-  border: 1px solid #334155;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  background-color: transparent;
 }
 
 html.dark .premium-pagination {
@@ -698,32 +865,32 @@ html.dark :deep(.el-button--primary:hover) {
   .homework-management {
     padding: 16px;
   }
-  
+
   .page-header {
     flex-direction: column;
     gap: 16px;
     padding: 20px;
     border-radius: 16px;
   }
-  
+
   .header-left {
     width: 100%;
   }
-  
+
   .create-homework-btn {
     width: 100%;
   }
-  
+
   .homework-grid {
     grid-template-columns: 1fr;
     gap: 16px;
   }
-  
+
   .homework-card-new {
     padding: 24px;
     border-radius: 24px;
   }
-  
+
   .card-footer-buttons {
     grid-template-columns: 1fr;
   }

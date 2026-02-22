@@ -6,6 +6,8 @@
     padding: 24px;
     background-color: #f8fafc;
     min-height: 100vh;
+    overflow: visible !important;
+    padding-bottom: 100px;
 }
 
 .filter-section {
@@ -228,26 +230,22 @@
 .pagination-outside {
     position: fixed;
     bottom: 0px;
-    left: 55%;
+    left: calc(55% + 100px);
     transform: translateX(-50%);
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 5px 16px;
-    background-color: rgba(255, 255, 255, 0.85);
-    /* backdrop-filter: blur(16px); */
-    /* -webkit-backdrop-filter: blur(16px); */
-    border-radius: 10px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
-    z-index: 100;
-    width: 100%;
+    padding: 8px 20px;
+    background-color: transparent;
+    border-radius: 12px;
+    /* box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15); */
+    z-index: 999;
+    width: auto;
 }
 
 html.dark .pagination-outside,
 .dark-theme .pagination-outside {
-    background-color: rgba(30, 41, 59, 0.85);
-    border: 1px solid rgba(51, 65, 85, 0.5);
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    background-color: transparent;
 }
 
 @media (max-width: 768px) {

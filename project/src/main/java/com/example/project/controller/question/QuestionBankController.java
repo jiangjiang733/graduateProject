@@ -27,7 +27,6 @@ public class QuestionBankController {
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) String courseId,
             @RequestParam(required = false) String type,
-            @RequestParam(required = false) Integer difficulty,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Integer teacherId) {
         Page<QuestionBank> page = new Page<>(pageNum, pageSize);
@@ -40,9 +39,7 @@ public class QuestionBankController {
         if (StringUtils.hasText(type)) {
             queryWrapper.eq("type", type);
         }
-        if (difficulty != null) {
-            queryWrapper.eq("difficulty", difficulty);
-        }
+
         if (teacherId != null) {
             queryWrapper.eq("teacher_id", teacherId);
         }

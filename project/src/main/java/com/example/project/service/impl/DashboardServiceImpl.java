@@ -82,7 +82,7 @@ public class DashboardServiceImpl implements DashboardService {
                 // 查询该教师的所有作业（通过教师ID或课程ID）
                 QueryWrapper<com.example.project.entity.homework.LabReport> reportWrapper = new QueryWrapper<>();
                 reportWrapper.and(w -> w.eq("teacher_id", teacherId).or().in("course_id", allCourseIds));
-                reportWrapper.ge("deadline", now);  // 只统计未过期的作业
+                reportWrapper.ge("deadline", now); // 只统计未过期的作业
                 List<Long> reportIds = labReportMapper.selectList(reportWrapper)
                         .stream()
                         .map(com.example.project.entity.homework.LabReport::getReportId)
@@ -91,7 +91,7 @@ public class DashboardServiceImpl implements DashboardService {
                 if (!reportIds.isEmpty()) {
                     QueryWrapper<com.example.project.entity.homework.StudentLabReport> slrWrapper = new QueryWrapper<>();
                     slrWrapper.in("report_id", reportIds);
-                    slrWrapper.eq("status", 1);  // 1-已提交待批改
+                    slrWrapper.in("status", Arrays.asList(1, 3)); // 1-已提交待批改, 3-被退回重写
                     Long pendingCount = studentLabReportMapper.selectCount(slrWrapper);
                     statistics.setPendingHomeworkCount(pendingCount.intValue());
                 } else {
@@ -109,7 +109,8 @@ public class DashboardServiceImpl implements DashboardService {
                         .filter(e -> {
                             Date start = e.getStartTime();
                             Date end = e.getEndTime();
-                            if (start == null || end == null) return false;
+                            if (start == null || end == null)
+                                return false;
                             return !now.before(start) && !now.after(end);
                         })
                         .count();
@@ -192,13 +193,13 @@ public class DashboardServiceImpl implements DashboardService {
             // Long pendingAudit = courseEnrollmentMapper.selectCount(enrollWrapper);
 
             // if (pendingAudit > 0) {
-            //     TodoItemDTO item = new TodoItemDTO();
-            //     item.setRelatedId(2L);
-            //     item.setTitle("待审核选课");
-            //     item.setDescription("您有 " + pendingAudit + " 位学生申请加入课程");
-            //     item.setType("course_approval");
-            //     item.setCount(pendingAudit.intValue());
-            //     todoList.add(item);
+            // TodoItemDTO item = new TodoItemDTO();
+            // item.setRelatedId(2L);
+            // item.setTitle("待审核选课");
+            // item.setDescription("您有 " + pendingAudit + " 位学生申请加入课程");
+            // item.setType("course_approval");
+            // item.setCount(pendingAudit.intValue());
+            // todoList.add(item);
             // }
 
         } catch (Exception e) {

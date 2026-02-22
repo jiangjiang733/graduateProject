@@ -1,7 +1,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getLabReportDetail, getStudentSubmission, submitLabReport as submitLabReportAPI } from '@/api/homework'
+import { getLabReportDetail, getStudentSubmission, submitLabReport as submitLabReportAPI, updateSubmission } from '@/api/homework'
 
 export function useHomeworkSubmit() {
     const router = useRouter()
@@ -160,8 +160,18 @@ export function useHomeworkSubmit() {
                 structuredAnswers: JSON.stringify(structuredAnswers)
             }
 
-            const response = await submitLabReportAPI(route.params.id, submissionData, currentFile.value)
-            const resId = response.data?.studentReportId || response.studentReportId || route.query.studentReportId
+            let response;
+            const studentReportId = route.query.studentReportId;
+
+            if (studentReportId) {
+                // 如果是更新已有提交
+                response = await updateSubmission(studentReportId, submissionData.content, submissionData.structuredAnswers, currentFile.value)
+            } else {
+                // 如果是新提交
+                response = await submitLabReportAPI(route.params.id, submissionData, currentFile.value)
+            }
+
+            const resId = response.data?.studentReportId || response.studentReportId || studentReportId
 
             ElMessage.success('作业提交成功')
 

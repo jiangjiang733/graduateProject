@@ -22,6 +22,8 @@ export function useHomeworkGrade() {
         teacherComment: ''
     })
 
+    const filterStatus = ref('ALL') // 'ALL', 'PENDING', 'GRADED'
+
     // ===== 1. 数据为空状态处理 =====
     const hasSubmissions = computed(() => submissions.value && submissions.value.length > 0)
     const hasQuestions = computed(() => questionList.value && questionList.value.length > 0)
@@ -146,6 +148,18 @@ export function useHomeworkGrade() {
         return types[type] || type
     }
 
+    // 解析选项
+    const parseOptions = (options) => {
+        if (!options) return []
+        try {
+            const parsed = typeof options === 'string' ? JSON.parse(options) : options
+            return Array.isArray(parsed) ? parsed : []
+        } catch (e) {
+            console.error('解析选项失败:', e)
+            return []
+        }
+    }
+
     // ===== 8. 题型标签颜色 =====
     const getQuestionTypeTag = (type) => {
         const tags = {
@@ -171,7 +185,7 @@ export function useHomeworkGrade() {
         if (hasQuestions.value) {
             activeTab.value = 'questions'
             // 未批改且未评分的，自动应用客观题评分
-            if (sub.status !== 2 && (!sub.score || sub.score === 0)) {
+            if (sub.status != 2 && sub.status !== 'GRADED' && (!sub.score || sub.score === 0)) {
                 setTimeout(() => applyAutoScore(false), 300)
             }
         } else if (hasAttachment.value) {
@@ -226,9 +240,28 @@ export function useHomeworkGrade() {
 
                 submissions.value = submissionsWithAvatar
 
-                // 自动选择第一个未批改的提交
+                // 检查纯客观题自动批改状态
+                const isOnlyObjective = questionList.value.length > 0 && questionList.value.every(q => {
+                    const type = (q.questionType || q.type || '').toString().toUpperCase()
+                    return ['SINGLE', 'MULTIPLE', 'JUDGE', 'FILL', 'SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE', '1', '2', '3', '4'].includes(type) ||
+                        ['单选', '多选', '判断', '填空'].includes(type) ||
+                        type.includes('CHOICE') || type.includes('SINGLE') || type.includes('MULTIPLE')
+                })
+
+                if (isOnlyObjective) {
+                    submissions.value.forEach(sub => {
+                        // 如果后端未将纯客观题标记为已批改，且学生已提交（有客观题答案）则将其视为已批改
+                        if (sub.status != 2 && sub.status !== 'GRADED') {
+                            if (sub.score > 0 || sub.structuredAnswers) {
+                                sub.status = 2 // 强制标记为已评分
+                            }
+                        }
+                    })
+                }
+
+                // 自动选择第一个符合条件的提交
                 if (!currentSubmission.value && submissions.value.length > 0) {
-                    const firstPending = submissions.value.find(s => s.status !== 2)
+                    const firstPending = submissions.value.find(s => s.status == 1)
                     selectSubmission(firstPending || submissions.value[0])
                 }
             } else {
@@ -254,19 +287,29 @@ export function useHomeworkGrade() {
 
     // ===== 11. 筛选提交列表（支持实时搜索） =====
     const filteredSubmissions = computed(() => {
-        if (!searchKeyword.value) return submissions.value
+        let result = submissions.value
 
-        const kw = searchKeyword.value.toLowerCase().trim()
-        return submissions.value.filter(s =>
-            (s.studentName && s.studentName.toLowerCase().includes(kw)) ||
-            (s.studentId && s.studentId.toLowerCase().includes(kw)) ||
-            (s.studentNumber && s.studentNumber.toLowerCase().includes(kw))
-        )
+        if (filterStatus.value === 'PENDING') {
+            result = result.filter(s => s.status == 1 || s.status == 3) // 1 是待批改，3 是被退回（需要重新关注）
+        } else if (filterStatus.value === 'GRADED') {
+            result = result.filter(s => s.status == 2 || s.status === 'GRADED') // 退回（3）目前当做未批改
+        }
+
+        if (searchKeyword.value) {
+            const kw = searchKeyword.value.toLowerCase().trim()
+            result = result.filter(s =>
+                (s.studentName && s.studentName.toLowerCase().includes(kw)) ||
+                (s.studentId && s.studentId.toLowerCase().includes(kw)) ||
+                (s.studentNumber && s.studentNumber.toLowerCase().includes(kw))
+            )
+        }
+
+        return result
     })
 
     // ===== 12. 已批改数量统计 =====
     const gradedCount = computed(() => {
-        return submissions.value.filter(s => s.status === 2).length
+        return submissions.value.filter(s => s.status == 2 || s.status === 'GRADED').length
     })
 
     // ===== 13. 日期格式化 =====
@@ -365,7 +408,7 @@ export function useHomeworkGrade() {
                 currentSubmission.value.teacherComment = gradeForm.teacherComment
 
                 // 自动跳转到下一个未批改的提交
-                const pendingIndex = submissions.value.findIndex(s => s.status !== 2)
+                const pendingIndex = submissions.value.findIndex(s => s.status == 1)
                 if (pendingIndex !== -1) {
                     setTimeout(() => {
                         selectSubmission(submissions.value[pendingIndex])
@@ -379,6 +422,54 @@ export function useHomeworkGrade() {
             }
         } catch (e) {
             ElMessage.error(e.message || '批改保存失败，请重试')
+        } finally {
+            submitting.value = false
+        }
+    }
+
+    // ===== 15.5 退回重写 =====
+    const returnForRevision = async () => {
+        if (!currentSubmission.value) {
+            ElMessage.warning('请先选择一个学生提交')
+            return
+        }
+
+        try {
+            await ElMessageBox.confirm(
+                `确认将 ${currentSubmission.value.studentName} 的作业退回重写吗？`,
+                '退回重写',
+                {
+                    confirmButtonText: '确认退回',
+                    cancelButtonText: '取消',
+                    type: 'danger'
+                }
+            )
+        } catch {
+            return
+        }
+
+        submitting.value = true
+        try {
+            const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
+
+            // 使用现有API修改状态为 3 （退回）
+            const response = await gradeLabReport(currentSubmission.value.studentReportId, {
+                score: 0,
+                teacherComment: gradeForm.teacherComment || '您的作业不符合要求，请退回重写。',
+                teacherId: teacherId,
+                status: 3, // 添加特定状态字段，需要后端配合或通过score区分
+                gradedAt: new Date().toISOString()
+            })
+
+            if (response.success || response.code === 200) {
+                ElMessage.success('已退回重写！')
+                currentSubmission.value.status = 3
+                currentSubmission.value.teacherComment = gradeForm.teacherComment || '您的作业不符合要求，请退回重写。'
+            } else {
+                throw new Error(response.message || '退回失败')
+            }
+        } catch (e) {
+            ElMessage.error(e.message || '操作失败，请重试')
         } finally {
             submitting.value = false
         }
@@ -405,6 +496,7 @@ export function useHomeworkGrade() {
         autoGrading,
         gradeForm,
         questionList,
+        filterStatus,
         filteredSubmissions,
         gradedCount,
         hasSubmissions,
@@ -415,6 +507,7 @@ export function useHomeworkGrade() {
         formatDate,
         downloadFile,
         submitGrade,
+        returnForRevision,
         getStudentAnswer,
         getCorrectAnswer,
         isCorrect,
@@ -422,6 +515,7 @@ export function useHomeworkGrade() {
         getQuestionTypeText,
         getQuestionTypeTag,
         getStudentAvatarUrl,
+        parseOptions,
         loadData
     }
 }

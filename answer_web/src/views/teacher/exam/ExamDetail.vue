@@ -21,6 +21,23 @@
       </div>
     </div>
 
+    <!-- 待批改提醒 -->
+    <el-alert
+      v-if="hasPendingSubjective"
+      title="📝 有学生提交了含简答题的试卷，需要手动批改"
+      type="warning"
+      show-icon
+      :closable="false"
+      style="margin-bottom: 16px; border-radius: 12px;"
+    >
+      <template #default>
+        <span>共 <b>{{ pendingCount }}</b> 份答卷等待批改。</span>
+        <el-button type="warning" size="small" style="margin-left: 16px;" @click="viewScores">
+          前往批改
+        </el-button>
+      </template>
+    </el-alert>
+
     <!-- 考试信息卡片 -->
     <el-card class="exam-info-card" v-loading="loading">
       <template #header>
@@ -96,7 +113,7 @@
             class="question-item"
           >
             <div class="question-header">
-              <span class="question-number">第 {{ question.globalIndex }} 题</span>
+              <span class="question-number">{{ question.globalIndex }}. </span>
               <el-tag :type="getQuestionTypeColor(question.questionType)" size="small">
                 {{ getQuestionTypeName(question.questionType) }}
               </el-tag>
@@ -183,9 +200,11 @@
 </template>
 
 <script setup>
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Calendar } from '@element-plus/icons-vue'
 import { useExamDetail } from '@/assets/js/teacher/exam-detail.js'
+import { getStudentExams } from '@/api/exam.js'
 
 const router = useRouter()
 const route = useRoute()
@@ -228,6 +247,37 @@ const viewScores = () => {
 const manageQuestions = () => {
   router.push(`/teacher/exam/${route.params.id}/questions`)
 }
+
+// ===== 待批改提醒 =====
+const studentExamList = ref([])
+
+const subjectiveTypes = ['ESSAY', 'SHORT', 'SHORT_ANSWER', 'FILL', 'FILL_BLANK']
+
+// 是否有简答题
+const hasSubjectiveQuestion = computed(() => {
+  return questions.value.some(q => subjectiveTypes.includes(q.questionType))
+})
+
+// 待批改的数量 (status=2)
+const pendingCount = computed(() => {
+  return studentExamList.value.filter(s => s.status === 2 || s.status === '2').length
+})
+
+// 显示待批改提醒
+const hasPendingSubjective = computed(() => {
+  return hasSubjectiveQuestion.value && pendingCount.value > 0
+})
+
+onMounted(async () => {
+  try {
+    const res = await getStudentExams(route.params.id)
+    if (res.code === 200 && res.data) {
+      studentExamList.value = res.data
+    }
+  } catch (e) {
+    // 静默忽略，不影响主页面
+  }
+})
 </script>
 
 <style scoped>

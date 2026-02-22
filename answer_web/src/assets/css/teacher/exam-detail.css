@@ -338,6 +338,8 @@
   color: #1e293b;
   margin: 0;
   font-weight: 700;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 /* 选项列表 - 两列布局 */

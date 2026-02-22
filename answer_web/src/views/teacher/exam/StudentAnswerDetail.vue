@@ -1,146 +1,137 @@
 <template>
-  <div class="student-answer-detail">
-    <!-- 页面头部 -->
-    <div class="page-header">
-      <el-button @click="goBack" :icon="ArrowLeft">返回</el-button>
-      <h2>{{ studentInfo.studentName }} 的答卷详情</h2>
-      <div class="header-info">
-        <el-tag :type="getScoreType(studentInfo.obtainedScore)">
-          得分: {{ studentInfo.obtainedScore || 0 }} / {{ examInfo.totalScore || 100 }}
-        </el-tag>
+  <div class="exam-detail-wrapper">
+    <!-- 顶部导航栏 -->
+    <div class="top-header">
+      <div class="header-left">
+        
+        <span class="header-title">阅卷系统 | 学生个人答卷详情</span>
+      </div>
+      <div class="header-score">
+        <span class="score-label">总分</span>
+        <span class="score-value">{{ studentInfo.obtainedScore || 0 }}</span>
       </div>
     </div>
 
-    <!-- 学生信息卡片 -->
-    <el-card class="info-card" v-loading="loading">
-      <template #header>
-        <span>考试信息</span>
-      </template>
-      <el-descriptions :column="3" border>
-        <el-descriptions-item label="学生姓名">{{ studentInfo.studentName }}</el-descriptions-item>
-        <el-descriptions-item label="学生ID">{{ studentInfo.studentId }}</el-descriptions-item>
-        <el-descriptions-item label="考试名称">{{ examInfo.examTitle }}</el-descriptions-item>
-        <el-descriptions-item label="提交时间">{{ formatDate(studentInfo.submitTime) }}</el-descriptions-item>
-        <el-descriptions-item label="答题用时">{{ formatDuration(studentInfo.duration) }}</el-descriptions-item>
-        <el-descriptions-item label="状态">
-          <el-tag :type="studentInfo.status >= 3 ? 'success' : 'warning'">
-            {{ studentInfo.status >= 3 ? '已批改' : '待批改' }}
-          </el-tag>
-        </el-descriptions-item>
-      </el-descriptions>
-    </el-card>
+    <!-- 主内容区 -->
+    <div class="main-content">
+      <!-- A4试卷主体 -->
+      <div class="paper-container">
+        <div class="a4-paper">
+          <!-- 密封线 -->
+          <div class="seal-line-container">
+            <div class="seal-text">密封线内请勿答题</div>
+          </div>
 
-    <!-- 成绩分析 -->
-    <el-row :gutter="20" style="margin-top: 20px">
-      <el-col :span="16">
-        <el-card class="chart-card">
-          <template #header>
-            <span>题目得分分析</span>
-          </template>
-          <div ref="questionChartRef" style="width: 100%; height: 300px;"></div>
-        </el-card>
-      </el-col>
-      <el-col :span="8">
-        <el-card class="summary-card">
-          <template #header>
-            <span>成绩概览</span>
-          </template>
-          <div class="summary-items">
-            <div class="summary-item">
-              <div class="label">总得分</div>
-              <div class="value" :class="getScoreClass(studentInfo.obtainedScore)">
-                {{ studentInfo.obtainedScore || 0 }}
-              </div>
-            </div>
-            <div class="summary-item">
-              <div class="label">满分</div>
-              <div class="value">{{ examInfo.totalScore || 100 }}</div>
-            </div>
-            <div class="summary-item">
-              <div class="label">得分率</div>
-              <div class="value primary">{{ scoreRate }}%</div>
-            </div>
-            <div class="summary-item">
-              <div class="label">正确率</div>
-              <div class="value success">{{ correctRate }}%</div>
+          <!-- 试卷头部 -->
+          <div class="paper-header">
+            <h1 class="paper-title">{{ examInfo.examTitle }}</h1>
+            <div class="student-info-row">
+              <div class="info-field">姓名：<span class="info-value">{{ studentInfo.studentName }}</span></div>
+              <div class="info-field">学号：<span class="info-value">{{ studentInfo.studentId }}</span></div>
             </div>
           </div>
-        </el-card>
-      </el-col>
-    </el-row>
 
-    <!-- 答题详情 -->
-    <el-card class="answers-card" style="margin-top: 20px">
-      <template #header>
-        <span>答题详情（共 {{ answers.length }} 题）</span>
-      </template>
-      
-      <div v-if="answers.length === 0" class="empty-state">
-        <el-empty description="暂无答题记录" />
-      </div>
-      
-      <div v-else class="answers-list">
-        <div 
-          v-for="(answer, index) in answers" 
-          :key="answer.questionId || index"
-          class="answer-item"
-          :class="{ 'is-correct': answer.isCorrect, 'is-wrong': !answer.isCorrect && answer.studentAnswer }"
-        >
-          <div class="answer-header">
-            <span class="question-number">第 {{ index + 1 }} 题</span>
-            <el-tag :type="getQuestionTypeColor(answer.questionType)" size="small">
-              {{ getQuestionTypeName(answer.questionType) }}
-            </el-tag>
-            <span class="question-score">
-              <span :class="{ 'score-correct': answer.isCorrect, 'score-wrong': !answer.isCorrect }">
-                {{ answer.obtainedScore || 0 }}
-              </span> / {{ answer.score }} 分
-            </span>
-            <el-tag v-if="answer.isCorrect" type="success" size="small">正确</el-tag>
-            <el-tag v-else-if="answer.studentAnswer" type="danger" size="small">错误</el-tag>
-            <el-tag v-else type="info" size="small">未作答</el-tag>
+          <!-- 分数统计表 -->
+          <div class="score-section">
+            <table class="score-table-mini">
+              <tr>
+                <th>类型</th>
+                <th v-for="grp in questionGroups" :key="'grp-' + grp.name">{{ grp.name }}</th>
+              </tr>
+              <tr>
+                <td>得分</td>
+                <td v-for="(grp, gi) in questionGroups" :key="'score-' + gi" class="score-red">
+                  {{ grp.score }}
+                </td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- 分隔线 -->
+          <div class="divider-line"></div>
+
+          <!-- 按题型分组的题目 -->
+          <div v-for="(group, gIndex) in questionGroups" :key="'group-' + gIndex" class="question-group">
+            <h2 class="group-title" style="font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #1f2937;">{{ group.name }}（共{{ group.questions.length }}题）</h2>
+            <div v-for="(answer, index) in group.questions" :key="index" :id="'question-' + answer.globalIndex" class="question-item">
+              <div class="question-header">
+                <span class="q-label">{{ answer.globalIndex + 1 }}. </span>
+              </div>
+              
+              <div class="question-content">
+                <div class="question-text">{{ answer.questionContent }}</div>
+                
+                <div class="points-badge">
+                  <span class="points-num">{{ answer.score != null ? answer.score : 0 }}</span>
+                  <span class="points-label">分</span>
+                </div>
+              </div>
+              
+              <!-- 选项 -->
+              <div v-if="answer.questionOptions" class="options-area">
+                <div v-for="(option, optIndex) in parseOptions(answer.questionOptions)" :key="optIndex" class="option-row">
+                  <span class="opt-letter">{{ String.fromCharCode(65 + optIndex) }}.</span>
+                  <span class="opt-text">{{ typeof option === 'object' ? option.text : option }}</span>
+                </div>
+              </div>
+              
+              <!-- 学生答案 -->
+              <div class="answer-area">
+                <div class="answer-label">学生答案：</div>
+                <div class="answer-text" :class="getStudentAnswerClass(answer)">
+                  {{ formatStudentAnswer(answer) || '未作答' }}
+                </div>
+              </div>
+              
+              <!-- 手动评分区域（仅主观题且未批改） -->
+              <div v-if="isSubjective(answer.questionType) && studentInfo.status == 2" class="grade-panel">
+                <div class="grade-input-row">
+                  <span class="grade-label">评分：</span>
+                  <el-input-number v-model="answer.gradeScore" :min="0" :max="answer.questionScore || 0" controls-position="right" size="small" />
+                  <span class="text-slate-500">/ {{ answer.questionScore || 0 }} 分</span>
+                </div>
+              </div>
+              
+              <!-- 正确答案/解析 -->
+              <div class="analysis-area">
+                <div class="analysis-row">
+                  <span class="analysis-label">正确答案：</span>
+                  <span class="correct-ans">{{ formatCorrectAnswer(answer) }}</span>
+                </div>
+              </div>
+              
+              <!-- 对勾叉号 -->
+              <span v-if="showCorrectIcon(answer)" class="icon-check">✓</span>
+              <span v-else-if="showPartialIcon(answer)" class="icon-partial"></span>
+              <span v-else-if="showWrongIcon(answer)" class="icon-cross">✗</span>
+            </div>
           </div>
           
-          <div class="answer-content">
-            <p class="question-text">{{ answer.questionContent }}</p>
-            
-            <!-- 选择题选项 -->
-            <div v-if="answer.questionOptions" class="question-options">
-              <div 
-                v-for="(option, optIndex) in parseOptions(answer.questionOptions)" 
-                :key="optIndex"
-                class="option-item"
-                :class="{ 
-                  'selected': isOptionSelected(answer.studentAnswer, optIndex),
-                  'correct': isCorrectOption(answer.correctAnswer, optIndex),
-                  'wrong': isOptionSelected(answer.studentAnswer, optIndex) && !isCorrectOption(answer.correctAnswer, optIndex)
-                }"
-              >
-                <span class="opt-prefix">{{ String.fromCharCode(65 + optIndex) }}.</span>
-                {{ typeof option === 'object' ? option.text : option }}
-              </div>
-            </div>
-            
-            <div class="answer-comparison">
-              <div class="student-answer">
-                <strong>学生答案：</strong>
-                <span :class="{ 'wrong-text': !answer.isCorrect }">
-                  {{ formatStudentAnswer(answer) || '未作答' }}
-                </span>
-              </div>
-              <div class="correct-answer">
-                <strong>正确答案：</strong>
-                <span class="correct-text">{{ formatCorrectAnswer(answer) }}</span>
-              </div>
-            </div>
-            
-            <div v-if="answer.analysis" class="answer-analysis">
-              <strong>解析：</strong>{{ answer.analysis }}
-            </div>
-          </div>
         </div>
       </div>
-    </el-card>
+
+      <!-- 答题卡侧边栏 -->
+      <div class="answer-sidebar">
+        <div class="sidebar-header">答题卡总览</div>
+        
+        <div class="answer-grid">
+          <div 
+             v-for="(answer, index) in answers" 
+             :key="index"
+             @click="scrollToQuestion(index)"
+             class="answer-number"
+             :class="getAnswerStatus(answer)"
+          >
+            {{ index + 1 }}
+          </div>
+        </div>
+        
+        <div class="sidebar-actions">
+          <el-button v-if="hasPendingSubjective" type="primary" @click="submitGrades" :loading="submitLoading">提交批改</el-button>
+          <el-button @click="goBack">返回列表</el-button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -149,8 +140,9 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
-import { getStudentExamDetail } from '@/api/exam'
+import { getStudentExamDetail, gradeExam } from '@/api/exam'
 import * as echarts from 'echarts'
+import '@/assets/css/teacher/student-answer-detail.css'
 
 const route = useRoute()
 const router = useRouter()
@@ -162,17 +154,170 @@ const answers = ref([])
 const questionChartRef = ref(null)
 let questionChart = null
 
+const questionGroups = computed(() => {
+  const cnNums = ['一', '二', '三', '四', '五', '六', '七'];
+  const typeWeights = {
+    'SINGLE': 1, 'SINGLE_CHOICE': 1,
+    'MULTIPLE': 2, 'MULTIPLE_CHOICE': 2,
+    'JUDGE': 3, 'TRUE_FALSE': 3,
+    'FILL': 4, 'FILL_BLANK': 4,
+    'SHORT': 5, 'SHORT_ANSWER': 5, 'ESSAY': 5
+  };
+  
+  // 按照题型顺序先整体排序
+  const sortedAnswers = [...answers.value].sort((a, b) => {
+    return (typeWeights[a.questionType] || 99) - (typeWeights[b.questionType] || 99)
+  });
+
+  const groupsObj = {};
+  sortedAnswers.forEach((ans, globalIdx) => {
+    const type = ans.questionType;
+    const weight = typeWeights[type] || 99;
+    if (!groupsObj[weight]) {
+      groupsObj[weight] = {
+        name: getQuestionTypeName(type),
+        questions: [],
+        score: 0
+      };
+    }
+    ans.globalIndex = globalIdx; // 录入全局有序编号
+    groupsObj[weight].questions.push(ans);
+    groupsObj[weight].score += Number(ans.score) || 0;
+  });
+
+  // 整理为数组并附加上“一、二”序号
+  const groupArr = Object.values(groupsObj);
+  groupArr.forEach((grp, i) => {
+    grp.name = cnNums[i % cnNums.length] + '、' + grp.name;
+  });
+  return groupArr;
+})
+
+const objectiveScore = computed(() => {
+  return answers.value
+    .filter(a => !isSubjective(a.questionType))
+    .reduce((sum, a) => sum + (Number(a.score) || 0), 0)
+})
+
+const subjectiveScore = computed(() => {
+  return answers.value
+    .filter(a => isSubjective(a.questionType))
+    .reduce((sum, a) => sum + (Number(a.score) || 0), 0)
+})
+
+const hasPendingSubjective = computed(() => {
+  return answers.value.some(a => isSubjective(a.questionType) && studentInfo.value.status == 2)
+})
+
+const submitLoading = ref(false)
+
 // 计算属性
 const scoreRate = computed(() => {
   if (!examInfo.value.totalScore) return 0
-  return Math.round((studentInfo.value.obtainedScore || 0) / examInfo.value.totalScore * 100)
+  const obtained = studentInfo.value.obtainedScore || 0
+  return Math.round(Number(obtained) / Number(examInfo.value.totalScore) * 100)
 })
 
+const isSubjective = (type) => ['SHORT', 'SHORT_ANSWER', 'ESSAY', 'FILL', 'FILL_BLANK'].includes(type)
+
+const getAnswerStatus = (answer) => {
+  if (isSubjective(answer.questionType)) {
+    const score = Number(answer.score) || 0
+    const maxScore = Number(answer.questionScore) || 1
+    if (score >= maxScore) return 'correct'
+    if (score > 0) return 'partial'
+    return 'wrong'
+  }
+  if (answer.isCorrect == 1) return 'correct'
+  if (answer.isCorrect == 0) return 'wrong'
+  return 'pending'
+}
+
+const showCorrectIcon = (answer) => {
+  if (isSubjective(answer.questionType)) {
+    const score = Number(answer.score) || 0
+    const maxScore = Number(answer.questionScore) || 1
+    return score >= maxScore && score > 0
+  }
+  return answer.isCorrect == 1
+}
+
+const showPartialIcon = (answer) => {
+  if (isSubjective(answer.questionType)) {
+    const score = Number(answer.score) || 0
+    const maxScore = Number(answer.questionScore) || 1
+    return score > 0 && score < maxScore
+  }
+  return false
+}
+
+const showWrongIcon = (answer) => {
+  if (isSubjective(answer.questionType)) {
+    const score = Number(answer.score) || 0
+    return score == 0;
+  }
+  return answer.isCorrect == 0
+}
+
+const getStudentAnswerClass = (answer) => {
+  if (isSubjective(answer.questionType)) {
+    const score = Number(answer.score) || 0
+    const maxScore = Number(answer.questionScore) || 1
+    if (score >= maxScore) return 'correct'
+    if (score == 0) return 'wrong'
+    return 'partial'
+  }
+  if (answer.isCorrect == 1) return 'correct'
+  if (answer.isCorrect == 0) return 'wrong'
+  return ''
+}
+
 const correctRate = computed(() => {
-  if (answers.value.length === 0) return 0
-  const correctCount = answers.value.filter(a => a.isCorrect).length
-  return Math.round(correctCount / answers.value.length * 100)
+  const objective = answers.value.filter(a => !isSubjective(a.questionType))
+  if (objective.length === 0) return 0
+  const correctCount = objective.filter(a => a.isCorrect == 1).length
+  return Math.round(correctCount / objective.length * 100)
 })
+
+const objectiveAnswers = computed(() => answers.value.filter(a => !isSubjective(a.questionType)))
+const subjectiveAnswers = computed(() => answers.value.filter(a => isSubjective(a.questionType)))
+
+const scrollToQuestion = (index) => {
+  const el = document.getElementById('question-' + index)
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+}
+
+const submitGrades = async () => {
+  // 收集包含简答题的主观题评分
+  const grades = answers.value.filter(a => isSubjective(a.questionType)).map(a => ({
+    answerId: a.answerId || a.id,
+    score: a.gradeScore || 0,
+    teacherComment: a.teacherCommentInput || ''
+  }))
+  
+  const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id') || localStorage.getItem('userId')
+
+  submitLoading.value = true
+  try {
+    const res = await gradeExam(route.params.studentExamId, {
+      teacherId,
+      answers: grades
+    })
+    if (res.code === 200 || res.success) {
+      ElMessage.success('批改成功')
+      fetchAnswerDetail() // 刷新页面
+    } else {
+      ElMessage.error(res.message || '批改失败')
+    }
+  } catch (error) {
+    console.error(error)
+    ElMessage.error('批改失败')
+  } finally {
+    submitLoading.value = false
+  }
+}
 
 // 获取答卷详情
 const fetchAnswerDetail = async () => {
@@ -186,6 +331,7 @@ const fetchAnswerDetail = async () => {
       studentInfo.value = {
         studentId: data.studentId,
         studentName: data.studentName,
+        studentAvatar: data.studentAvatar || null,
         obtainedScore: data.obtainedScore || data.totalScore,
         submitTime: data.submitTime,
         duration: data.duration,
@@ -196,10 +342,13 @@ const fetchAnswerDetail = async () => {
         examTitle: data.examTitle,
         totalScore: data.examTotalScore || data.totalScore || 100
       }
-      // 处理答案列表
+      // 处理答案列表 —— score 是学生得分，questionScore 是题目满分
       answers.value = (data.answers || data.studentAnswers || []).map(ans => ({
         ...ans,
-        isCorrect: ans.isCorrect || ans.obtainedScore === ans.score
+        // 主观题批改输入框的初始值：若已批改过则显示已有分数，否则为0
+        gradeScore: ans.score != null ? Number(ans.score) : 0,
+        teacherCommentInput: ans.teacherComment || '',
+        // isCorrect 来自后端的 Integer 字段（1=正确，0=错误），此处不覆盖
       }))
       
       nextTick(() => {
@@ -214,6 +363,15 @@ const fetchAnswerDetail = async () => {
   } finally {
     loading.value = false
   }
+}
+
+// 头像URL生成
+const getAvatarUrl = (path) => {
+  if (!path || path.trim() === '') {
+    return 'https://cube.elemecdn.com/9/c2/f0ee8a3c7c9636ef921315944d5671d8.png'
+  }
+  if (path.startsWith('http://') || path.startsWith('https://')) return path
+  return `http://localhost:8088${path}`
 }
 
 // 初始化图表
@@ -429,161 +587,18 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.student-answer-detail {
-  padding: 20px;
+/* 针对答题卡侧边栏的细小滚动条 */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
 }
-
-.page-header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid #e4e7ed;
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
 }
-
-.page-header h2 {
-  margin: 0;
-  flex: 1;
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 10px;
 }
-
-.info-card, .chart-card, .summary-card, .answers-card {
-  border-radius: 12px;
-}
-
-.summary-items {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-}
-
-.summary-item {
-  text-align: center;
-  padding: 16px;
-  background: #f8fafc;
-  border-radius: 8px;
-}
-
-.summary-item .label {
-  font-size: 14px;
-  color: #64748b;
-  margin-bottom: 8px;
-}
-
-.summary-item .value {
-  font-size: 28px;
-  font-weight: 700;
-  color: #1f2937;
-}
-
-.summary-item .value.success { color: #67C23A; }
-.summary-item .value.warning { color: #E6A23C; }
-.summary-item .value.danger { color: #F56C6C; }
-.summary-item .value.primary { color: #409EFF; }
-
-.answers-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.answer-item {
-  padding: 20px;
-  border-radius: 12px;
-  border: 1px solid #e4e7ed;
-  transition: all 0.3s;
-}
-
-.answer-item.is-correct {
-  border-left: 4px solid #67C23A;
-  background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
-}
-
-.answer-item.is-wrong {
-  border-left: 4px solid #F56C6C;
-  background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%);
-}
-
-.answer-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.question-number {
-  font-weight: 700;
-  color: #1f2937;
-}
-
-.question-score {
-  margin-left: auto;
-  color: #64748b;
-}
-
-.score-correct { color: #67C23A; font-weight: 700; }
-.score-wrong { color: #F56C6C; font-weight: 700; }
-
-.question-text {
-  font-size: 15px;
-  line-height: 1.6;
-  color: #1f2937;
-  margin-bottom: 16px;
-}
-
-.question-options {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.option-item {
-  padding: 10px 16px;
-  border-radius: 8px;
-  border: 1px solid #e4e7ed;
-  background: #f8fafc;
-  transition: all 0.3s;
-}
-
-.option-item.selected {
-  border-color: #409EFF;
-  background: #ecf5ff;
-}
-
-.option-item.correct {
-  border-color: #67C23A;
-  background: #f0f9eb;
-}
-
-.option-item.wrong {
-  border-color: #F56C6C;
-  background: #fef0f0;
-}
-
-.opt-prefix {
-  font-weight: 700;
-  margin-right: 8px;
-}
-
-.answer-comparison {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  padding: 12px;
-  background: #f8fafc;
-  border-radius: 8px;
-  margin-bottom: 12px;
-}
-
-.wrong-text { color: #F56C6C; }
-.correct-text { color: #67C23A; }
-
-.answer-analysis {
-  padding: 12px;
-  background: #fffbeb;
-  border-radius: 8px;
-  color: #92400e;
-  font-size: 14px;
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.5);
 }
 </style>

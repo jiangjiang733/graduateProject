@@ -170,20 +170,22 @@
             :image-size="200"
           />
 
-          <!-- 分页 — 固定在底部右侧 -->
-          <div v-if="pagination.total > 0" class="pagination-container">
-            <el-pagination
-              v-model:current-page="pagination.currentPage"
-              v-model:page-size="pagination.pageSize"
-              :page-sizes="[ 4,8,12,16,20]"
-              :total="pagination.total"
-              layout="total, sizes, prev, pager, next, jumper"
-              @size-change="handleSizeChange"
-              @current-change="handlePageChange"
-            />
-          </div>
         </div>
       </template>
+    </div>
+
+    <!-- 独立的分页块 - 位于列表外部底部中间 -->
+    <div class="pagination-container pagination-outside" v-if="pagination.total > 0">
+      <el-pagination
+        v-model:current-page="pagination.currentPage"
+        v-model:page-size="pagination.pageSize"
+        :page-sizes="[4, 8, 12, 16]"
+        layout="total, sizes, prev, pager, next, jumper"
+        :total="pagination.total"
+        @size-change="handleSizeChange"
+        @current-change="handlePageChange"
+        class="premium-pagination"
+      />
     </div>
   </div>
 </template>

@@ -596,40 +596,40 @@ export function useExamDetail() {
       'ESSAY': 5
     }
 
-    const typeNames = {
-      1: '一、单选题',
-      2: '二、多选题',
-      3: '三、判断题',
-      4: '四、填空题',
-      5: '五、简答题'
-    }
+    const cnNums = ['一', '二', '三', '四', '五', '六', '七'];
 
-    // 给每道题添加全局序号
-    const questionsWithIndex = questions.value.map((q, index) => ({
-      ...q,
-      globalIndex: index + 1
-    }))
+    // 首先按题型排序
+    const sortedQuestions = [...questions.value].sort((a, b) => {
+      const orderA = typeOrder[a.questionType] || 99
+      const orderB = typeOrder[b.questionType] || 99
+      return orderA - orderB
+    })
 
-    // 按题型分组
+    // 再按顺序赋全局连续编号，并分组
     const grouped = {}
-    questionsWithIndex.forEach(question => {
+    sortedQuestions.forEach((question, index) => {
+      const qWithIndex = { ...question, globalIndex: index + 1 }
       const order = typeOrder[question.questionType] || 99
+
       if (!grouped[order]) {
         grouped[order] = {
-          typeName: typeNames[order] || '其他题型',
+          rawTypeName: getQuestionTypeName(question.questionType),
           questions: []
         }
       }
-      grouped[order].questions.push(question)
+      grouped[order].questions.push(qWithIndex)
     })
 
-    // 按顺序返回
-    return Object.keys(grouped)
-      .sort((a, b) => parseInt(a) - parseInt(b))
-      .reduce((acc, key) => {
-        acc[key] = grouped[key]
-        return acc
-      }, {})
+    // 按顺序返回，并附上连续的中文编号
+    const sortedKeys = Object.keys(grouped).sort((a, b) => parseInt(a) - parseInt(b))
+    const result = {}
+    sortedKeys.forEach((key, i) => {
+      const group = grouped[key]
+      group.typeName = cnNums[i % cnNums.length] + '、' + group.rawTypeName
+      result[key] = group
+    })
+
+    return result
   })
 
   // 获取考试状态类型

@@ -308,7 +308,9 @@ export function useHomeworkDetail() {
 
         // 题目编辑相关
         editQuestionDialogVisible: management.editQuestionDialogVisible,
+        editingQuestionIndex: management.editingQuestionIndex,
         editingQuestion: management.editingQuestion,
+        openCreateQuestion: management.openCreateQuestion,
         openEditQuestion: management.openEditQuestion,
         saveEditQuestion: management.saveEditQuestion,
         addOption: management.addOption,

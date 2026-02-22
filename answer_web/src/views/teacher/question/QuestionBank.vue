@@ -87,18 +87,12 @@
     <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑题目' : '新增题目'" width="700px" class="premium-dialog" :close-on-click-modal="false" destroy-on-close>
       
       <div class="dialog-body-content">
-          <!-- Course & Difficulty Row -->
-          <div class="form-section" style="display: flex; gap: 20px; padding: 16px;">
-              <div style="flex: 1">
-                  <div class="section-title" style="margin-bottom: 8px">所属课程</div>
-                  <el-select v-model="form.courseId" placeholder="选择课程" class="glass-select" style="width: 100%">
-                    <el-option v-for="c in courses" :key="c.id" :label="c.courseName" :value="c.id" />
-                  </el-select>
-              </div>
-              <div>
-                  <div class="section-title" style="margin-bottom: 8px">难度</div>
-                  <el-rate v-model="form.difficulty" :max="3" :texts="['简单', '中等', '困难']" show-text />
-              </div>
+          <!-- Course Row -->
+          <div class="form-section" style="padding: 16px;">
+              <div class="section-title" style="margin-bottom: 8px">所属课程</div>
+              <el-select v-model="form.courseId" placeholder="选择课程" class="glass-select" style="width: 100%">
+                <el-option v-for="c in courses" :key="c.id" :label="c.courseName" :value="c.id" />
+              </el-select>
           </div>
 
           <div class="custom-tabs">
@@ -178,7 +172,19 @@
                />
            </div>
 
-      </div>
+           <!-- Analysis Section -->
+           <div class="form-section">
+                <div class="section-title">题目解析 (可选)</div>
+                <el-input 
+                    v-model="form.analysis" 
+                    type="textarea" 
+                    :rows="2" 
+                    placeholder="在此输入题目详细解析内容..." 
+                    class="clean-textarea"
+                    resize="none"
+                />
+            </div>
+       </div>
 
       <template #footer>
         <div class="dialog-footer">

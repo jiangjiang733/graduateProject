@@ -373,9 +373,7 @@
           <el-table-column label="题目内容" show-overflow-tooltip>
             <template #default="{row}">{{ row.content || row.questionContent }}</template>
           </el-table-column>
-          <el-table-column label="难度" width="80" align="center">
-            <template #default="{row}">{{ '★'.repeat(row.difficulty || 2) }}</template>
-          </el-table-column>
+
         </el-table>
 
         <div class="bank-picker-footer">

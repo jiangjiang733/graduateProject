@@ -1,9 +1,10 @@
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useTeacherStore } from '@/stores/teacher.js'
 import { useSettingsStore } from '@/stores/settings.js'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getUnreadCount } from '@/api/message.js'
+import { getChatUnreadCount } from '@/api/chat.js'
 import { getProfile } from '@/api/teacher.js'
 
 export function useTeacherLayout() {
@@ -21,7 +22,6 @@ export function useTeacherLayout() {
         { path: '/teacher/exams', label: '考试管理', icon: 'Collection' },
         { path: '/teacher/homework', label: '作业管理', icon: 'EditPen' },
         { path: '/teacher/questions', label: '题库', icon: 'List' },
-        { path: '/teacher/enrollments', label: '报名中心', icon: 'Checked' },
         { path: '/teacher/messages', label: '消息中心', icon: 'Bell' },
         { path: '/teacher/profile', label: '个人中心', icon: 'UserFilled' },
     ]
@@ -56,10 +56,24 @@ export function useTeacherLayout() {
         try {
             const teacherId = teacherStore.teacherId
             if (!teacherId) return
-            const res = await getUnreadCount(teacherId)
-            if (res.code === 200) {
-                teacherStore.setUnreadCount(res.data.unreadCount)
+            
+            const teacherType = 'TEACHER'
+            let totalUnread = 0
+
+            const [chatRes, sysRes] = await Promise.all([
+                getChatUnreadCount(teacherType.toLowerCase(), teacherId),
+                getUnreadCount(teacherId, teacherType)
+            ])
+
+            if (chatRes.code === 200) {
+                totalUnread += chatRes.data
             }
+
+            if (sysRes.code === 200) {
+                totalUnread += sysRes.data.unreadCount || 0
+            }
+
+            teacherStore.setUnreadCount(totalUnread)
         } catch (error) {
             console.error('Fetch unread count failed', error)
         }
@@ -81,6 +95,8 @@ export function useTeacherLayout() {
         }
     }
 
+    let unreadTimer = null
+
     onMounted(async () => {
         // 注意: initSettings() 已由 App.vue 在 onMounted 中调用
         // 这里只刷新当前用户的设置，避免重复初始化
@@ -94,8 +110,19 @@ export function useTeacherLayout() {
                 fetchProfile(),
                 fetchUnreadCount()
             ])
+
+            // 每 5 秒刷新一次侧边栏未读数量
+            unreadTimer = setInterval(() => {
+                fetchUnreadCount()
+            }, 5000)
         } else {
             console.warn('[TeacherLayout] teacherId 不存在，跳过数据加载')
+        }
+    })
+
+    onUnmounted(() => {
+        if (unreadTimer) {
+            clearInterval(unreadTimer)
         }
     })
 

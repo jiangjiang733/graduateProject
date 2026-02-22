@@ -41,6 +41,20 @@
           >
             已结束
           </span>
+          <span 
+            class="tab-item pending-tab" 
+            :class="{active: filterForm.status === 'UNGRADED'}" 
+            @click="setFilterStatus('UNGRADED')"
+          >
+            待批改
+          </span>
+          <span 
+            class="tab-item graded-tab" 
+            :class="{active: filterForm.status === 'GRADED'}" 
+            @click="setFilterStatus('GRADED')"
+          >
+            已批改
+          </span>
         </div>
         <el-button class="create-homework-btn" @click="showCreateDialog">
           <el-icon><Plus /></el-icon> 布置新作业
@@ -93,15 +107,17 @@
             <el-icon><Clock /></el-icon>
             <span class="deadline-text">截止: {{ formatDate(homework.deadline) }}</span>
           </div>
-          <div class="submitted-count">
-            {{ homework.submittedCount }} / {{ homework.totalStudents }}
+          <div class="submitted-count" style="font-size: 13px; color: #64748b;">
+            已批改 <span style="font-weight: bold; color: #10b981;">{{ homework.gradedCount || 0 }}</span> / 
+            待批改 <span style="font-weight: bold; color: #f59e0b;">{{ Math.max(0, (homework.submittedCount || 0) - (homework.gradedCount || 0) - (homework.returnedCount || 0)) }}</span> / 
+            已退回 <span style="font-weight: bold; color: #ef4444;">{{ homework.returnedCount || 0 }}</span>
           </div>
         </div>
 
         <div class="progress-bar-container">
           <el-progress 
-            :percentage="getSubmitProgress(homework)" 
-            :color="'#2563eb'" 
+            :percentage="getGradeProgress(homework)" 
+            :color="getGradeProgressColor(homework)" 
             :stroke-width="8" 
             :show-text="false" 
           />
@@ -183,6 +199,9 @@
               <span class="section-tip">学生可直接在页面上作答</span>
             </div>
             <div class="h-right">
+              <el-button link class="import-link" @click="openCreateQuestion">
+                <el-icon><Plus /></el-icon> 添加试题
+              </el-button>
               <el-button link class="import-link" @click="openQuestionBank">
                 <el-icon><List /></el-icon> 引用题库
               </el-button>
@@ -333,11 +352,7 @@
               <div class="question-preview">{{ row.content }}</div>
             </template>
           </el-table-column>
-          <el-table-column label="难度" width="100" align="center">
-            <template #default="{row}">
-              <span class="diff-stars">{{ '★'.repeat(row.difficulty || 1) }}</span>
-            </template>
-          </el-table-column>
+
         </el-table>
 
         <div class="picker-footer">
@@ -412,12 +427,20 @@
     <!-- 题目编辑弹窗 -->
     <el-dialog
       v-model="editQuestionDialogVisible"
-      title="编辑题目"
+      :title="editingQuestionIndex === -1 ? '添加题目' : '编辑题目'"
       width="700px"
       append-to-body
       class="modern-dialog"
     >
       <el-form label-position="top">
+        <el-form-item label="题型" v-if="editingQuestionIndex === -1">
+          <el-radio-group v-model="editingQuestion.questionType">
+             <el-radio label="SINGLE">单选题</el-radio>
+             <el-radio label="MULTIPLE">多选题</el-radio>
+             <el-radio label="JUDGE">判断题</el-radio>
+             <el-radio label="ESSAY">简答题</el-radio>
+          </el-radio-group>
+        </el-form-item>
         <el-form-item label="题目内容">
           <el-input v-model="editingQuestion.questionContent" type="textarea" :rows="4" />
         </el-form-item>
@@ -534,6 +557,8 @@ const {
   formatDate,
   getSubmitProgress,
   getProgressColor,
+  getGradeProgress,
+  getGradeProgressColor,
   openQuestionBank,
   searchBank,
   handleBankSelection,
@@ -551,7 +576,9 @@ const {
   moveHomeworkQuestion,
   calculateHomeworkTotalScore,
   editQuestionDialogVisible,
+  editingQuestionIndex,
   editingQuestion,
+  openCreateQuestion,
   openEditQuestion,
   saveEditQuestion,
   addOption,

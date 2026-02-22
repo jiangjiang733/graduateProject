@@ -1481,7 +1481,9 @@ html.dark .footer-btn-prev:hover {
 }
 
 .schedule-management .section-header {
-    display: none;
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 24px;
 }
 
 .schedule-list {

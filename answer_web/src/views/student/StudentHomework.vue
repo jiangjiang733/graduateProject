@@ -57,6 +57,13 @@
           >
             已完成 <span>{{ getCountByStatus(2) }}</span>
           </div>
+          <div
+              class="filter-tab"
+              :class="{ active: filterStatus === 3 }"
+              @click="filterStatus = 3; filterHomeworks()"
+          >
+            被退回 <span>{{ getCountByStatus(3) }}</span>
+          </div>
         </div>
       </section>
 
@@ -127,7 +134,7 @@
                   提交作业
                 </el-button>
                 <el-button
-                    v-else-if="homework.status === 1"
+                    v-else-if="homework.status === 1 || homework.status === 3"
                     type="primary"
                     plain
                     class="btn-submit"

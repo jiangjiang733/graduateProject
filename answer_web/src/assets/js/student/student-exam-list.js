@@ -98,7 +98,10 @@ export function useStudentExamList() {
     }
 
     const getStatusText = (exam) => {
-        if (exam.isSubmitted) return '已交卷'
+        if (exam.isSubmitted) {
+            if (exam.studentStatus === 2) return '等待成绩'
+            return '已交卷'
+        }
         const status = getStatus(exam)
         if (status === 'ONGOING') return '正在进行'
         if (status === 'NOT_STARTED') return '未开始'
@@ -106,13 +109,20 @@ export function useStudentExamList() {
     }
 
     const canStart = (exam) => {
-        if (exam.isSubmitted) return true
+        if (exam.isSubmitted) {
+            if (exam.studentStatus === 2) return false // 隐藏或禁用重做/查看按钮
+            return true
+        }
         const status = getStatus(exam)
         return status === 'ONGOING'
     }
 
     const getActionButtonText = (exam) => {
-        if (exam.isSubmitted) return exam.studentScore !== null ? '查看成绩' : '回顾试卷'
+        if (exam.isSubmitted) {
+            if (exam.studentStatus === 2) return '批改中'
+            if (exam.studentStatus === 3) return '可查看成绩'
+            return exam.studentScore !== null ? '查看成绩' : '回顾试卷'
+        }
         const status = getStatus(exam)
         if (status === 'NOT_STARTED') return '尚未开启'
         if (status === 'ENDED') return '缺考'

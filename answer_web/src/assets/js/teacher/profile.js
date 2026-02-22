@@ -34,6 +34,14 @@ export function useProfile() {
 
     // 课程表数据
     const courseData = ref([])
+    const currentPage = ref(1)
+    const pageSize = ref(5)
+
+    const totalCourses = computed(() => courseData.value.length)
+    const paginatedCourseData = computed(() => {
+        const start = (currentPage.value - 1) * pageSize.value
+        return courseData.value.slice(start, start + pageSize.value)
+    })
 
     // 将当前用户信息填充到表单中
     const fillFormWithCurrentData = () => {
@@ -451,38 +459,63 @@ export function useProfile() {
             const courses = coursesResponse.data.list
             console.log('课程数量:', courses.length)
 
-            // 2. 为每个课程获取时间表
+            // 辅助格式化日期
+            const formatDate = (dateStr) => {
+                if (!dateStr) return ''
+                const date = new Date(dateStr)
+                const year = date.getFullYear()
+                const month = String(date.getMonth() + 1).padStart(2, '0')
+                const day = String(date.getDate()).padStart(2, '0')
+                return `${year}-${month}-${day}`
+            }
+
+            // 2. 处理课程并获取时间表（有排课记录或有有效时间的课程都会显示）
             const schedulePromises = courses.map(async (course) => {
+                const startStr = course.startTime ? formatDate(course.startTime) : ''
+                const endStr = course.endTime ? formatDate(course.endTime) : ''
+
+                let validityTime = ''
+                if (startStr && endStr) validityTime = `${startStr} 至 ${endStr}`
+                else if (startStr) validityTime = `${startStr} 开始`
+                else if (endStr) validityTime = `截止 ${endStr}`
+
+                const baseInfo = {
+                    courseName: course.courseName || course.name,
+                    courseTime: validityTime || '未设置时间',
+                    courseLocation: '线上平台', // 默认线上
+                    courseStudent: course.num || 0,
+                    courseId: course.id
+                }
+
                 try {
                     const scheduleResponse = await getCourseSchedules(course.id)
-                    console.log(`课程 ${course.courseName} 的时间表:`, scheduleResponse)
 
                     if (scheduleResponse.success && scheduleResponse.data && scheduleResponse.data.length > 0) {
-                        // 将课程时间表转换为显示格式
+                        // 有详细排课记录，读取 course_schedule 表数据
                         return scheduleResponse.data.map(schedule => ({
-                            courseName: course.courseName || course.name,
-                            courseTime: formatScheduleTime(schedule),
+                            ...baseInfo,
+                            courseTime: formatScheduleTime(schedule) + (validityTime ? ` [${validityTime}]` : ''),
                             courseLocation: schedule.location || '未设置',
-                            courseStudent: course.num || 0,
-                            courseId: course.id,
                             scheduleId: schedule.scheduleId
                         }))
                     }
+
+                    // 仅显示有上课时间/排课记录的课程
                     return []
                 } catch (error) {
-                    console.error(`获取课程 ${course.courseName} 的时间表失败:`, error)
+                    // 接口报错时不显示此课程排课
                     return []
                 }
             })
 
-            // 3. 等待所有时间表加载完成
+            // 3. 等待所有处理完成
             const scheduleResults = await Promise.all(schedulePromises)
 
             // 4. 扁平化数组并设置数据
             courseData.value = scheduleResults.flat()
 
+            // 更新这部分后如果需要排个序可以自己加排序，这里默认按原返回为主
             console.log('最终课程表数据:', courseData.value)
-            console.log('=== 教师课程表加载完成 ===')
 
         } catch (error) {
             console.error('加载教师课程表失败:', error)
@@ -540,6 +573,10 @@ export function useProfile() {
         passwordRules,
         submitPasswordChange,
         handleEdit,
-        handleChangePassword
+        handleChangePassword,
+        currentPage,
+        pageSize,
+        totalCourses,
+        paginatedCourseData
     }
 }

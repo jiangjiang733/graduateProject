@@ -63,6 +63,7 @@ public class ExamGradingServiceImpl implements ExamGradingService {
         detailDTO.setExamId(studentExam.getExamId());
         detailDTO.setStudentId(studentExam.getStudentId());
         detailDTO.setStudentName(student != null ? student.getStudentsUsername() : "未知");
+        detailDTO.setStudentAvatar(student != null ? student.getStudentsHead() : null);
         detailDTO.setStartTime(studentExam.getStartTime());
         detailDTO.setSubmitTime(studentExam.getSubmitTime());
         detailDTO.setTotalScore(studentExam.getTotalScore());
@@ -93,7 +94,9 @@ public class ExamGradingServiceImpl implements ExamGradingService {
                 answerDTO.setQuestionContent(question.getQuestionContent());
                 answerDTO.setQuestionOptions(question.getQuestionOptions());
                 answerDTO.setAnswer(question.getAnswer());
+                answerDTO.setCorrectAnswer(question.getAnswer()); // 兼容字段
                 answerDTO.setQuestionScore(question.getScore());
+                answerDTO.setAnalysis(question.getAnalysis());
             }
 
             answerDTOs.add(answerDTO);

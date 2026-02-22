@@ -16,7 +16,7 @@
           <div class="modern-search-box">
             <el-input
                 v-model="searchQuery"
-                placeholder="搜索已加入的课程..."
+                placeholder="搜索课程..."
                 @keyup.enter="handleSearch"
                 clearable
             >
@@ -84,7 +84,7 @@
         </div>
 
         <div v-else-if="courses.length === 0" class="empty-state">
-          <el-empty description="暂无已加入的课程" />
+          <el-empty description="暂无课程" />
         </div>
 
         <div v-else class="course-grid">
@@ -92,7 +92,8 @@
               v-for="course in courses"
               :key="course.id"
               class="course-card-premium"
-              @click="goToLearn(course.id)"
+              :class="{ 'not-joined': !course.isJoined }"
+              @click="course.isJoined ? goToLearn(course.id) : null"
           >
             <div class="card-cover-wrapper">
               <img :src="getCourseImage(course.image)" :alt="course.courseName" />
@@ -118,16 +119,35 @@
 
 
               <div class="card-footer">
-                <el-button
-                    type="primary"
-                    class="action-btn"
-                    @click.stop="goToLearn(course.id)"
-                >
-                  进入学习
-                </el-button>
-                <el-button link class="more-btn" @click.stop="goToCourseDetail(course.id)">
-                  详情 <el-icon><ArrowRight /></el-icon>
-                </el-button>
+                <!-- 已加入课程 -->
+                <template v-if="course.isJoined">
+                  <el-button type="primary" class="action-btn" @click.stop="goToLearn(course.id)">
+                    进入学习
+                  </el-button>
+                  <el-button link class="more-btn" @click.stop="goToCourseDetail(course.id)">
+                    详情 <el-icon><ArrowRight /></el-icon>
+                  </el-button>
+                </template>
+
+                <!-- 审核中 -->
+                <template v-else-if="course.enrollmentStatus === 'pending'">
+                  <el-button type="warning" class="action-btn" disabled>
+                    审核中...
+                  </el-button>
+                  <el-button link class="more-btn" @click.stop="goToCourseDetail(course.id)">
+                    详情 <el-icon><ArrowRight /></el-icon>
+                  </el-button>
+                </template>
+
+                <!-- 未加入 -->
+                <template v-else>
+                  <el-button type="success" class="action-btn" @click.stop="applyToCourse(course)">
+                    申请加入
+                  </el-button>
+                  <el-button link class="more-btn" @click.stop="goToCourseDetail(course.id)">
+                    详情 <el-icon><ArrowRight /></el-icon>
+                  </el-button>
+                </template>
               </div>
             </div>
           </div>
@@ -174,6 +194,7 @@ const {
   handlePageChange,
   goToCourseDetail,
   goToLearn,
+  applyToCourse,
   getCourseImage,
   getTeacherAvatar,
   formatDate

@@ -167,6 +167,7 @@ export function useCourseForm() {
 
     // ==================== 课程时间表相关 ====================
     const schedules = ref([])
+    const schedulesToDelete = ref([])
     const scheduleLoading = ref(false)
     const scheduleDialogVisible = ref(false)
     const isEditSchedule = ref(false)
@@ -198,6 +199,7 @@ export function useCourseForm() {
 
             if (response.success) {
                 schedules.value = response.data || []
+                schedulesToDelete.value = []
                 console.log('课程时间表数据:', schedules.value)
             } else {
                 console.error('获取课程时间表失败:', response.message)
@@ -239,7 +241,7 @@ export function useCourseForm() {
         scheduleDialogVisible.value = true
     }
 
-    // 提交时间表
+    // 提交时间表（仅本地操作，实际提交在更新课程时执行）
     const submitSchedule = async () => {
         // 验证
         if (!scheduleForm.dayOfWeek || !scheduleForm.startSection || !scheduleForm.endSection) {
@@ -259,23 +261,7 @@ export function useCourseForm() {
             return
         }
 
-        // 如果是创建课程模式，仅在本地操作
-        if (!isEdit.value) {
-            const tempSchedule = { ...scheduleForm }
-            if (isEditSchedule.value) {
-                const index = schedules.value.findIndex(item => item.scheduleId === tempSchedule.scheduleId)
-                if (index !== -1) schedules.value[index] = tempSchedule
-            } else {
-                tempSchedule.scheduleId = 'temp_' + Date.now()
-                schedules.value.push(tempSchedule)
-            }
-            ElMessage.success('已添加到列表')
-            scheduleDialogVisible.value = false
-            return
-        }
-
-        // 将 reactive 对象转为普通对象，避免 axios 序列化 Proxy 问题
-        const payload = {
+        const tempSchedule = {
             scheduleId: scheduleForm.scheduleId,
             courseId: scheduleForm.courseId || courseId.value,
             dayOfWeek: scheduleForm.dayOfWeek,
@@ -287,37 +273,33 @@ export function useCourseForm() {
             status: scheduleForm.status || 1
         }
 
-        scheduleLoading.value = true
-        try {
-            let response
-            if (isEditSchedule.value) {
-                response = await updateSchedule(payload.scheduleId, payload)
-            } else {
-                response = await addSchedule(payload)
+        if (isEditSchedule.value) {
+            // 编辑模式
+            const index = schedules.value.findIndex(item => item.scheduleId === tempSchedule.scheduleId)
+            if (index !== -1) {
+                // 如果不是新添加的，标记为待修改
+                if (!schedules.value[index].isNew) {
+                    tempSchedule.isModified = true
+                }
+                schedules.value[index] = tempSchedule
             }
-
-            if (response.success) {
-                ElMessage.success(isEditSchedule.value ? '更新成功' : '添加成功')
-                scheduleDialogVisible.value = false
-                loadSchedules()
-            } else {
-                ElMessage.error(response.message || '操作失败')
-            }
-        } catch (error) {
-            console.error('保存课程时间失败:', error)
-            // 优先显示后端返回的具体错误信息
-            const msg = error?.response?.data?.message || error?.message || '保存失败，请检查时间是否冲突'
-            ElMessage.error(msg)
-        } finally {
-            scheduleLoading.value = false
+            ElMessage.success('已标记修改，点击"更新课程"后生效')
+        } else {
+            // 新增模式
+            tempSchedule.scheduleId = 'temp_' + Date.now()
+            tempSchedule.isNew = true
+            schedules.value.push(tempSchedule)
+            ElMessage.success('已添加到列表，点击"更新课程"后生效')
         }
+
+        scheduleDialogVisible.value = false
     }
 
-    // 删除时间
+    // 删除时间（仅标记待删除，实际删除在更新课程时执行）
     const deleteScheduleItem = async (schedule) => {
         try {
             await ElMessageBox.confirm(
-                '确定要删除这个上课时间吗？',
+                '确定要删除这个上课时间吗？（需点击"更新课程"才会真正删除）',
                 '删除确认',
                 { confirmButtonText: '确定', cancelButtonText: '取消', type: 'warning' }
             )
@@ -327,26 +309,28 @@ export function useCourseForm() {
                 const index = schedules.value.findIndex(item => item.scheduleId === schedule.scheduleId)
                 if (index !== -1) {
                     schedules.value.splice(index, 1)
-                    ElMessage.success('删除成功')
+                    ElMessage.success('已标记删除')
                 }
                 return
             }
 
-            scheduleLoading.value = true
-            const response = await deleteSchedule(schedule.scheduleId)
-            if (response.success) {
-                ElMessage.success('删除成功')
-                loadSchedules()
-            } else {
-                ElMessage.error(response.message || '删除失败')
+            // 编辑模式：标记待删除，加入待删除列表
+            if (schedule.scheduleId && !schedulesToDelete.value.includes(schedule.scheduleId)) {
+                schedulesToDelete.value.push(schedule.scheduleId)
             }
+
+            // 从当前显示列表移除
+            const index = schedules.value.findIndex(item => item.scheduleId === schedule.scheduleId)
+            if (index !== -1) {
+                schedules.value.splice(index, 1)
+            }
+
+            ElMessage.success('已标记待删除，点击"更新课程"后生效')
         } catch (error) {
             if (error === 'cancel' || error?.toString() === 'cancel') return
             console.error('删除课程时间失败:', error)
             const msg = error?.response?.data?.message || error?.message || '删除失败'
             ElMessage.error(msg)
-        } finally {
-            scheduleLoading.value = false
         }
     }
 
@@ -528,6 +512,58 @@ export function useCourseForm() {
                 const success = response.success || (response.data && response.data.success)
                 const newCourseId = response.data?.id || response.data?.data?.id || response.id || (isEdit.value ? route.params.id : null)
 
+                // 编辑模式下，先处理待删除的时间表
+                if (isEdit.value && schedulesToDelete.value.length > 0) {
+                    try {
+                        console.log('开始删除时间表，待删除列表:', schedulesToDelete.value)
+                        for (const scheduleId of schedulesToDelete.value) {
+                            const id = Number(scheduleId)
+                            if (!isNaN(id) && id > 0) {
+                                console.log('正在删除 scheduleId:', id)
+                                const result = await deleteSchedule(id)
+                                console.log('删除结果:', result)
+                            } else {
+                                console.warn('无效的 scheduleId:', scheduleId)
+                            }
+                        }
+                        schedulesToDelete.value = []
+                    } catch (deleteError) {
+                        console.error('删除时间表失败:', deleteError)
+                        ElMessage.warning('课程更新成功，但部分时间表删除失败')
+                    }
+                }
+
+                // 编辑模式下，处理新增和修改的时间表
+                if (isEdit.value && schedules.value.length > 0) {
+                    try {
+                        for (const schedule of schedules.value) {
+                            if (schedule.isNew) {
+                                const newSchedule = { ...schedule }
+                                delete newSchedule.isNew
+                                delete newSchedule.isModified
+                                if (newSchedule.scheduleId && String(newSchedule.scheduleId).startsWith('temp_')) {
+                                    delete newSchedule.scheduleId
+                                }
+                                newSchedule.courseId = courseId.value
+                                console.log('添加时间表:', newSchedule)
+                                const addResult = await addSchedule(newSchedule)
+                                console.log('添加结果:', addResult)
+                            } else if (schedule.isModified) {
+                                const modifiedSchedule = { ...schedule }
+                                delete modifiedSchedule.isNew
+                                delete modifiedSchedule.isModified
+                                const id = Number(modifiedSchedule.scheduleId)
+                                console.log('修改时间表 ID:', id, modifiedSchedule)
+                                const updateResult = await updateSchedule(id, modifiedSchedule)
+                                console.log('修改结果:', updateResult)
+                            }
+                        }
+                    } catch (schedError) {
+                        console.error('保存时间表失败:', schedError)
+                        ElMessage.warning('课程更新成功，但部分时间表保存失败')
+                    }
+                }
+
                 if (!isEdit.value && schedules.value.length > 0 && newCourseId) {
                     try {
                         for (const schedule of schedules.value) {
@@ -556,6 +592,8 @@ export function useCourseForm() {
                 ElMessage.success(isEdit.value ? '课程更新成功' : '课程创建成功')
                 if (!isEdit.value) {
                     router.push('/teacher/courses')
+                } else {
+                    loadSchedules()
                 }
             } else {
                 ElMessage.error(response.message || response.data?.message || '操作失败')

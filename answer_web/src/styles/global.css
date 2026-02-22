@@ -776,6 +776,135 @@ body > .el-popper.el-select-dropdown,
     background-color: #f5f7fa !important;
 }
 
+/* 亮色模式日期选择器 - 防止暗黑样式泄漏 */
+html:not(.dark) body > .el-picker-panel,
+html:not(.dark) body > .el-date-picker,
+html:not(.dark) body > .el-datetime-picker,
+html:not(.dark) body > .el-popper.is-light.el-picker-panel,
+html:not(.dark) body > .el-popper.is-light.el-date-picker,
+html:not(.dark) body > .el-popper.is-light.el-datetime-picker {
+    background-color: #ffffff !important;
+    border: 1px solid #dcdfe6 !important;
+}
+
+html:not(.dark) body > .el-picker-panel .el-picker-panel__content,
+html:not(.dark) body > .el-date-picker .el-picker-panel__content,
+html:not(.dark) body > .el-datetime-picker .el-picker-panel__content,
+html:not(.dark) body > .el-popper.is-light .el-picker-panel__content {
+    background-color: #ffffff !important;
+}
+
+html:not(.dark) body > .el-picker-panel .el-date-table,
+html:not(.dark) body > .el-date-picker .el-date-table,
+html:not(.dark) body > .el-datetime-picker .el-date-table,
+html:not(.dark) body > .el-popper.is-light .el-date-table {
+    background-color: #ffffff !important;
+}
+
+html:not(.dark) body > .el-picker-panel .el-date-table th,
+html:not(.dark) body > .el-date-picker .el-date-table th,
+html:not(.dark) body > .el-datetime-picker .el-date-table th,
+html:not(.dark) body > .el-popper.is-light .el-date-table th {
+    color: #606266 !important;
+    border-bottom-color: #dcdfe6 !important;
+}
+
+html:not(.dark) body > .el-picker-panel .el-date-table td,
+html:not(.dark) body > .el-date-picker .el-date-table td,
+html:not(.dark) body > .el-datetime-picker .el-date-table td,
+html:not(.dark) body > .el-popper.is-light .el-date-table td {
+    color: #606266 !important;
+}
+
+html:not(.dark) body > .el-picker-panel .el-date-table td.available:hover,
+html:not(.dark) body > .el-date-picker .el-date-table td.available:hover,
+html:not(.dark) body > .el-datetime-picker .el-date-table td.available:hover,
+html:not(.dark) body > .el-popper.is-light .el-date-table td.available:hover {
+    background-color: #f5f7fa !important;
+}
+
+html:not(.dark) body > .el-picker-panel .el-date-table td.in-range,
+html:not(.dark) body > .el-date-picker .el-date-table td.in-range,
+html:not(.dark) body > .el-datetime-picker .el-date-table td.in-range,
+html:not(.dark) body > .el-popper.is-light .el-date-table td.in-range {
+    background-color: rgba(59, 130, 246, 0.1) !important;
+}
+
+html:not(.dark) body > .el-picker-panel .el-date-table td.start-date span,
+html:not(.dark) body > .el-date-picker .el-date-table td.start-date span,
+html:not(.dark) body > .el-datetime-picker .el-date-table td.start-date span,
+html:not(.dark) body > .el-picker-panel .el-date-table td.end-date span,
+html:not(.dark) body > .el-date-picker .el-date-table td.end-date span,
+html:not(.dark) body > .el-datetime-picker .el-date-table td.end-date span,
+html:not(.dark) body > .el-popper.is-light .el-date-table td.start-date span,
+html:not(.dark) body > .el-popper.is-light .el-date-table td.end-date span {
+    background-color: #3b82f6 !important;
+    color: #ffffff !important;
+}
+
+html:not(.dark) body > .el-picker-panel .el-picker-panel__footer,
+html:not(.dark) body > .el-date-picker .el-picker-panel__footer,
+html:not(.dark) body > .el-datetime-picker .el-picker-panel__footer,
+html:not(.dark) body > .el-popper.is-light .el-picker-panel__footer {
+    background-color: #ffffff !important;
+    border-top-color: #e4e7ed !important;
+}
+
+html:not(.dark) body > .el-picker-panel .el-date-range-picker__header,
+html:not(.dark) body > .el-date-picker .el-date-range-picker__header,
+html:not(.dark) body > .el-popper.is-light .el-date-range-picker__header {
+    background-color: #ffffff !important;
+    color: #303133 !important;
+}
+
+html:not(.dark) body > .el-picker-panel .el-date-range-picker__content,
+html:not(.dark) body > .el-date-picker .el-date-range-picker__content,
+html:not(.dark) body > .el-popper.is-light .el-date-range-picker__content {
+    background-color: #ffffff !important;
+}
+
+html:not(.dark) body > .el-picker-panel .el-date-range-picker__editors,
+html:not(.dark) body > .el-date-picker .el-date-range-picker__editors,
+html:not(.dark) body > .el-popper.is-light .el-date-range-picker__editors {
+    background-color: #ffffff !important;
+    border-bottom: 1px solid #e4e7ed !important;
+}
+
+html:not(.dark) body > .el-picker-panel .el-range-input,
+html:not(.dark) body > .el-date-picker .el-range-input,
+html:not(.dark) body > .el-popper.is-light .el-range-input {
+    background-color: #ffffff !important;
+    color: #606266 !important;
+}
+
+/* 时间选择器头部 */
+html:not(.dark) body > .el-picker-panel .el-time-panel__header,
+html:not(.dark) body > .el-popper.is-light .el-time-panel__header {
+    background-color: #ffffff !important;
+    border-bottom: 1px solid #e4e7ed !important;
+}
+
+html:not(.dark) body > .el-picker-panel .el-time-panel__content,
+html:not(.dark) body > .el-popper.is-light .el-time-panel__content {
+    background-color: #ffffff !important;
+}
+
+html:not(.dark) body > .el-picker-panel .el-time-spinner__wrapper,
+html:not(.dark) body > .el-popper.is-light .el-time-spinner__wrapper {
+    background-color: #ffffff !important;
+}
+
+html:not(.dark) body > .el-picker-panel .el-time-spinner__item,
+html:not(.dark) body > .el-popper.is-light .el-time-spinner__item {
+    color: #606266 !important;
+}
+
+html:not(.dark) body > .el-picker-panel .el-time-panel__footer,
+html:not(.dark) body > .el-popper.is-light .el-time-panel__footer {
+    background-color: #ffffff !important;
+    border-top: 1px solid #e4e7ed !important;
+}
+
 /* 暗黑模式下禁用hover效果 */
 html.dark .el-select-dropdown .el-tree-node__content:hover {
     background-color: transparent !important;
@@ -1000,12 +1129,23 @@ html.dark .el-select-dropdown .el-tree-node.is-current > .el-tree-node__content 
 
 .dark-theme .el-date-table td.start-date span,
 .dark-theme .el-date-table td.end-date span {
-    background: #3b82f6 !important;
-    color: white !important;
+    background: #10b981 !important;
+    color: rgb(54, 52, 52) !important;
 }
 
 .dark-theme .el-date-table td.in-range {
-    background: rgba(59, 130, 246, 0.2) !important;
+    background: rgba(16, 185, 129, 0.2) !important;
+}
+
+.dark-theme .el-date-table td.in-range span {
+    background: transparent !important;
+    color: #d1d5db !important;
+}
+
+.dark-theme .el-date-table td.in-range div,
+.dark-theme .el-date-table td.in-range .cell {
+    background: transparent !important;
+    color: #d1d5db !important;
 }
 
 .dark-theme .el-picker-panel__content {
@@ -1109,9 +1249,7 @@ html.dark .el-select-dropdown .el-tree-node.is-current > .el-tree-node__content 
     color: #e2e8f0 !important;
 }
 
-/* =========================================
-   html.dark 版本 - 全局暗黑模式覆盖
-   ========================================= */
+
 
 /* 所有弹出框通用 */
 html.dark body > .el-popper.is-light:not(.el-popper--tooltip) {
@@ -1387,6 +1525,36 @@ html.dark body > .el-picker-panel .el-picker-panel__footer,
 html.dark body > .el-date-picker .el-picker-panel__footer {
     background-color: #1e293b !important;
     border-top-color: #334155 !important;
+}
+
+html.dark body > .el-picker-panel .el-date-table td.start-date span,
+html.dark body > .el-date-picker .el-date-table td.start-date span,
+html.dark body > .el-picker-panel .el-date-table td.end-date span,
+html.dark body > .el-date-picker .el-date-table td.end-date span {
+    background-color: #10b981 !important;
+    color: white !important;
+}
+
+html.dark body > .el-picker-panel .el-date-table td.in-range,
+html.dark body > .el-date-picker .el-date-table td.in-range {
+    background-color: rgba(16, 185, 129, 0.2) !important;
+}
+
+html.dark body > .el-picker-panel .el-date-table td.in-range span,
+html.dark body > .el-date-picker .el-date-table td.in-range span {
+    background-color: transparent !important;
+    color: #d1d5db !important;
+}
+
+html.dark body > .el-picker-panel .el-date-table td.in-range div,
+html.dark body > .el-date-picker .el-date-table td.in-range div {
+    background-color: transparent !important;
+}
+
+html.dark body > .el-picker-panel .el-date-table td.in-range .cell,
+html.dark body > .el-date-picker .el-date-table td.in-range .cell {
+    background-color: transparent !important;
+    color: #d1d5db !important;
 }
 
 /* 时间选择器 */

@@ -416,7 +416,7 @@ export function useStudentMessageCenter() {
             if (currentChatTeacher.value && activeTab.value === 'chat') {
                 refreshChatHistory()
             }
-        }, 3000)
+        }, 1500)
     })
 
     watch(activeInteractionType, () => {

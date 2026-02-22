@@ -115,10 +115,23 @@ public class LabReportServiceImpl implements LabReportService {
                 submitWrapper.ge("status", 1); // 1-已提交待批改, 2-已批改
                 Integer submittedCount = Math.toIntExact(studentLabReportMapper.selectCount(submitWrapper));
                 dto.setSubmittedCount(submittedCount);
+
+                QueryWrapper<StudentLabReport> gradedWrapper = new QueryWrapper<>();
+                gradedWrapper.eq("report_id", report.getReportId());
+                gradedWrapper.eq("status", 2); // 2-已批改
+                Integer gradedCount = Math.toIntExact(studentLabReportMapper.selectCount(gradedWrapper));
+                dto.setGradedCount(gradedCount);
+
+                QueryWrapper<StudentLabReport> returnedWrapper = new QueryWrapper<>();
+                returnedWrapper.eq("report_id", report.getReportId());
+                returnedWrapper.eq("status", 3); // 3-被退回
+                Integer returnedCount = Math.toIntExact(studentLabReportMapper.selectCount(returnedWrapper));
+                dto.setReturnedCount(returnedCount);
             } catch (Exception e) {
                 // 表可能不存在，暂时忽略
                 System.err.println("统计提交人数失败: " + e.getMessage());
                 dto.setSubmittedCount(0);
+                dto.setGradedCount(0);
             }
 
             // 获取参与人数和课程名称
@@ -210,7 +223,11 @@ public class LabReportServiceImpl implements LabReportService {
         studentReport.setTeacherComment(gradingDTO.getTeacherComment());
         studentReport.setGradedBy(gradingDTO.getTeacherId());
         studentReport.setGradedTime(new Date());
-        studentReport.setStatus(2); // 2-已批改
+        if (gradingDTO.getStatus() != null && gradingDTO.getStatus() == 3) {
+            studentReport.setStatus(3); // 3-退回重写
+        } else {
+            studentReport.setStatus(2); // 2-已批改
+        }
 
         studentLabReportMapper.updateById(studentReport);
 
@@ -264,15 +281,22 @@ public class LabReportServiceImpl implements LabReportService {
 
         studentLabReportMapper.delete(wrapper);
 
-        // 删除报告
+        // 删除作业
         labReportMapper.deleteById(reportId);
+    }
+
+    @Override
+    public LabReportDTO getLabReportDTOById(Long reportId) {
+        LabReport report = getLabReportById(reportId);
+        List<LabReportDTO> dtoList = convertToDTOList(Collections.singletonList(report));
+        return dtoList.isEmpty() ? null : dtoList.get(0);
     }
 
     @Override
     public LabReport getLabReportById(Long reportId) {
         LabReport report = labReportMapper.selectById(reportId);
         if (report == null) {
-            throw new ResourceNotFoundException("实验报告不存在");
+            throw new ResourceNotFoundException("不存在");
         }
         return report;
     }
@@ -373,24 +397,115 @@ public class LabReportServiceImpl implements LabReportService {
                 existingReport.setAttachmentUrl(attachmentUrl);
             }
 
-            studentLabReportMapper.updateById(existingReport);
-            return existingReport.getStudentReportId();
+            // 设置新引用（由于我们要对其进一步判定客观题批改，不再直接 update 返回）
+            studentReport.setStudentReportId(existingReport.getStudentReportId());
+            studentReport.setAttachmentUrl(existingReport.getAttachmentUrl());
+        } else {
+            // 处理附件上传
+            if (attachment != null && !attachment.isEmpty()) {
+                String attachmentUrl = saveAttachment(attachment);
+                studentReport.setAttachmentUrl(attachmentUrl);
+            }
         }
 
-        // 处理附件上传
-        if (attachment != null && !attachment.isEmpty()) {
-            String attachmentUrl = saveAttachment(attachment);
-            studentReport.setAttachmentUrl(attachmentUrl);
+        // 设置提交时间，默认状态1（待批改）
+        studentReport.setSubmitTime(now != null ? now : new Date());
+        studentReport.setStatus(1);
+
+        applyAutoGrading(labReport, studentReport);
+
+        // 如果是修改操作
+        if (existingReport != null) {
+            studentLabReportMapper.updateById(studentReport);
+            return studentReport.getStudentReportId();
+        } else {
+            studentLabReportMapper.insert(studentReport);
+            return studentReport.getStudentReportId();
         }
+    }
 
-        // 设置提交时间和状态
-        studentReport.setSubmitTime(new Date());
-        studentReport.setStatus(1); // 1-已提交待批改
+    private void applyAutoGrading(LabReport labReport, StudentLabReport studentReport) {
+        try {
+            if (labReport.getQuestionList() != null && !labReport.getQuestionList().trim().isEmpty()
+                    && studentReport.getStructuredAnswers() != null
+                    && !studentReport.getStructuredAnswers().trim().isEmpty()) {
 
-        // 保存学生报告
-        studentLabReportMapper.insert(studentReport);
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                java.util.List<java.util.Map<String, Object>> qList = mapper.readValue(labReport.getQuestionList(),
+                        new com.fasterxml.jackson.core.type.TypeReference<java.util.List<java.util.Map<String, Object>>>() {
+                        });
+                java.util.List<java.util.Map<String, Object>> aList = mapper.readValue(
+                        studentReport.getStructuredAnswers(),
+                        new com.fasterxml.jackson.core.type.TypeReference<java.util.List<java.util.Map<String, Object>>>() {
+                        });
 
-        return studentReport.getStudentReportId();
+                boolean isOnlyObjective = true;
+                java.math.BigDecimal totalScore = java.math.BigDecimal.ZERO;
+
+                if (!qList.isEmpty()) {
+                    for (int i = 0; i < qList.size(); i++) {
+                        java.util.Map<String, Object> q = qList.get(i);
+                        String qType = (String) q.getOrDefault("questionType", q.get("type"));
+                        if (qType != null) {
+                            qType = qType.toUpperCase();
+                            if (!java.util.Arrays.asList("SINGLE", "MULTIPLE", "JUDGE", "FILL", "SINGLE_CHOICE",
+                                    "MULTIPLE_CHOICE", "TRUE_FALSE", "1", "2", "3", "4").contains(qType)
+                                    && !qType.contains("CHOICE") && !qType.contains("SINGLE")
+                                    && !qType.contains("MULTIPLE") && !qType.equals("单选") && !qType.equals("多选")
+                                    && !qType.equals("判断") && !qType.equals("填空")) {
+                                isOnlyObjective = false;
+                                break;
+                            }
+
+                            if (i < aList.size()) {
+                                String correctAns = (String) q.getOrDefault("correctAnswer", q.get("answer"));
+                                String studentAns = (String) aList.get(i).get("answer");
+
+                                if (correctAns != null && studentAns != null && !correctAns.trim().isEmpty()) {
+                                    String normCorrect = correctAns.trim().toUpperCase().replaceAll("[\\s,]+", "");
+                                    String normStudent = studentAns.trim().toUpperCase().replaceAll("[\\s,]+", "");
+
+                                    boolean correct = false;
+                                    if (normCorrect.equals(normStudent)) {
+                                        correct = true;
+                                    } else if ("JUDGE".equals(qType) || "TRUE_FALSE".equals(qType)
+                                            || qType.contains("判断")) {
+                                        if (("A".equals(normCorrect) || "正确".equals(normCorrect)
+                                                || "对".equals(normCorrect) || "TRUE".equals(normCorrect))
+                                                && ("A".equals(normStudent) || "正确".equals(normStudent)
+                                                        || "对".equals(normStudent) || "TRUE".equals(normStudent))) {
+                                            correct = true;
+                                        } else if (("B".equals(normCorrect) || "错误".equals(normCorrect)
+                                                || "错".equals(normCorrect) || "FALSE".equals(normCorrect))
+                                                && ("B".equals(normStudent) || "错误".equals(normStudent)
+                                                        || "错".equals(normStudent) || "FALSE".equals(normStudent))) {
+                                            correct = true;
+                                        }
+                                    }
+
+                                    if (correct) {
+                                        Object scoreObj = q.get("score");
+                                        if (scoreObj != null) {
+                                            totalScore = totalScore.add(new java.math.BigDecimal(scoreObj.toString()));
+                                        } else {
+                                            totalScore = totalScore.add(new java.math.BigDecimal("5"));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (isOnlyObjective) {
+                        studentReport.setStatus(2);
+                        studentReport.setScore(totalScore);
+                        studentReport.setGradedTime(new java.util.Date());
+                        studentReport.setGradedBy("SYSTEM");
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -509,7 +624,8 @@ public class LabReportServiceImpl implements LabReportService {
 
     @Override
     @Transactional
-    public void updateSubmission(Long studentReportId, String content, MultipartFile attachment) {
+    public void updateSubmission(Long studentReportId, String content, String structuredAnswers,
+            MultipartFile attachment) {
         // 查询学生报告
         StudentLabReport studentReport = studentLabReportMapper.selectById(studentReportId);
         if (studentReport == null) {
@@ -529,6 +645,11 @@ public class LabReportServiceImpl implements LabReportService {
 
         // 更新内容
         studentReport.setContent(content);
+        studentReport.setStructuredAnswers(structuredAnswers);
+
+        // 由于是学生主动修改，重新将其设为待批改状态，尝试进行自动批改
+        studentReport.setStatus(1);
+        applyAutoGrading(labReport, studentReport);
 
         // 处理附件上传
         if (attachment != null && !attachment.isEmpty()) {

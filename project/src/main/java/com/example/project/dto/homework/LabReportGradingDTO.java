@@ -9,4 +9,5 @@ public class LabReportGradingDTO {
     private String teacherId;
     private BigDecimal score;
     private String teacherComment;
+    private Integer status;
 }

@@ -49,7 +49,7 @@ export function useExamManagement() {
         duration: 120,
         totalScore: 100,
         passScore: 60,
-        status: 'DRAFT',
+        status: 0,
         timeRange: []
     })
 
@@ -256,7 +256,7 @@ export function useExamManagement() {
             duration: 120,
             totalScore: 100,
             passScore: 60,
-            status: 'DRAFT',
+            status: 0,
             timeRange: []
         })
         examQuestions.value = []
@@ -664,8 +664,11 @@ export function useExamManagement() {
         return map[type] || type
     }
 
+    const wantPublish = ref(false)
+
     const saveAsDraft = async () => {
-        examForm.status = 'DRAFT'
+        wantPublish.value = false
+        examForm.status = 0 // DRAFT
         await handleFormSubmit()
     }
 
@@ -674,7 +677,8 @@ export function useExamManagement() {
             ElMessage.warning('请至少添加一道题目')
             return
         }
-        examForm.status = 'PUBLISHED'
+        wantPublish.value = true
+        examForm.status = 0 // always create as draft; publish separately below
         await handleFormSubmit()
     }
 
@@ -703,7 +707,7 @@ export function useExamManagement() {
                 }
 
                 // 如果用户点击的是"确定并发布"，后端默认建的是草稿(状态0)，需要我们手动调用一次发布接口
-                if (examForm.status === 'PUBLISHED' && examId) {
+                if (wantPublish.value && examId) {
                     try {
                         await request.put(`/exam/${examId}/publish`)
                         // 准备加入题库弹窗数据
@@ -736,6 +740,7 @@ export function useExamManagement() {
             ElMessage.error('保存失败')
         } finally {
             submitting.value = false
+            wantPublish.value = false
         }
     }
 

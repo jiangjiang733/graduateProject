@@ -63,6 +63,14 @@ public interface LabReportService {
     void deleteLabReport(Long reportId);
 
     /**
+     * 获取实验报告详情 (含课程名与统计信息)
+     * 
+     * @param reportId 实验报告ID
+     * @return 实验报告DTO
+     */
+    LabReportDTO getLabReportDTOById(Long reportId);
+
+    /**
      * 获取实验报告详情
      * 
      * @param reportId 实验报告ID
@@ -107,9 +115,10 @@ public interface LabReportService {
     /**
      * 更新学生提交
      * 
-     * @param studentReportId 学生报告ID
-     * @param content         内容
-     * @param attachment      附件文件
+     * @param studentReportId   学生报告ID
+     * @param content           内容
+     * @param structuredAnswers 结构化答案
+     * @param attachment        附件文件
      */
-    void updateSubmission(Long studentReportId, String content, MultipartFile attachment);
+    void updateSubmission(Long studentReportId, String content, String structuredAnswers, MultipartFile attachment);
 }

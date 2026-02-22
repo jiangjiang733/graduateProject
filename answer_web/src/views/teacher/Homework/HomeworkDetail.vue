@@ -8,138 +8,110 @@
         <h1 class="page-title">{{ homework.reportTitle || '作业详情' }}</h1>
       </div>
       <div class="header-right">
-        <el-button type="primary" class="glass-btn primary" @click="editHomework">
-          <el-icon><Edit /></el-icon> 编辑作业
-        </el-button>
+        <div class="quick-stats">
+          <div class="stat-item">
+            <span class="s-label">提交人数</span>
+            <span class="s-value">{{ homework.submittedCount || 0 }}/{{ homework.totalStudents || 0 }}</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <span class="s-label">截止日期</span>
+            <span class="s-value">{{ formatDate(homework.deadline) }}</span>
+          </div>
+        </div>
+        <div class="header-actions">
+          <el-button type="primary" class="action-btn-main" @click="goToGrading">
+            <el-icon><Check /></el-icon> 批改作业
+          </el-button>
+          <el-button class="action-btn-sub" @click="editHomework">
+            <el-icon><Edit /></el-icon> 编辑
+          </el-button>
+        </div>
       </div>
     </div>
 
-    <div v-loading="loading" class="detail-container">
-      <div class="left-section">
-        <!-- 基本信息卡片 -->
-        <div class="detail-card glass-panel animate-slide-up" style="animation-delay: 0.1s">
-          <div class="card-title-row">
-            <h2 class="section-title">作业要求</h2>
-            <el-tag :type="getStatusType(currentStatus)" effect="dark" round>
-               {{ getStatusText(currentStatus) }}
-            </el-tag>
-          </div>
-
-          <div class="info-grid">
-            <div class="info-item">
-              <span class="label">所属课程：</span>
-              <span class="value">{{ homework.courseName || '未分配课程' }}</span>
+    <div v-loading="loading" class="detail-content-wrapper">
+        <!-- 作业内容主卡片 -->
+        <div class="content-card glass-panel animate-slide-up">
+          <div class="content-header">
+            <div class="ch-left">
+              <h2 class="section-title">作业要求</h2>
+              <p class="course-name">{{ homework.courseName || '未分配课程' }}</p>
             </div>
-            <div class="info-item">
-              <span class="label">截止时间：</span>
-              <span class="value">{{ formatDate(homework.deadline) }}</span>
-            </div>
-            <div class="info-item">
-              <span class="label">总分：</span>
-              <span class="value">{{ homework.totalScore }} 分</span>
+            <div class="ch-right">
+              <el-tag :type="getStatusType(currentStatus)" effect="dark" round>
+                 {{ getStatusText(currentStatus) }}
+              </el-tag>
             </div>
           </div>
 
-          <el-divider />
-
-          <div class="description-content">
-            <p v-for="(line, index) in descriptionLines" :key="index" :class="{ 'question-header': line.startsWith('【') }">
-              {{ line }}
-            </p>
+          <div class="description-area">
+            <div class="description-text">
+              <p v-for="(line, index) in descriptionLines" :key="index" :class="{ 'question-header': line.startsWith('【') }">
+                {{ line }}
+              </p>
+            </div>
           </div>
 
-          <div v-if="homework.attachmentUrl" class="attachment-box">
-             <el-icon><Document /></el-icon>
-             <span class="file-name">附件已上传</span>
-             <el-link :href="`/api/${homework.attachmentUrl}`" target="_blank" type="primary">点击查阅</el-link>
+          <div v-if="homework.attachmentUrl" class="attachment-section">
+             <div class="att-card">
+               <el-icon><Document /></el-icon>
+               <div class="att-info">
+                 <span class="att-name">作业附件材料</span>
+                 <span class="att-tip">教师上传的参考文档</span>
+               </div>
+               <el-link :href="`/api/${homework.attachmentUrl}`" target="_blank" type="primary">点击查看</el-link>
+             </div>
           </div>
 
-          <!-- 结构化题目预览 -->
-          <div v-if="groupedQuestions.length > 0" class="questions-preview-section">
-            <el-divider><el-icon><List /></el-icon> 试题列表</el-divider>
+          <!-- 结构化题目部分 -->
+          <div v-if="groupedQuestions.length > 0" class="questions-section">
+            <div class="q-section-header">
+              <el-icon><List /></el-icon> 试题
+            </div>
             
-            <div v-for="group in groupedQuestions" :key="group.typeName" class="question-type-group">
-              <div class="type-group-header">
-                <h3>{{ group.typeName }}（{{ group.questions.length }}题）</h3>
-              </div>
+            <div v-for="group in groupedQuestions" :key="group.typeName" class="q-group">
+              <div class="q-group-title">{{ group.typeName }}<span>（共 {{ group.questions.length }} 题）</span></div>
 
-              <div v-for="(q, qIndex) in group.questions" :key="qIndex" class="q-detail-item">
-                <div class="q-item-header">
-                  <span class="q-num">{{ q.globalIndex }}</span>
-                  <el-tag size="small" :type="getQuestionTypeTag(q.questionType)">{{ getQuestionTypeText(q.questionType) }}</el-tag>
-                  <span class="q-score">({{ q.score }}分)</span>
-                </div>
-                <div class="q-item-content">{{ q.questionContent }}</div>
-                
-                <!-- 选项列表 -->
-                <div v-if="['SINGLE', 'MULTIPLE', '1', '2'].includes(String(q.questionType))" class="q-item-options">
-                  <div v-for="(opt, oIdx) in parseOptions(q.questionOptions)" :key="oIdx" class="opt-line" :class="{correct: isCorrect(opt, oIdx, q)}">
-                    <span class="opt-label">{{ String.fromCharCode(65+oIdx) }}</span>
-                    <span class="opt-text">{{ opt.text || opt }}</span>
-                    <el-icon v-if="isCorrect(opt, oIdx, q)" class="correct-icon"><Check /></el-icon>
+              <div v-for="(q, qIndex) in group.questions" :key="qIndex" class="q-display-item">
+                <div class="q-num-badge">{{ q.globalIndex }}</div>
+                <div class="q-body-content">
+                  <div class="q-text-row">
+                    <span class="q-type-tag">{{ getQuestionTypeText(q.questionType) }}</span>
+                    <span class="q-main-text">{{ q.questionContent }}</span>
+                    <span class="q-score-tag">{{ q.score }}分</span>
+                  </div>
+                  
+                  <!-- 选项 -->
+                  <div v-if="['SINGLE', 'MULTIPLE', '1', '2'].includes(String(q.questionType))" class="q-options-list">
+                    <div v-for="(opt, oIdx) in parseOptions(q.questionOptions)" :key="oIdx" class="q-opt-item" :class="{correct: isCorrect(opt, oIdx, q)}">
+                      <span class="opt-alpha">{{ String.fromCharCode(65+oIdx) }}</span>
+                      <span class="opt-val">{{ opt.text || opt }}</span>
+                      <el-icon v-if="isCorrect(opt, oIdx, q)" class="check-icon"><Check /></el-icon>
+                    </div>
+                  </div>
+                  
+                  <!-- 判断 -->
+                  <div v-else-if="q.questionType === 'JUDGE' || q.questionType === '3'" class="q-options-list">
+                    <div class="q-opt-item" :class="{correct: q.correctAnswer === 'A' || q.correctAnswer === '正确' || q.answer === '正确'}">
+                      <span class="opt-alpha">A</span>
+                      <span class="opt-val">正确</span>
+                    </div>
+                    <div class="q-opt-item" :class="{correct: q.correctAnswer === 'B' || q.correctAnswer === '错误' || q.answer === '错误'}">
+                      <span class="opt-alpha">B</span>
+                      <span class="opt-val">错误</span>
+                    </div>
+                  </div>
+
+                  <div class="q-ans-analysis" v-if="q.analysis">
+                    <span class="a-label">解析</span>
+                    <p class="a-content">{{ q.analysis }}</p>
                   </div>
                 </div>
-                <!-- 判断题 -->
-                <div v-else-if="q.questionType === 'JUDGE' || q.questionType === '3'" class="q-item-options">
-                    <div class="opt-line" :class="{correct: q.correctAnswer === 'A' || q.correctAnswer === '正确' || q.answer === '正确'}">
-                      <span class="opt-label">A</span>
-                      <span class="opt-text">正确</span>
-                      <el-icon v-if="q.correctAnswer === 'A' || q.correctAnswer === '正确' || q.answer === '正确'" class="correct-icon"><Check /></el-icon>
-                    </div>
-                    <div class="opt-line" :class="{correct: q.correctAnswer === 'B' || q.correctAnswer === '错误' || q.answer === '错误'}">
-                      <span class="opt-label">B</span>
-                      <span class="opt-text">错误</span>
-                      <el-icon v-if="q.correctAnswer === 'B' || q.correctAnswer === '错误' || q.answer === '错误'" class="correct-icon"><Check /></el-icon>
-                    </div>
-                </div>
-
-                <div class="q-item-analysis" v-if="q.analysis">
-                  <div class="analysis-label">【解析】</div>
-                  <div class="analysis-text">{{ q.analysis }}</div>
-                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-
-      <div class="right-section">
-        <!-- 统计信息 -->
-        <div class="stats-card glass-panel animate-slide-up" style="animation-delay: 0.2s">
-          <h2 class="section-title">提交统计</h2>
-          <div class="stats-grid">
-            <div class="stat-box">
-              <div class="stat-num">{{ homework.submittedCount || 0 }}</div>
-              <div class="stat-label">已提交</div>
-            </div>
-            <div class="stat-box">
-              <div class="stat-num">{{ homework.totalStudents || 0 }}</div>
-              <div class="stat-label">总人数</div>
-            </div>
-          </div>
-          <div class="progress-wrap">
-             <div class="progress-info">
-               <span>提交进度</span>
-               <span>{{ submitPercentage }}%</span>
-             </div>
-             <el-progress :percentage="submitPercentage" :show-text="false" stroke-width="12" />
-          </div>
-        </div>
-
-        <!-- 快速操作 -->
-        <div class="actions-card glass-panel animate-slide-up" style="animation-delay: 0.3s">
-          <h2 class="section-title">快速操作</h2>
-          <div class="action-buttons">
-            <el-button class="full-btn" @click="goToGrading">
-              <el-icon><Check /></el-icon> 进入批改系统
-            </el-button>
-            <!-- 只有在实时状态为"进行中"时才显示提前截止按钮 -->
-            <el-button class="full-btn warning" @click="closeHomework" v-if="currentStatus === 1">
-              <el-icon><CircleClose /></el-icon> 提前截止作业
-            </el-button>
-          </div>
-        </div>
-      </div>
     </div>
 
     <!-- 编辑作业对话框 (复用列表页逻辑) -->
@@ -349,11 +321,7 @@
               <div class="question-preview">{{ row.content }}</div>
             </template>
           </el-table-column>
-          <el-table-column label="难度" width="100" align="center">
-            <template #default="{row}">
-              <span class="diff-stars">{{ '★'.repeat(row.difficulty || 1) }}</span>
-            </template>
-          </el-table-column>
+
         </el-table>
 
         <div class="picker-footer">

@@ -4,7 +4,7 @@ import { getQuestionList, createQuestion, updateQuestion, deleteQuestion } from 
 import { getCourseList } from '@/api/course.js'
 
 export function useQuestionBank() {
-    const filter = ref({ type: '', difficulty: '', keyword: '', courseId: '' })
+    const filter = ref({ type: '', keyword: '', courseId: '' })
     const questions = ref([])
     const courses = ref([])
     const loading = ref(false)
@@ -16,11 +16,11 @@ export function useQuestionBank() {
     const form = ref({
         courseId: '',
         type: 'SINGLE',
-        difficulty: 1,
         content: '',
         options: [{ text: '', isCorrect: false }, { text: '', isCorrect: false }],
         correctIndex: 0,
-        answer: ''
+        answer: '',
+        analysis: ''
     })
 
     const getTeacherId = () => localStorage.getItem('teacherId') || '1'
@@ -61,11 +61,11 @@ export function useQuestionBank() {
         form.value = {
             courseId: courses.value[0]?.id || '',
             type: 'SINGLE',
-            difficulty: 1,
             content: '',
             options: [{ text: '', isCorrect: false }, { text: '', isCorrect: false }],
             correctIndex: 0,
-            answer: ''
+            answer: '',
+            analysis: ''
         }
         dialogVisible.value = true
     }

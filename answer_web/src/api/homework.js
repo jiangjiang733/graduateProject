@@ -143,12 +143,17 @@ export const getStudentSubmission = (studentReportId) => {
  * 更新学生提交
  * @param {number} studentReportId - 学生报告ID
  * @param {string} content - 内容
+ * @param {string} structuredAnswers - 结构化答案（JSON字符串）
  * @param {File} attachment - 附件文件
  * @returns {Promise}
  */
-export const updateSubmission = (studentReportId, content, attachment) => {
+export const updateSubmission = (studentReportId, content, structuredAnswers, attachment) => {
   const formData = new FormData()
   formData.append('content', content)
+
+  if (structuredAnswers) {
+    formData.append('structuredAnswers', structuredAnswers)
+  }
 
   if (attachment) {
     formData.append('attachment', attachment)

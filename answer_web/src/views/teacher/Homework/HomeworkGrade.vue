@@ -23,36 +23,48 @@
       <!-- 左侧学生列表 -->
       <div class="student-list-section">
         <div class="list-header">
-          <el-input
-            v-model="searchKeyword"
-            placeholder="搜索学生..."
-            clearable
-            class="ketangpai-search"
-          >
-            <template #prefix>
-              <el-icon><Search /></el-icon>
-            </template>
-          </el-input>
+          <div class="filter-controls">
+            <el-input
+              v-model="searchKeyword"
+              placeholder="搜索学生..."
+              clearable
+              class="ketangpai-search"
+            >
+              <template #prefix>
+                <el-icon><Search /></el-icon>
+              </template>
+            </el-input>
+            <div class="status-filters">
+              <span class="filter-tag" :class="{ active: filterStatus === 'ALL' }" @click="filterStatus = 'ALL'">全部</span>
+              <span class="filter-tag" :class="{ active: filterStatus === 'PENDING' }" @click="filterStatus = 'PENDING'">待批改</span>
+              <span class="filter-tag" :class="{ active: filterStatus === 'GRADED' }" @click="filterStatus = 'GRADED'">已批改</span>
+            </div>
+          </div>
         </div>
         
         <div class="list-content">
           <div v-if="filteredSubmissions.length > 0">
             <div 
               v-for="(sub, index) in filteredSubmissions" 
-              :key="sub.studentReportId" 
+              :key="index" 
               class="student-item"
-              :class="{ active: currentSubmission?.studentReportId === sub.studentReportId, graded: sub.status === 2 }"
+              :class="{ active: currentSubmission?.studentReportId === sub.studentReportId, graded: sub.status == 2 || sub.status === 'GRADED' || sub.status == 3 }"
               @click="selectSubmission(sub, index)"
             >
               <div class="student-info">
                 <div class="name-row">
                   <span class="name">{{ sub.studentName }}</span>
-                  <span v-if="sub.status === 2" class="status-dot graded-dot"></span>
-                  <span v-else class="status-dot pending-dot"></span>
+                  <div class="status-indicator">
+                    <span v-if="sub.status == 2 || sub.status === 'GRADED' || sub.status == 3" class="status-dot graded-dot" :class="{ 'returned-dot': sub.status == 3 }"></span>
+                    <span v-else class="status-dot pending-dot"></span>
+                  </div>
                 </div>
                 <div class="student-id">SNO: {{ sub.studentId }}</div>
               </div>
-              <span v-if="sub.status === 2" class="score-badge">{{ sub.score }}</span>
+              <div class="score-badge" v-if="sub.status == 2 || sub.status === 'GRADED' || sub.status == 3">
+                <span v-if="sub.status == 3" style="font-size: 11px;">被退回</span>
+                <span v-else>{{ sub.score || 0 }}分</span>
+              </div>
             </div>
           </div>
           
@@ -103,6 +115,18 @@
                     <span class="q-num">{{ index + 1 }}</span>
                     <span class="q-text">{{ q.questionContent || q.content }}</span>
                     <span class="q-score-tag">{{ q.score || 0 }}分</span>
+                  </div>
+                  
+                  <!-- 选项显示区 -->
+                  <div v-if="['SINGLE', 'MULTIPLE'].includes(q.questionType)" class="q-options-container">
+                    <div v-for="(opt, oIdx) in parseOptions(q.questionOptions || q.options)" :key="oIdx" class="q-option-item">
+                      <span class="opt-label">{{ String.fromCharCode(65 + oIdx) }}.</span>
+                      <span class="opt-text">{{ opt.text || opt }}</span>
+                    </div>
+                  </div>
+                  <div v-else-if="q.questionType === 'JUDGE'" class="q-options-container">
+                    <div class="q-option-item"><span class="opt-label">A.</span><span class="opt-text">正确</span></div>
+                    <div class="q-option-item"><span class="opt-label">B.</span><span class="opt-text">错误</span></div>
                   </div>
                   <div class="ans-comparison">
                     <div class="ans-unit student">
@@ -211,15 +235,24 @@
           />
         </div>
 
-        <!-- 退回重写 -->
-        <button class="return-btn" @click="returnForRevision">
-          <el-icon><RefreshLeft /></el-icon> 退回重写
-        </button>
-
-        <!-- 保存 -->
-        <button class="save-btn" @click="submitGrade" :disabled="submitting">
-          <el-icon><Check /></el-icon> {{ submitting ? '保存中...' : '保存批改结果' }}
-        </button>
+        <!-- 按钮区域: 不同状态显示不同的文本和颜色 -->
+        <template v-if="currentSubmission.status == 2 || currentSubmission.status === 'GRADED' || currentSubmission.status == 3">
+          <button class="return-btn" @click="returnForRevision" v-if="currentSubmission.status != 3">
+            <el-icon><RefreshLeft /></el-icon> 退回重写
+          </button>
+          <button class="save-btn over-grade-btn" @click="submitGrade" :disabled="submitting">
+            <el-icon><Check /></el-icon> {{ submitting ? '覆盖批改中...' : '重新批改/覆盖' }}
+          </button>
+        </template>
+        
+        <template v-else>
+          <button class="return-btn" @click="returnForRevision">
+            <el-icon><RefreshLeft /></el-icon> 退回重写
+          </button>
+          <button class="save-btn" @click="submitGrade" :disabled="submitting">
+            <el-icon><Check /></el-icon> {{ submitting ? '批改中...' : '提交批改' }}
+          </button>
+        </template>
       </div>
     </div>
   </div>
@@ -241,15 +274,18 @@ const {
   submitting,
   gradeForm,
   questionList,
+  filterStatus,
   filteredSubmissions,
   hasQuestions,
   hasContent,
   selectSubmission: originalSelect,
   downloadFile,
   submitGrade,
+  returnForRevision,
   getStudentAnswer,
   getCorrectAnswer,
   isCorrect,
+  parseOptions,
 } = useHomeworkGrade()
 
 const currentIndex = ref(0)
@@ -288,7 +324,7 @@ const selectSubmission = (sub, index) => {
   originalSelect(sub)
   
   // 如果只有客观题，自动评分
-  if (isOnlyObjectiveQuestions.value && sub.status !== 2) {
+  if (isOnlyObjectiveQuestions.value && sub.status != 2 && sub.status !== 'GRADED') {
     setTimeout(() => {
       let total = 0
       questionList.value.forEach((q, idx) => {
@@ -321,10 +357,7 @@ const saveAndNext = async () => {
   }
 }
 
-const returnForRevision = () => {
-  gradeForm.teacherComment = '需要修改，请重新提交'
-  submitGrade()
-}
+
 </script>
 
 <style scoped>

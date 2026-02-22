@@ -177,9 +177,9 @@ public class LabReportController {
      * GET /api/lab-report/{reportId}
      */
     @GetMapping("/{reportId}")
-    public Result<LabReport> getLabReportById(@PathVariable Long reportId) {
+    public Result<LabReportDTO> getLabReportById(@PathVariable Long reportId) {
         try {
-            LabReport report = labReportService.getLabReportById(reportId);
+            LabReportDTO report = labReportService.getLabReportDTOById(reportId);
             return Result.success(report);
         } catch (Exception e) {
             return Result.error("获取实验报告详情失败: " + e.getMessage());
@@ -258,9 +258,10 @@ public class LabReportController {
     public Result<String> updateSubmission(
             @PathVariable Long studentReportId,
             @RequestParam("content") String content,
+            @RequestParam(value = "structuredAnswers", required = false) String structuredAnswers,
             @RequestParam(value = "attachment", required = false) MultipartFile attachment) {
         try {
-            labReportService.updateSubmission(studentReportId, content, attachment);
+            labReportService.updateSubmission(studentReportId, content, structuredAnswers, attachment);
             return Result.success("更新成功");
         } catch (Exception e) {
             return Result.error("更新失败: " + e.getMessage());

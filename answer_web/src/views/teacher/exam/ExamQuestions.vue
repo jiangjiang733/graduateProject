@@ -121,7 +121,7 @@
     <div class="fixed-footer">
        <el-button type="info" @click="$router.push('/teacher/exams')" class="glass-btn">返回试卷列表</el-button>
        <el-button type="success" @click="saveAll" :loading="saving" class="bottom-save-btn">
-          <el-icon><CircleCheck /></el-icon> 保存配置并发布
+          <el-icon><CircleCheck /></el-icon> 保存
        </el-button>
     </div>
 
@@ -149,9 +149,7 @@
                <div class="truncate-2-lines" v-html="row.content"></div>
             </template>
          </el-table-column>
-         <el-table-column label="难度" width="80" align="center">
-            <template #default="{row}">{{ getDiffLabel(row.difficulty) }}</template>
-         </el-table-column>
+
       </el-table>
       <div class="pagination-row">
          <el-pagination layout="prev, pager, next" :total="bankTotal" v-model:current-page="bankPage" :page-size="10" @current-change="searchBank" background />

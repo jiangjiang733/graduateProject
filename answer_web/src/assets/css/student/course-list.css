@@ -191,6 +191,19 @@ html.dark .card-meta {
     border-color: #6366f133;
 }
 
+/* 未加入的课程 - 稍微灰化，不可直接点击进入 */
+.course-card-premium.not-joined {
+    cursor: default;
+    opacity: 0.92;
+    border-style: dashed;
+}
+
+.course-card-premium.not-joined:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 10px 24px -8px rgba(0, 0, 0, 0.06);
+    border-color: #94a3b8;
+}
+
 .card-cover-wrapper {
     height: 160px;
     position: relative;

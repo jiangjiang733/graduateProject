@@ -12,6 +12,7 @@ public class StudentExamDetailDTO {
     private Long examId;
     private String studentId;
     private String studentName;
+    private String studentAvatar;
     private Date startTime;
     private Date submitTime;
     private Integer totalScore;

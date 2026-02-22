@@ -5,13 +5,14 @@
 /* ====== 主容器 ====== */
 .course-management {
   background: linear-gradient(135deg, #f0f4ff 0%, #f8fafc 100%);
-  height: 100%;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   padding: 2rem;
+  padding-bottom: 100px;
   box-sizing: border-box;
   width: 100%;
-  overflow: hidden;
+  overflow: visible !important;
 }
 
 /* ====== 控制面板 ====== */
@@ -491,45 +492,29 @@
   border: 1px solid #e2e8f0;
 }
 
-/* ====== 分页 — 固定在底部居中 ====== */
-.pagination-container {
-  margin: 24px 0 0 0;
-  padding: 0;
+/* ====== 分页 — 固定在底部居中（复用考试管理样式） ====== */
+.pagination-outside {
+  position: fixed;
+  bottom: 0px;
+  left: calc(55% + 100px);
+  transform: translateX(-50%);
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 100%;
+  padding: 8px 20px;
+  background-color: transparent;
+  border-radius: 12px;
+  z-index: 999;
+  width: auto;
 }
 
-.pagination-container :deep(.el-pagination) {
-  background: rgba(255, 255, 255, 0.92);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  padding: 10px 20px;
-  border-radius: 14px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-  border: 1px solid #e2e8f0;
+.premium-pagination {
+  --el-pagination-bg-color: transparent;
 }
 
-.pagination-container :deep(.el-pagination .el-pager li) {
-  border-radius: 8px;
-  margin: 0 3px;
-  border: 1.5px solid #e2e8f0;
-  font-weight: 600;
-  transition: all 0.2s;
-}
-
-.pagination-container :deep(.el-pagination .el-pager li:hover) {
-  border-color: #3b82f6;
-  background: #eff6ff;
-  color: #3b82f6;
-}
-
-.pagination-container :deep(.el-pagination .el-pager li.is-active) {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  border-color: #3b82f6;
-  color: #fff;
-  box-shadow: 0 3px 8px rgba(59, 130, 246, 0.3);
+html.dark .pagination-outside,
+.dark-theme .pagination-outside {
+  background-color: transparent;
 }
 
 /* ====== 空状态 ====== */
@@ -603,9 +588,8 @@
   .card-top {
     height: 160px;
   }
-  .pagination-container {
-    margin: 16px 0 0 0;
-    justify-content: center;
+  .pagination-outside {
+    left: 50%;
   }
 }
 
