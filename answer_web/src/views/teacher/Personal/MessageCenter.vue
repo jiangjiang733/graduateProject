@@ -243,6 +243,9 @@
                 </div>
 
                 <div class="item-actions">
+                  <el-button v-if="item.type === 'SYSTEM' && item.source === 'MESSAGE'" link type="primary" size="small" @click="handleInteractionDetail(item)">
+                    前往查看
+                  </el-button>
                   <el-button v-if="item.type === 'COMMENT' && !item.content.includes('已删除')" link type="primary" size="small" @click="toggleQuickReply(item)">
                     {{ item.showReply ? '取消回复' : '快捷回复' }}
                   </el-button>
@@ -504,6 +507,7 @@ const {
   selectChatUser,
   handleSendMessage,
   isMyMessage,
+  handleInteractionDetail,
   toggleQuickReply,
   handleQuickReply,
   handleDeleteMessage,

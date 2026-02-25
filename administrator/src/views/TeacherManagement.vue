@@ -55,9 +55,6 @@
         <el-table-column label="教师名录" min-width="200">
           <template #default="{ row }">
             <div class="user-cell">
-              <div class="user-avatar-mini" style="background: var(--admin-sidebar-active-bg); color: #8b5cf6;">
-                {{ row.teacherUsername.charAt(0) }}
-              </div>
               <div class="user-detail">
                 <div style="font-weight: 600; color: #1e293b;">{{ row.teacherUsername }}</div>
                 <div style="font-size: 12px; color: #64748b;">{{ row.teacherEmail || '未设置邮箱' }}</div>
@@ -73,7 +70,6 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="teacherPhone" label="联系电话" width="140" />
         <el-table-column label="账户信息" width="160">
           <template #default="{ row }">
             <div class="password-display">
@@ -143,7 +139,6 @@
             </el-form-item>
           </el-col>
         </el-row>
-        
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="联系邮箱" prop="teacherEmail">
@@ -151,18 +146,14 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="联系电话" prop="teacherPhone">
-              <el-input v-model="form.teacherPhone" placeholder="11位手机号" />
+            <el-form-item label="所属学部/院系" prop="teacherDepartment">
+              <el-input v-model="form.teacherDepartment" placeholder="例如：计算机学院" />
             </el-form-item>
           </el-col>
         </el-row>
         
         <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="所属学部/院系" prop="teacherDepartment">
-              <el-input v-model="form.teacherDepartment" placeholder="例如：计算机学院" />
-            </el-form-item>
-          </el-col>
+
           <el-col :span="12">
             <el-form-item label="获聘职称" prop="teacherLevel">
               <el-select v-model="form.teacherLevel" style="width: 100%" placeholder="请选择职称">

@@ -116,8 +116,8 @@ export function useHomeworkSubmit() {
     }
 
     const handleFileChange = (file, fileList) => {
-        if (file.size > 10 * 1024 * 1024) {
-            ElMessage.error('文件大小不能超过10MB')
+        if (file.size > 50 * 1024 * 1024) {
+            ElMessage.error('文件大小不能超过50MB')
             fileList.pop()
             return
         }

@@ -322,3 +322,117 @@ html.dark .comment-tip {
 .empty-placeholder {
     padding: 60px 0;
 }
+
+/* ---- 实时监控徽标 ---- */
+.realtime-badge {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    padding: 6px 14px;
+    border-radius: 20px;
+    margin-left: 12px;
+    white-space: nowrap;
+}
+
+.pulse-dot {
+    width: 8px;
+    height: 8px;
+    background: #10b981;
+    border-radius: 50%;
+    animation: pulse-ring 1.6s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
+    flex-shrink: 0;
+}
+
+@keyframes pulse-ring {
+    0% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.55);
+    }
+
+    70% {
+        box-shadow: 0 0 0 7px rgba(16, 185, 129, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
+}
+
+html.dark .realtime-badge {
+    background: rgba(16, 185, 129, 0.12);
+    border-color: rgba(16, 185, 129, 0.3);
+    color: #34d399;
+}
+
+/* ---- 教师评语：升级展示 ---- */
+.comment-tip {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 12px;
+    color: #0369a1;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border: 1px solid #bae6fd;
+    padding: 10px 14px;
+    border-radius: 10px;
+    margin-bottom: 16px;
+}
+
+.comment-tip-text {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1;
+    min-width: 0;
+}
+
+.tip-label {
+    font-weight: 700;
+    font-size: 11px;
+    color: #0369a1;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.tip-content {
+    color: #0c4a6e;
+    font-size: 13px;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+html.dark .comment-tip {
+    background: linear-gradient(135deg, rgba(3, 105, 161, 0.15) 0%, rgba(2, 132, 199, 0.1) 100%);
+    border-color: rgba(2, 132, 199, 0.3);
+    color: #7dd3fc;
+}
+
+html.dark .tip-label {
+    color: #7dd3fc;
+}
+
+html.dark .tip-content {
+    color: #bae6fd;
+}
+
+/* ---- 分页样式 ---- */
+.pagination-wrapper {
+    margin-top: 48px;
+    margin-bottom: 32px;
+    display: flex;
+    justify-content: center;
+    padding: 20px 0;
+}
+
+/* 搜索框右侧对齐实时徽标 */
+.header-right {
+    display: flex;
+    align-items: center;
+}

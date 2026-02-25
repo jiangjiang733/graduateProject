@@ -817,3 +817,39 @@ html.dark .quote-text {
         width: 100%;
     }
 }
+
+/* Dashboard \u8bfe\u7a0b\u641c\u7d22\u6846 */
+.dashboard-course-search {
+    margin-bottom: 20px;
+}
+
+.dashboard-course-search :deep(.el-input__wrapper) {
+    border-radius: 10px;
+    background: #f8fafc;
+    box-shadow: none !important;
+    border: 1px solid #e2e8f0;
+}
+
+.dashboard-course-search :deep(.el-input__wrapper:hover),
+.dashboard-course-search :deep(.el-input__wrapper.is-focus) {
+    border-color: #6366f1;
+    background: #fff;
+}
+
+html.dark .dashboard-course-search :deep(.el-input__wrapper) {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+.section-block {
+    background: #fff;
+    border-radius: 16px;
+    padding: 28px;
+    border: 1px solid #f0f2f5;
+    margin-bottom: 30px;
+}
+
+html.dark .section-block {
+    background: #1e293b;
+    border-color: #334155;
+}

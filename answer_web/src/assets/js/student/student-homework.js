@@ -1,9 +1,10 @@
 /**
  * 学生端作业列表逻辑
+ * 含分页 + 教师批改实时通知（轮询对比状态变化）
  */
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElNotification } from 'element-plus'
 import { getStudentLabReports } from '@/api/homework'
 
 export function useStudentHomework() {
@@ -13,41 +14,133 @@ export function useStudentHomework() {
     const filterStatus = ref(null)
     const searchKeyword = ref('')
 
-    onMounted(() => {
-        loadHomeworks()
-    })
+    // ---- 分页 ----
+    const currentPage = ref(1)
+    const pageSize = ref(6)
 
-    const loadHomeworks = async () => {
-        loading.value = true
+    // ---- 实时通知：记录上一次各作业的状态快照 ----
+    const prevStatusMap = ref({})   // { [reportId]: status }
+    let pollTimer = null
+
+    // ============ 加载作业 ============
+    const loadHomeworks = async (silent = false) => {
+        if (!silent) loading.value = true
         try {
             const studentId = localStorage.getItem('s_id') || localStorage.getItem('studentId')
-
             if (!studentId) {
                 ElMessage.warning('未能获取学生信息，请重新登录')
                 return
             }
             const response = await getStudentLabReports(String(studentId))
-            if (response) {
-                homeworks.value = response.data || (Array.isArray(response) ? response : [])
+            const list = response.data || (Array.isArray(response) ? response : [])
+
+            if (silent && homeworks.value.length > 0) {
+                // 静默刷新：对比状态变化
+                detectGradeChanges(list)
+            }
+
+            homeworks.value = list
+
+            // 初始化状态快照
+            if (!silent) {
+                prevStatusMap.value = {}
+                list.forEach(hw => {
+                    prevStatusMap.value[hw.reportId] = hw.status
+                })
             }
         } catch (error) {
-            ElMessage.error('获取作业列表失败')
+            if (!silent) ElMessage.error('获取作业列表失败')
         } finally {
-            loading.value = false
+            if (!silent) loading.value = false
         }
     }
 
-    const filteredHomeworks = computed(() => {
+    // ============ 检测批改状态变化 ============
+    const detectGradeChanges = (newList) => {
+        newList.forEach(hw => {
+            const prevStatus = prevStatusMap.value[hw.reportId]
+            const nowStatus = hw.status
+
+            // 状态从"待批改(1)"变为"已完成(2)"→ 教师批改了
+            if (prevStatus === 1 && nowStatus === 2) {
+                showGradedNotification(hw)
+            }
+            // 状态从"待批改(1)"变为"被退回(3)"→ 教师退回了
+            if (prevStatus === 1 && nowStatus === 3) {
+                showReturnedNotification(hw)
+            }
+            // 更新快照
+            prevStatusMap.value[hw.reportId] = nowStatus
+        })
+    }
+
+    // ============ 批改完成通知 ============
+    const showGradedNotification = (hw) => {
+        ElNotification({
+            title: '🎉 作业已批改',
+            dangerouslyUseHTMLString: true,
+            message: `
+                <div class="notify-body">
+                    <div class="notify-name">${hw.reportTitle}</div>
+                    <div class="notify-score">
+                        得分：<strong>${hw.score ?? '—'}</strong> / ${hw.totalScore ?? '—'} 分
+                    </div>
+                    ${hw.teacherComment ? `<div class="notify-comment">💬 ${hw.teacherComment}</div>` : ''}
+                </div>
+            `,
+            type: 'success',
+            duration: 6000,
+            position: 'top-right',
+            onClick: () => {
+                if (hw.studentReportId) viewDetail(hw)
+            }
+        })
+    }
+
+    const showReturnedNotification = (hw) => {
+        ElNotification({
+            title: '📝 作业被退回，请修改',
+            dangerouslyUseHTMLString: true,
+            message: `
+                <div class="notify-body">
+                    <div class="notify-name">${hw.reportTitle}</div>
+                    ${hw.teacherComment ? `<div class="notify-comment">教师意见：${hw.teacherComment}</div>` : ''}
+                </div>
+            `,
+            type: 'warning',
+            duration: 8000,
+            position: 'top-right',
+            onClick: () => goToSubmit(hw)
+        })
+    }
+
+    // ============ 过滤 + 分页 ============
+    const filteredAll = computed(() => {
         let result = homeworks.value
         if (filterStatus.value !== null) {
             result = result.filter(hw => (hw.status || 0) === filterStatus.value)
         }
         if (searchKeyword.value) {
             const kw = searchKeyword.value.toLowerCase()
-            result = result.filter(hw => hw.reportTitle.toLowerCase().includes(kw))
+            result = result.filter(hw =>
+                (hw.reportTitle && hw.reportTitle.toLowerCase().includes(kw))
+            )
         }
         return result
     })
+
+    const total = computed(() => filteredAll.value.length)
+
+    // 当前页展示的作业
+    const filteredHomeworks = computed(() => {
+        const start = (currentPage.value - 1) * pageSize.value
+        return filteredAll.value.slice(start, start + pageSize.value)
+    })
+
+    const handlePageChange = (page) => {
+        currentPage.value = page
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
 
     const getCountByStatus = (status) => {
         return homeworks.value.filter(hw => (hw.status || 0) === status).length
@@ -86,7 +179,23 @@ export function useStudentHomework() {
         params: { id: hw.studentReportId }
     })
 
-    const filterHomeworks = () => { }
+    const filterHomeworks = () => {
+        currentPage.value = 1  // 切换筛选时重置到第一页
+    }
+
+    // ============ 生命周期 ============
+    onMounted(() => {
+        loadHomeworks()
+        // 每 2 秒静默轮询，提升实时交互和无延迟提醒
+        pollTimer = setInterval(() => loadHomeworks(true), 2000)
+    })
+
+    onUnmounted(() => {
+        if (pollTimer) {
+            clearInterval(pollTimer)
+            pollTimer = null
+        }
+    })
 
     return {
         loading,
@@ -94,6 +203,9 @@ export function useStudentHomework() {
         filterStatus,
         searchKeyword,
         filteredHomeworks,
+        total,
+        currentPage,
+        pageSize,
         getCountByStatus,
         getStatusType,
         getStatusText,
@@ -101,6 +213,7 @@ export function useStudentHomework() {
         isOverdue,
         goToSubmit,
         viewDetail,
-        filterHomeworks
+        filterHomeworks,
+        handlePageChange
     }
 }

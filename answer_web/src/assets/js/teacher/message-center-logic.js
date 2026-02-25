@@ -106,9 +106,9 @@ export function useMessageCenter() {
                 // 过滤"新课程讨论"：依据标题判断或显示所有课程讨论类型
                 return list.filter(item => {
                     if (!item.actionText) return false
-                    return item.actionText.includes('新课程讨论') || 
-                           item.actionText.includes('讨论') ||
-                           item.type === 'COMMENT'
+                    return item.actionText.includes('新课程讨论') ||
+                        item.actionText.includes('讨论') ||
+                        item.type === 'COMMENT'
                 })
             } else {
                 // 过滤"收到的回复" - 回复消息
@@ -132,10 +132,10 @@ export function useMessageCenter() {
     // Methods
     const loadContacts = async (showLoading = true) => {
         if (showLoading) loadingContacts.value = true
-        
+
         // 保存当前选中用户引用
         const savedCurrentUserId = currentChatUser.value?.contactId
-        
+
         try {
             const teacherId = userStore.userId
             const teacherType = 'TEACHER'
@@ -180,7 +180,7 @@ export function useMessageCenter() {
                 })
 
                 userList.value = newList
-                
+
                 // 恢复当前选中用户引用
                 if (savedCurrentUserId && !currentChatUser.value) {
                     const found = newList.find(u => u.contactId === savedCurrentUserId)
@@ -383,8 +383,27 @@ export function useMessageCenter() {
         return sId === tId && (msg.senderType === 'TEACHER' || msg.senderRole === 'TEACHER')
     }
 
-    // 移除未使用的 handleInteractionDetail 函数以精简代码
+    const handleInteractionDetail = async (item) => {
+        if (!item.isRead && item.source === 'MESSAGE') {
+            try {
+                await markAsRead(item.id, userStore.userId, 'TEACHER')
+                item.isRead = true
+                updateUnreadCounts()
+            } catch (e) { }
+        }
 
+        if (item.type === 'SYSTEM' && item.source === 'MESSAGE') {
+            if ((item.actionText?.includes('作业/实验报告') || item.content?.includes('作业/实验报告')) && item.relatedId) {
+                router.push(`/teacher/homework/${item.relatedId}/grade`)
+            } else if ((item.actionText?.includes('试卷') || item.content?.includes('试卷') || item.content?.includes('考试')) && item.relatedId) {
+                // Assuming relatedId is formatted as "examId_studentId"
+                if (item.relatedId.includes('_')) {
+                    const [examId, studentId] = item.relatedId.split('_')
+                    router.push(`/teacher/exam/${examId}/student/${studentId}`)
+                }
+            }
+        }
+    }
     const toggleQuickReply = async (item) => {
         item.showReply = !item.showReply
         // 实时响应已读
@@ -590,9 +609,16 @@ export function useMessageCenter() {
                     (currentLen > 0 && newMessagesList.length > 0 &&
                         newMessagesList[newMessagesList.length - 1].createTime > currentMessages.value[currentLen - 1].createTime)
 
-                if (hasNew) {
+                const oldStr = JSON.stringify(currentMessages.value)
+                const newStr = JSON.stringify(newMessagesList)
+                const hasChanges = oldStr !== newStr
+
+                if (hasChanges) {
                     currentMessages.value = newMessagesList
-                    scrollToBottom()
+
+                    if (hasNew) {
+                        scrollToBottom()
+                    }
 
                     // 核心逻辑：如果在聊天窗口且收到新消息，立即标记已读
                     if (activeTab.value === 'chat') {
@@ -632,7 +658,7 @@ export function useMessageCenter() {
             // 保存当前选中用户，避免刷新后丢失
             const savedChatUser = currentChatUser.value
             loadInteractions(false)
-            
+
             // 恢复选中用户
             if (savedChatUser && activeTab.value === 'chat') {
                 const found = userList.value.find(u => u.contactId === savedChatUser.contactId)
@@ -645,7 +671,7 @@ export function useMessageCenter() {
             if (currentChatUser.value && activeTab.value === 'chat') {
                 refreshChatHistory()
             }
-        }, 5000)
+        }, 2000)
     }
 
     const cleanupMessageCenter = () => {
@@ -688,6 +714,7 @@ export function useMessageCenter() {
         selectChatUser,
         handleSendMessage,
         isMyMessage,
+        handleInteractionDetail,
         toggleQuickReply,
         handleQuickReply,
         handleDeleteMessage,

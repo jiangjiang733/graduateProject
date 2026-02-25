@@ -234,10 +234,19 @@ public class LabReportServiceImpl implements LabReportService {
         // 发送系统通知给学生
         try {
             LabReport report = labReportMapper.selectById(studentReport.getReportId());
-            String title = "作业/实验报告已批改";
-            String content = String.format("您的实验报告《%s》已被教师批改。得分：%s。",
-                    report != null ? report.getReportTitle() : "未知报告",
-                    studentReport.getScore());
+            String title;
+            String content;
+            
+            if (gradingDTO.getStatus() != null && gradingDTO.getStatus() == 3) {
+                title = "作业/实验报告被打回";
+                content = String.format("你的作业/实验报告《%s》已被打回，请重新修改后再提交。",
+                        report != null ? report.getReportTitle() : "未知报告");
+            } else {
+                title = "作业/实验报告已批改";
+                content = String.format("你的作业/实验报告《%s》已被教师批改。得分：%s。",
+                        report != null ? report.getReportTitle() : "未知报告",
+                        studentReport.getScore());
+            }
 
             messageService.sendMessage(
                     gradingDTO.getTeacherId(),
@@ -302,35 +311,34 @@ public class LabReportServiceImpl implements LabReportService {
     }
 
     /**
-     * 保存附件文件
+     * 保存附件文件 → 统一存储到 uploads/homework/ 目录
      */
     private String saveAttachment(MultipartFile file) {
         try {
-            // 获取项目根目录
-            String projectPath = System.getProperty("user.dir");
-            // 构建绝对路径
-            String absoluteUploadPath = projectPath + File.separator + uploadPath;
-            String materialDir = absoluteUploadPath + "material" + File.separator;
+            // 使用配置文件中的绝对路径
+            String baseDir = "D:/Graduation project/uploads";
+            String homeworkDir = baseDir + "/homework/";
 
-            File dir = new File(materialDir);
+            File dir = new File(homeworkDir);
             if (!dir.exists()) {
                 dir.mkdirs();
             }
 
-            // 生成唯一文件名
+            // 生成唯一文件名（保留原始扩展名）
             String originalFilename = file.getOriginalFilename();
-            String extension = originalFilename != null && originalFilename.contains(".")
-                    ? originalFilename.substring(originalFilename.lastIndexOf("."))
-                    : "";
+            String extension = "";
+            if (originalFilename != null && originalFilename.contains(".")) {
+                extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            }
             String filename = System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8)
                     + extension;
 
             // 保存文件
-            File destFile = new File(materialDir + filename);
-            // 使用绝对路径保存
+            File destFile = new File(homeworkDir + filename);
             file.transferTo(destFile.getAbsoluteFile());
 
-            return "material/" + filename;
+            // 返回相对于 uploads 根目录的路径
+            return "homework/" + filename;
         } catch (IOException e) {
             e.printStackTrace();
             throw new RuntimeException("文件上传失败: " + e.getMessage());
@@ -417,9 +425,11 @@ public class LabReportServiceImpl implements LabReportService {
         // 如果是修改操作
         if (existingReport != null) {
             studentLabReportMapper.updateById(studentReport);
+            sendSubmissionNotification(studentReport, labReport, true);
             return studentReport.getStudentReportId();
         } else {
             studentLabReportMapper.insert(studentReport);
+            sendSubmissionNotification(studentReport, labReport, false);
             return studentReport.getStudentReportId();
         }
     }
@@ -667,5 +677,32 @@ public class LabReportServiceImpl implements LabReportService {
         studentReport.setSubmitTime(new Date());
 
         studentLabReportMapper.updateById(studentReport);
+        sendSubmissionNotification(studentReport, labReport, true);
+    }
+
+    /**
+     * 发送提交通知给教师
+     */
+    private void sendSubmissionNotification(StudentLabReport studentReport, LabReport labReport, boolean isUpdate) {
+        try {
+            String title = isUpdate ? "作业/实验报告已更新" : "有新的作业/实验报告提交";
+            String action = isUpdate ? "更新" : "提交";
+            String content = String.format("学生 %s %s了作业/实验报告《%s》。请前往批改。",
+                    studentReport.getStudentName(),
+                    action,
+                    labReport != null ? labReport.getReportTitle() : "未知作业/报告");
+
+            messageService.sendMessage(
+                    studentReport.getStudentId(),
+                    "STUDENT",
+                    labReport.getTeacherId(),
+                    "TEACHER",
+                    "SYSTEM",
+                    title,
+                    content,
+                    labReport.getReportId().toString());
+        } catch (Exception e) {
+            System.err.println("发送提交通知失败: " + e.getMessage());
+        }
     }
 }

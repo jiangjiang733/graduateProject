@@ -55,8 +55,7 @@
               </div>
               <div class="user-info">
                 <div class="info-top">
-                  <span class="name">{{ teacher.contactName }} 老师</span>
-                  <span class="course-tag">{{ teacher.courseName }}</span>
+                  <span class="name">{{ teacher.contactName }}老师</span>
                 </div>
                 <div class="info-bottom">
                    <p class="last-msg">{{ teacher.lastMessage || '暂无消息' }}</p>
@@ -78,6 +77,7 @@
            >
               <el-icon class="icon-box bg-green"><Bell /></el-icon>
               <span>系统通知</span>
+              <span v-if="systemUnreadTotal > 0" class="sub-unread-badge">{{ systemUnreadTotal }}</span>
               <el-icon class="arrow"><ArrowRight /></el-icon>
            </div>
            <div 
@@ -87,6 +87,7 @@
            >
               <el-icon class="icon-box bg-blue"><Comment /></el-icon>
               <span>收到的回复</span>
+              <span v-if="commentUnreadTotal > 0" class="sub-unread-badge">{{ commentUnreadTotal }}</span>
               <el-icon class="arrow"><ArrowRight /></el-icon>
            </div>
            <div 
@@ -112,7 +113,7 @@
                 </el-avatar>
                 <div class="user-info-text">
                   <span class="name">{{ currentChatTeacher.contactName }} 老师</span>
-                  <span class="sub-text">{{ currentChatTeacher.courseName }}</span>
+<!--                  <span class="sub-text">{{ currentChatTeacher.courseName }}</span>-->
                 </div>
               </div>
               <div class="window-actions">
@@ -144,11 +145,6 @@
             </div>
 
             <footer class="input-area">
-               <div class="toolbar">
-                 <el-icon title="发送图片"><Picture /></el-icon>
-                 <el-icon title="发送文件"><Folder /></el-icon>
-                 <el-icon title="语言录制"><Microphone /></el-icon>
-               </div>
                <div class="input-wrapper">
                  <textarea 
                    v-model="inputMessage" 
@@ -177,7 +173,7 @@
            </header>
            
            <div v-loading="interactionLoading" class="interaction-list custom-scrollbar">
-              <div v-for="(item, index) in filteredInteractionList" :key="index" class="interaction-item animate-slide-up">
+              <div v-for="(item, index) in filteredInteractionList" :key="index" class="interaction-item animate-slide-up" :class="{ 'unread-item': !item.isRead }">
                  <div class="item-avatar">
                     <el-avatar :size="48" :src="getAvatarUrl(item.userAvatar)" shape="circle">
                       <el-icon v-if="item.type === 'SYSTEM'"><BellFilled /></el-icon>
@@ -225,7 +221,7 @@
                        <el-button v-if="item.type !== 'SYSTEM' && item.type !== 'COURSE_INVITATION' && !item.content?.includes('已删除')" link type="primary" size="small" @click="toggleQuickReply(item)">
                          {{ item.showReply ? '取消回复' : '快捷回复' }}
                        </el-button>
-                       <el-button v-if="item.type !== 'COURSE_INVITATION' && !item.content?.includes('已删除')" link size="small" @click="handleInteractionDetail(item)">查看详情</el-button>
+                       <el-button v-if="item.type === 'SYSTEM' && item.type !== 'COURSE_INVITATION' && !item.content?.includes('已删除')" link size="small" @click="handleInteractionDetail(item)">查看详情</el-button>
                        <el-button link type="danger" size="small" class="delete-btn" @click="handleDeleteMessage(item)">
                          <el-icon><Delete /></el-icon> 删除
                        </el-button>
@@ -233,7 +229,7 @@
                     <div v-if="item.showReply" class="quick-reply-box">
                        <el-input 
                          v-model="item.replyContent" 
-                         placeholder="发送私信回复..." 
+                         :placeholder="(item.type === 'INTERACTION' || item.type === 'COMMENT') ? '回复这条评论...' : '发送私信回复...'"
                          size="small"
                          @keydown.enter.prevent="handleQuickReply(item)"
                        >
@@ -322,13 +318,23 @@ const filteredInteractionList = computed(() => {
   })
 })
 
+const systemUnreadTotal = computed(() => {
+  return interactionList.value.filter(item => item.type === 'SYSTEM' && !item.isRead).length
+})
+
+const commentUnreadTotal = computed(() => {
+  return interactionList.value.filter(item => 
+    (item.type === 'INTERACTION' || item.type === 'COMMENT') && !item.isRead
+  ).length
+})
+
 // Methods
-const loadContacts = async () => {
-    loadingContacts.value = true
+const loadContacts = async (silent = false) => {
+    if (!silent) {
+        loadingContacts.value = true
+    }
     try {
-        // 步骤1：获取所有相关老师（基于课程）
         const activeRes = await getActiveContacts(userType.value.toLowerCase(), studentId.value)
-        // 步骤2：获取实际有过聊天记录的摘要
         const chatRes = await getChatContacts(userType.value.toLowerCase(), studentId.value)
         
         if (activeRes.code === 200) {
@@ -374,12 +380,14 @@ const updateUnreadCounts = async () => {
     } catch (e) {}
 }
 
-const loadInteractions = async () => {
-    interactionLoading.value = true
+const loadInteractions = async (forceReload = false) => {
+    if (!forceReload) {
+        interactionLoading.value = true
+    }
     try {
         const res = await getMessageList(studentId.value, userType.value, { pageSize: 50 })
         if (res.code === 200 && res.data) {
-            interactionList.value = res.data.records.map(m => ({
+            const newList = res.data.records.map(m => ({
                 id: m.messageId,
                 senderId: m.senderId, 
                 senderType: m.senderType || 'TEACHER', 
@@ -389,17 +397,29 @@ const loadInteractions = async () => {
                 content: m.content,
                 time: m.createTime,
                 isRead: m.isRead === 1,
-                actionText: m.title || (m.messageType === 'INTERACTION' ? '发表了新回复' : '发来一条消息'),
+                actionText: m.title || (m.messageType === 'INTERACTION' ? '回复了你的评论' : '发来一条消息'),
                 showReply: false, 
                 replyContent: '',
                 relatedId: m.relatedId,
-                // Course invitation specific fields
+                courseId: m.courseId || '',
+                chapterId: m.chapterId || null,
                 enrollmentId: m.relatedId,
                 courseName: m.courseName || extractCourseName(m.content),
                 invitationStatus: m.invitationStatus || m.invitation_status || m.status || 'pending',
                 accepting: false,
                 rejecting: false
             }))
+            
+            if (!forceReload || interactionList.value.length === 0) {
+                interactionList.value = newList
+            } else {
+                const existingIds = new Set(interactionList.value.map(item => item.id))
+                const hasChanges = newList.length !== interactionList.value.length ||
+                    newList.some(item => !existingIds.has(item.id))
+                if (hasChanges) {
+                    interactionList.value = newList
+                }
+            }
         }
     } catch (error) {
         console.error('加载互动消息失败:', error)
@@ -486,7 +506,22 @@ const isMyMessage = (msg) => {
 }
 
 const handleInteractionDetail = async (item) => {
-    if (!item.isRead && item.type !== 'COMMENT') { // Comments don't have read status via msg API
+    if (!item.isRead) {
+        try {
+            await markAsRead(item.id, studentId.value, userType.value)
+            item.isRead = true
+            interactionUnread.value = Math.max(0, interactionUnread.value - 1)
+        } catch (e) {}
+    }
+    
+    if (item.type === 'SYSTEM' && item.relatedId) {
+        router.push(`/student/homework/${item.relatedId}/detail`)
+    }
+}
+
+const toggleQuickReply = async (item) => {
+    item.showReply = !item.showReply
+    if (!item.isRead) {
         try {
             await markAsRead(item.id, studentId.value, userType.value)
             item.isRead = true
@@ -495,47 +530,55 @@ const handleInteractionDetail = async (item) => {
     }
 }
 
-const toggleQuickReply = (item) => {
-    item.showReply = !item.showReply
-}
-
 const handleQuickReply = async (item) => {
     if (!item.replyContent.trim()) return
 
     try {
-        if (item.type === 'COMMENT') {
-            // Reply via Comment API (Public Reply)
+        // 先标记为已读
+        if (!item.isRead) {
+            try {
+                await markAsRead(item.id, studentId.value, userType.value)
+                item.isRead = true
+                interactionUnread.value = Math.max(0, interactionUnread.value - 1)
+            } catch (e) {}
+        }
+        
+        // INTERACTION（被回复评论通知）和 COMMENT 类型都走评论 API
+        if (item.type === 'INTERACTION' || item.type === 'COMMENT') {
+            // relatedId 就是触发此通知的评论 ID，作为 parentId
+            const parentCommentId = item.relatedId ? Number(item.relatedId) : null
             const commentData = {
-                courseId: item.courseId,
-                chapterId: item.chapterId,
+                courseId: item.courseId || '',
+                chapterId: item.chapterId || null,
                 userId: studentId.value,
                 userName: userStore.userName,
-                userAvatar: userStore.avatar,
+                userAvatar: userStore.avatar || userStore.avatarUrl,
                 userType: userType.value,
                 content: item.replyContent,
-                parentId: item.id,
-                targetUserId: item.senderId
+                parentId: parentCommentId,
+                targetUserId: item.senderId,
+                targetUserType: item.senderType || 'TEACHER'
             }
             const res = await addComment(commentData)
             if (res.code === 200) {
-                ElMessage.success('评论回复成功')
+                ElMessage.success('回复成功')
                 item.replyContent = ''
                 item.showReply = false
             } else {
                 ElMessage.error(res.message || '回复失败')
             }
         } else {
-            // Reply via DM (Private Message)
+            // 其他类型（如系统消息的回复）走私信 API
             const msgData = {
                 senderId: studentId.value,
                 senderType: userType.value,
                 receiverId: item.senderId,
-                receiverType: item.senderType || 'TEACHER', 
-                content: `[回复] ${item.replyContent}`,
+                receiverType: item.senderType || 'TEACHER',
+                content: item.replyContent,
                 msgType: 'TEXT'
             }
             const res = await sendChatMessage(msgData)
-             if (res.code === 200) {
+            if (res.code === 200) {
                 ElMessage.success('私信回复成功')
                 item.replyContent = ''
                 item.showReply = false
@@ -740,19 +783,26 @@ const refreshChatHistory = async () => {
             user2Type: 'TEACHER'
         })
         if (res.code === 200 && res.data) {
-            // 如果有新消息才更新
-            if (Array.isArray(res.data) && res.data.length > currentMessages.value.length) {
+            const hasNewMessage = Array.isArray(res.data) && (
+                res.data.length > currentMessages.value.length ||
+                (currentMessages.value.length > 0 && res.data.length > 0 &&
+                new Date(res.data[res.data.length - 1].createTime) > new Date(currentMessages.value[currentMessages.value.length - 1].createTime))
+            )
+            
+            if (hasNewMessage || currentMessages.value.length === 0) {
                 currentMessages.value = res.data
                 scrollToBottom()
-            } else if (Array.isArray(res.data)) {
-                // 检查最后一条消息是否不同
-                const hasNewMessage = currentMessages.value.length > 0 && 
-                                    res.data.length > 0 && 
-                                    res.data[res.data.length - 1].createTime > currentMessages.value[currentMessages.value.length - 1].createTime
-                if (hasNewMessage) {
-                    currentMessages.value = res.data
-                    scrollToBottom()
-                }
+                
+                await markChatRead({
+                    currentUserId: studentId.value,
+                    currentUserType: userType.value,
+                    senderId: currentChatTeacher.value.contactId,
+                    senderType: currentChatTeacher.value.contactType || 'TEACHER'
+                })
+                
+                currentChatTeacher.value.unreadCount = 0
+                await loadContacts(true)
+                await updateUnreadCounts()
             }
         }
     } catch (error) {
@@ -762,18 +812,22 @@ const refreshChatHistory = async () => {
 
 let refreshTimer = null
 onMounted(() => {
-    userStore.initUserInfo() // Initialize store data if not already done
+    userStore.initUserInfo()
     loadContacts()
     loadInteractions()
     
-    // 轮询新消息
     refreshTimer = setInterval(() => {
         updateUnreadCounts()
-        // 如果打开了聊天窗口，定期刷新历史
+        loadContacts(true)
+        
+        if (activeTab.value === 'interaction') {
+            loadInteractions(true)
+        }
+        
         if (currentChatTeacher.value && activeTab.value === 'chat') {
             refreshChatHistory()
         }
-    }, 10000)
+    }, 5000)
 })
 
 watch(activeInteractionType, () => {
@@ -864,13 +918,33 @@ onUnmounted(() => {
 
 .interaction-list { flex: 1; overflow-y: auto; }
 .interaction-item { display: flex; padding: 16px 24px; border-bottom: 1px solid var(--border-color, #f1f5f9); gap: 16px; }
+.item-avatar { position: relative; flex-shrink: 0; }
 .item-content { flex: 1; display: flex; flex-direction: column; gap: 4px; }
 .item-top { display: flex; gap: 8px; align-items: center; font-size: 13px; }
 .user-name { font-weight: 700; color: var(--text-main, #1f2937); }
 .action-text { color: var(--text-sub, #64748b); }
 .time { font-size: 11px; color: var(--text-sub, #9ca3af); }
 .reply-content { font-size: 14px; color: var(--text-main, #1e293b); margin: 4px 0; }
-.unread-badge { position: absolute; top: 0; right: 0; width: 10px; height: 10px; background: #ef4444; border-radius: 50%; border: 2px solid var(--bg-card, #fff); }
+.unread-badge { position: absolute; top: -2px; right: -2px; width: 12px; height: 12px; background: #ef4444; border-radius: 50%; border: 2px solid var(--bg-card, #fff); z-index: 10; }
+.sub-unread-badge { 
+  margin-left: auto; 
+  min-width: 20px; 
+  height: 20px; 
+  padding: 0 6px; 
+  background: linear-gradient(135deg, #ef4444, #dc2626); 
+  color: white; 
+  font-size: 11px; 
+  font-weight: 600; 
+  border-radius: 10px; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+}
+
+.interaction-item.unread-item {
+  background: rgba(239, 68, 68, 0.05);
+  border-left: 3px solid #ef4444;
+}
 
 .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; gap: 16px; }
 .custom-scrollbar::-webkit-scrollbar { width: 6px; }
@@ -968,5 +1042,41 @@ onUnmounted(() => {
 
 :global(.dark-theme) .status-pill.is-rejected {
   background: rgba(239, 68, 68, 0.2);
+}
+
+.interaction-item {
+  transition: all 0.3s ease;
+}
+
+.animate-slide-up {
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.unread-badge {
+  animation: pulse 2s infinite;
+}
+
+.sub-unread-badge {
+  animation: pulse 2s infinite;
 }
 </style>

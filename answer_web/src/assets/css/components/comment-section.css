@@ -1,12 +1,44 @@
+/* =============================================
+   课程评论区 - 支持亮色 / 暗黑模式
+   ============================================= */
+
+/* CSS 变量定义（亮色模式默认值） */
 .comment-section {
+    --cs-bg: #ffffff;
+    --cs-bg-sub: #f8f9fa;
+    --cs-border: #f2f3f5;
+    --cs-border-reply: #e8eaed;
+    --cs-text-main: #18191c;
+    --cs-text-sub: #61666d;
+    --cs-text-muted: #9499a0;
+    --cs-title: #303133;
+    --cs-reply-bg: #f8f9fa;
+    --cs-input-bg: #ffffff;
+
     padding: 20px;
-    background: #fff;
+    background: var(--cs-bg);
     border-radius: 8px;
     min-height: calc(100vh - 400px);
     display: flex;
     flex-direction: column;
+    transition: background 0.3s, color 0.3s;
 }
 
+/* 暗黑模式变量覆盖 */
+html.dark .comment-section {
+    --cs-bg: #1e293b;
+    --cs-bg-sub: #0f172a;
+    --cs-border: #334155;
+    --cs-border-reply: #2d3f54;
+    --cs-text-main: #e2e8f0;
+    --cs-text-sub: #94a3b8;
+    --cs-text-muted: #64748b;
+    --cs-title: #f1f5f9;
+    --cs-reply-bg: #0f172a;
+    --cs-input-bg: #1e293b;
+}
+
+/* ---- 头部 ---- */
 .comment-header {
     display: flex;
     justify-content: space-between;
@@ -17,16 +49,36 @@
 .comment-header h3 {
     margin: 0;
     font-size: 18px;
-    color: #303133;
+    color: var(--cs-title);
 }
 
 .comment-count {
-    color: #909399;
+    color: var(--cs-text-muted);
     font-size: 14px;
 }
 
+/* ---- 输入区 ---- */
 .comment-input-section {
     margin-bottom: 24px;
+}
+
+/* 强制 textarea 宽度 100% */
+.comment-input-section :deep(.el-textarea),
+.comment-input-section :deep(.el-textarea__inner) {
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* 暗黑模式下 textarea 背景 */
+html.dark .comment-input-section :deep(.el-textarea__inner) {
+    background-color: #0f172a !important;
+    color: #e2e8f0 !important;
+    border-color: #334155 !important;
+}
+
+html.dark .comment-input-section :deep(.el-input__count) {
+    background: transparent !important;
+    color: #64748b !important;
 }
 
 .input-actions {
@@ -35,6 +87,7 @@
     margin-top: 12px;
 }
 
+/* ---- 评论列表 ---- */
 .comment-list {
     display: flex;
     flex-direction: column;
@@ -45,7 +98,7 @@
     display: flex;
     gap: 16px;
     padding: 16px 0;
-    border-bottom: 1px solid #f2f3f5;
+    border-bottom: 1px solid var(--cs-border);
 }
 
 .comment-item:last-child {
@@ -71,9 +124,10 @@
 
 .user-name {
     font-weight: 600;
-    color: #61666d;
+    color: var(--cs-text-sub);
     font-size: 13px;
     cursor: pointer;
+    transition: color 0.2s;
 }
 
 .user-name:hover {
@@ -81,13 +135,13 @@
 }
 
 .comment-time {
-    color: #9499a0;
+    color: var(--cs-text-muted);
     font-size: 12px;
 }
 
 .comment-text {
     font-size: 14px;
-    color: #18191c;
+    color: var(--cs-text-main);
     line-height: 1.6;
     margin: 4px 0;
     word-break: break-word;
@@ -97,15 +151,23 @@
     display: flex;
     gap: 16px;
     margin-top: 4px;
-    color: #9499a0;
+    color: var(--cs-text-muted);
     font-size: 12px;
 }
 
+/* ---- 回复输入框 ---- */
 .reply-input {
     margin-top: 12px;
     padding: 12px;
-    background: #fff;
+    background: var(--cs-reply-bg);
     border-radius: 6px;
+    border: 1px solid var(--cs-border);
+}
+
+html.dark .reply-input :deep(.el-textarea__inner) {
+    background-color: #1e293b !important;
+    color: #e2e8f0 !important;
+    border-color: #334155 !important;
 }
 
 .reply-actions {
@@ -121,6 +183,7 @@
     margin-top: 8px;
 }
 
+/* ---- 回复列表 ---- */
 .replies-section {
     margin-top: 12px;
 }
@@ -128,20 +191,20 @@
 .replies-toggle {
     display: inline-block;
     font-size: 13px;
-    color: #909399;
+    color: var(--cs-text-muted);
     cursor: pointer;
     padding: 4px 0;
+    transition: color 0.2s;
 }
 
 .replies-toggle:hover {
-    color: #606266;
+    color: var(--cs-text-sub);
 }
 
-/* 查看更多/收起回复按钮行 */
 .view-more-row {
     padding: 4px 0 8px;
     font-size: 13px;
-    color: #9499a0;
+    color: var(--cs-text-muted);
 }
 
 .view-more-btn {
@@ -160,14 +223,15 @@
     margin-top: 8px;
     margin-left: 56px;
     padding-left: 16px;
-    border-left: 2px solid #f2f3f5;
+    border-left: 2px solid var(--cs-border-reply);
 }
 
 .reply-item {
     display: flex;
     gap: 12px;
     padding: 12px 0 8px 0;
-    border-bottom: 1px solid #f8f9fa;
+    border-bottom: 1px solid var(--cs-border);
+    transition: border-color 0.3s;
 }
 
 .reply-item:last-child {
@@ -191,20 +255,20 @@
 }
 
 .reply-time {
-    color: #9499a0;
+    color: var(--cs-text-muted);
     font-size: 12px;
 }
 
 .reply-text {
     font-size: 14px;
-    color: #18191c;
+    color: var(--cs-text-main);
     line-height: 1.6;
     margin: 4px 0;
     word-break: break-word;
 }
 
 .reply-to {
-    color: #909399;
+    color: var(--cs-text-muted);
     font-size: 12px;
     margin-left: 4px;
 }
@@ -214,9 +278,9 @@
     font-weight: 500;
 }
 
-/* 教师端风格的@提及样式 */
+/* @提及样式 */
 .reply-target-text {
-    color: #61666d;
+    color: var(--cs-text-sub);
     margin-right: 2px;
     font-size: 14px;
     display: inline-flex;
@@ -238,20 +302,20 @@
     color: #1890ff;
 }
 
-/* 教师端风格的教师标签 */
+/* 教师标签 */
 .tag-teacher {
     padding: 0 4px;
     height: 18px;
     line-height: 16px;
 }
 
-/* 教师端风格的操作按钮 */
+/* 操作按钮 */
 .action-item {
     cursor: pointer;
     display: flex;
     align-items: center;
     gap: 4px;
-    color: #9499a0;
+    color: var(--cs-text-muted);
     font-size: 12px;
     transition: color 0.2s;
 }
@@ -267,7 +331,7 @@
 /* 迷你删除按钮 */
 .delete-mini {
     cursor: pointer;
-    color: #9499a0;
+    color: var(--cs-text-muted);
     font-size: 14px;
     transition: color 0.2s;
     margin-left: auto;
@@ -277,7 +341,7 @@
     color: #f56c6c;
 }
 
-/* Highlight Animation */
+/* 高亮动画 */
 @keyframes highlight-fade {
     0% {
         background-color: rgba(64, 158, 255, 0.2);

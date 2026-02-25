@@ -1,13 +1,13 @@
 <template>
   <div class="student-dashboard modern-page">
-    <!-- Welcome Header with Quick Actions -->
+
     <div class="welcome-header glass-panel animate-fade-in">
       <div class="header-left">
         <h2 class="greeting">早安，{{ studentInfo.username || '同学' }}！👋</h2>
         <p class="subtitle">今天是 {{ currentDate }}，又是充满希望的一天。</p>
       </div>
       <div class="header-right">
-        <!-- Quick Actions -->
+
         <div class="quick-action" @click="$router.push('/student/courses')">
           <div class="action-icon bg-blue-100/80 text-blue-600 shadow-sm"><el-icon><Reading /></el-icon></div>
           <span>课程中心</span>
@@ -24,10 +24,9 @@
     </div>
 
     <div class="dashboard-container">
-      <!-- MAIN COLUMN (Left, 70%) -->
+
       <div class="main-content">
-        
-        <!-- Stats Overview -->
+
         <div class="stats-overview animate-slide-up">
            <div class="stat-box">
               <div class="stat-val">{{ stats.courseCount || 0 }}</div>
@@ -45,20 +44,32 @@
            </div>
         </div>
 
-        <!-- My Courses Grid -->
         <div class="section-block animate-slide-up" style="animation-delay: 0.1s">
           <div class="block-header">
             <h3>正在学习 <span class="highlight-count">({{ myCourses.length }})</span></h3>
             <el-button link type="primary" @click="$router.push('/student/courses')">查看全部 <el-icon><ArrowRight /></el-icon></el-button>
           </div>
-          
+
+          <!-- 课程搜索框 -->
+          <div class="dashboard-course-search">
+            <el-input
+              v-model="dashboardSearch"
+              placeholder="搜索课程..."
+              clearable
+              size="small"
+            >
+              <template #prefix>
+                <el-icon><Search /></el-icon>
+              </template>
+            </el-input>
+          </div>
           <div v-if="myCourses.length === 0" class="empty-state-large">
              <el-empty description="暂无课程，快去加入吧！" :image-size="140" />
              <el-button type="primary" @click="$router.push('/student/courses')">去选课</el-button>
           </div>
 
           <div v-else class="rich-course-grid">
-            <div v-for="course in displayedCourses" :key="course.course_id || course.id" class="rich-course-card" @click="$router.push(`/student/course/${course.course_id || course.id}`)">
+            <div v-for="course in filteredDisplayedCourses" :key="course.course_id || course.id" class="rich-course-card" @click="$router.push(`/student/course/${course.course_id || course.id}`)">
                <div class="card-cover">
                  <img :src="getCourseCover(course.courseImage || course.courscImage || course.image)" @error="handleImageError" />
                  <div class="course-tag">{{ course.classification || '必修' }}</div>
@@ -143,7 +154,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { Reading, EditPen, Timer, ChatDotRound, User, ArrowRight, CircleCheck, Service, Cpu } from '@element-plus/icons-vue'
+import { Reading, EditPen, Timer, ChatDotRound, User, ArrowRight, CircleCheck, Service, Cpu, Search } from '@element-plus/icons-vue'
 import { getStudentJoinedCourses } from '@/api/course'
 import { getStudentLabReports } from '@/api/homework'
 import { getStudentExamList } from '@/api/exam'
@@ -165,9 +176,22 @@ const upcomingExams = ref([])
 const pendingHomeworks = ref([])
 const myCourses = ref([])
 
-// 限制首页最多显示3个课程
+// 带搜索的课程列表
+const dashboardSearch = ref('')
+
+// 首页最多显示 3 个课程，搜索时把限制放大
 const displayedCourses = computed(() => {
   return myCourses.value.slice(0, 3)
+})
+
+const filteredDisplayedCourses = computed(() => {
+  const q = dashboardSearch.value.trim().toLowerCase()
+  const base = myCourses.value // 搜索时全量过滤
+  if (!q) return base.slice(0, 3)
+  return base.filter(c =>
+    (c.courseName || c.course_name || '').toLowerCase().includes(q) ||
+    (c.teacherName || '').toLowerCase().includes(q)
+  )
 })
 
 onMounted(() => {
@@ -342,6 +366,39 @@ const handleAIChat = () => {
 }
 :global(html.dark) .course-thumb {
    background: #374151;
+}
+
+/* Dashboard 课程搜索框 */
+.dashboard-course-search {
+    margin-bottom: 20px;
+}
+.dashboard-course-search :deep(.el-input__wrapper) {
+    border-radius: 10px;
+    background: #f8fafc;
+    box-shadow: none !important;
+    border: 1px solid #e2e8f0;
+}
+.dashboard-course-search :deep(.el-input__wrapper:hover),
+.dashboard-course-search :deep(.el-input__wrapper.is-focus) {
+    border-color: #6366f1;
+    background: #fff;
+}
+:global(html.dark) .dashboard-course-search :deep(.el-input__wrapper) {
+    background: #1e293b;
+    border-color: #334155;
+}
+
+/* 正在学习区块卡片 */
+.section-block {
+    background: #fff;
+    border-radius: 16px;
+    padding: 28px;
+    border: 1px solid #f0f2f5;
+    margin-bottom: 30px;
+}
+:global(html.dark) .section-block {
+    background: #1e293b;
+    border-color: #334155;
 }
 
 </style>

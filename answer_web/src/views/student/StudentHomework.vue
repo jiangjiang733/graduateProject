@@ -1,6 +1,6 @@
 <template>
   <div class="homework-page-container">
-    <!-- 顶部 Header：保持与课程列表、主页一致 -->
+    <!-- 顶部 Header -->
     <header class="page-header">
       <div class="header-content">
         <div class="header-left">
@@ -14,6 +14,7 @@
                 placeholder="搜索作业名称..."
                 clearable
                 @input="filterHomeworks"
+                @clear="filterHomeworks"
                 class="modern-search"
             >
               <template #prefix>
@@ -69,7 +70,7 @@
 
       <!-- 作业列表 -->
       <div v-loading="loading" class="homework-list-section">
-        <div v-if="filteredHomeworks.length === 0" class="empty-placeholder">
+        <div v-if="filteredHomeworks.length === 0 && !loading" class="empty-placeholder">
           <el-empty description="暂时没有找到相关作业" :image-size="160" />
         </div>
 
@@ -78,6 +79,10 @@
               v-for="homework in filteredHomeworks"
               :key="homework.reportId"
               class="homework-card"
+              :class="{
+                'card-graded': homework.status === 2,
+                'card-returned': homework.status === 3
+              }"
           >
             <div class="card-top">
               <div class="tag-row">
@@ -101,7 +106,7 @@
                 <el-icon><Collection /></el-icon>
                 <span>满分: {{ homework.totalScore }} 分</span>
               </div>
-              <div v-if="homework.score" class="info-item highlight-score">
+              <div v-if="homework.score !== null && homework.score !== undefined" class="info-item highlight-score">
                 <el-icon><Trophy /></el-icon>
                 <span>最终得分: <strong>{{ homework.score }}</strong></span>
               </div>
@@ -111,10 +116,13 @@
               <div class="description-preview">
                 {{ homework.reportDescription || '点击查看作业详情及具体要求...' }}
               </div>
-
-              <!-- 教师评语缩略提示 -->
+              <!-- 教师评语提示（更醒目） -->
               <div v-if="homework.teacherComment" class="comment-tip">
-                <el-icon><ChatDotRound /></el-icon> 教师已批阅并留下评语
+                <el-icon><ChatDotRound /></el-icon>
+                <div class="comment-tip-text">
+                  <span class="tip-label">教师评语</span>
+                  <span class="tip-content">{{ homework.teacherComment }}</span>
+                </div>
               </div>
 
               <div class="actions">
@@ -147,13 +155,27 @@
           </div>
         </div>
       </div>
+
+      <!-- 分页（始终在底部） -->
+      <div class="pagination-wrapper" v-if="total > 0">
+        <el-pagination
+            v-model:current-page="currentPage"
+            v-model:page-size="pageSize"
+            :total="total"
+            :page-sizes="[6, 12, 24]"
+            layout="total, sizes, prev, pager, next, jumper"
+            background
+            @current-change="handlePageChange"
+            @size-change="() => handlePageChange(1)"
+        />
+      </div>
     </main>
   </div>
 </template>
 
 <script setup>
 import {
-  Search, Calendar, Trophy, Collection, ArrowRight, Warning, ChatDotRound, Clock
+  Search, Calendar, Trophy, Collection, Warning, ChatDotRound
 } from '@element-plus/icons-vue'
 import { useStudentHomework } from '@/assets/js/student/student-homework.js'
 
@@ -163,6 +185,9 @@ const {
   filterStatus,
   searchKeyword,
   filteredHomeworks,
+  total,
+  currentPage,
+  pageSize,
   getCountByStatus,
   getStatusType,
   getStatusText,
@@ -170,10 +195,65 @@ const {
   isOverdue,
   goToSubmit,
   viewDetail,
-  filterHomeworks
+  filterHomeworks,
+  handlePageChange
 } = useStudentHomework()
 </script>
 
 <style scoped>
 @import '@/assets/css/student/student-homework.css';
+</style>
+
+<!-- 全局：通知弹窗内容样式 -->
+<style>
+.notify-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 4px 0;
+}
+
+.notify-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1f2937;
+    line-height: 1.4;
+}
+
+.notify-score {
+    font-size: 13px;
+    color: #374151;
+}
+
+.notify-score strong {
+    font-size: 16px;
+    font-weight: 800;
+    color: #10b981;
+}
+
+.notify-comment {
+    font-size: 12px;
+    color: #6b7280;
+    background: #f9fafb;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border-left: 3px solid #10b981;
+    margin-top: 2px;
+}
+
+html.dark .notify-name { color: #f3f4f6; }
+html.dark .notify-score { color: #d1d5db; }
+html.dark .notify-comment { background: #1f2937; color: #9ca3af; }
+
+/* 已批改卡片高亮边框 */
+.homework-card.card-graded {
+    border-color: rgba(16, 185, 129, 0.4) !important;
+    box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.15);
+}
+
+/* 被退回卡片橙色边框 */
+.homework-card.card-returned {
+    border-color: rgba(245, 158, 11, 0.4) !important;
+    box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.15);
+}
 </style>

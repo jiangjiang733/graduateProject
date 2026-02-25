@@ -1,4 +1,4 @@
-import { ref, onMounted, reactive, computed } from 'vue'
+import { ref, onMounted, reactive, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { searchCourses, getStudentJoinedCourses } from '@/api/course.js'
@@ -10,7 +10,7 @@ export function useCourseList() {
 
     // 状态
     const courses = ref([])
-    const allJoinedCourses = ref([]) // 存储从后端获取的所有课程，用于提取分类
+    const allJoinedCourses = ref([])
     const loading = ref(false)
     const searchQuery = ref('')
     const currentPage = ref(1)
@@ -21,8 +21,16 @@ export function useCourseList() {
     const filters = reactive({
         major: 'all',
         classification: 'all',
-        sort: 'newest'
+        sort: 'newest',
+        joinStatus: 'all'
     })
+
+    // 参与状态筛选项
+    const joinStatusOptions = [
+        { label: '全部课程', value: 'all' },
+        { label: '已参与', value: 'joined' },
+        { label: '未参与', value: 'unjoined' }
+    ]
 
     // 动态提取的专业列表
     const categories = ref([
@@ -74,6 +82,7 @@ export function useCourseList() {
                     return {
                         id: cId,
                         courseName: item.courseName || item.course_name || item.name,
+                        courseCode: item.courseCode || item.course_code || '',
                         image: item.courseImage || item.course_image || item.image,
                         teacherName: item.teacherName || item.teacher_name,
                         teacherAvatar: item.teacherAvatar || item.teacher_avatar,
@@ -130,10 +139,11 @@ export function useCourseList() {
 
         // 搜索过滤
         if (searchQuery.value) {
-            const q = searchQuery.value.toLowerCase()
+            const q = searchQuery.value.trim().toLowerCase()
             result = result.filter(c =>
-                c.courseName.toLowerCase().includes(q) ||
-                (c.teacherName && c.teacherName.toLowerCase().includes(q))
+                (c.courseName && c.courseName.toLowerCase().includes(q)) ||
+                (c.teacherName && c.teacherName.toLowerCase().includes(q)) ||
+                (c.courseCode && c.courseCode.toLowerCase().includes(q))
             )
         }
 
@@ -147,11 +157,18 @@ export function useCourseList() {
             result = result.filter(c => c.classification === filters.classification)
         }
 
+        // 参与状态筛选
+        if (filters.joinStatus === 'joined') {
+            result = result.filter(c => c.isJoined)
+        } else if (filters.joinStatus === 'unjoined') {
+            result = result.filter(c => !c.isJoined)
+        }
+
         // 排序
         if (filters.sort === 'newest') {
             result.sort((a, b) => new Date(b.lastStudyTime) - new Date(a.lastStudyTime))
         } else if (filters.sort === 'name') {
-            result.sort((a, b) => a.courseName.localeCompare(b.courseName, 'zh-CN'))
+            result.sort((a, b) => (a.courseName || '').localeCompare(b.courseName || '', 'zh-CN'))
         }
 
         total.value = result.length
@@ -236,6 +253,13 @@ export function useCourseList() {
             return '未知'
         }
     }
+    // 监听搜索词：清空时自动显示全部
+    watch(searchQuery, (val) => {
+        if (val === '' || val.trim() === '') {
+            currentPage.value = 1
+            applyFilters()
+        }
+    })
 
     onMounted(() => {
         if (route.query.keyword) {
@@ -243,7 +267,6 @@ export function useCourseList() {
         }
         loadCourses()
     })
-
     return {
         courses,
         loading,
@@ -255,6 +278,7 @@ export function useCourseList() {
         categories,
         classifications,
         sortOptions,
+        joinStatusOptions,
         handleSearch,
         handleFilterChange,
         handlePageChange,

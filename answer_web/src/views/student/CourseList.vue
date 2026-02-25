@@ -4,11 +4,6 @@
     <header class="page-header">
       <div class="header-content">
         <div class="header-left">
-          <div class="breadcrumb-nav">
-            <span class="root">学习中心</span>
-            <el-icon><ArrowRight /></el-icon>
-            <span class="current">我的课程</span>
-          </div>
           <h1 class="main-title">开启你的知识之旅</h1>
         </div>
 
@@ -18,6 +13,8 @@
                 v-model="searchQuery"
                 placeholder="搜索课程..."
                 @keyup.enter="handleSearch"
+                @clear="handleSearch"
+                @input="searchQuery.trim() === '' && handleSearch()"
                 clearable
             >
               <template #prefix>
@@ -67,6 +64,23 @@
           </div>
         </div>
 
+        <div class="filter-divider"></div>
+
+        <div class="filter-section">
+          <h3 class="filter-title">参与状态</h3>
+          <div class="chip-group">
+            <div
+                v-for="item in joinStatusOptions"
+                :key="item.value"
+                class="tag-chip"
+                :class="{ active: filters.joinStatus === item.value }"
+                @click="filters.joinStatus = item.value; handleFilterChange()"
+            >
+              {{ item.label }}
+            </div>
+          </div>
+        </div>
+
       </aside>
 
       <!-- 课程展示区 -->
@@ -98,16 +112,11 @@
             <div class="card-cover-wrapper">
               <img :src="getCourseImage(course.image)" :alt="course.courseName" />
               <span class="type-tag">{{ course.classification }}</span>
-              <div class="hover-overlay">
-                <el-button type="primary" circle size="large">
-                  <el-icon><VideoPlay /></el-icon>
-                </el-button>
-              </div>
+              <div class="cover-course-name">{{ course.courseName }}</div>
             </div>
 
             <div class="card-info">
               <h4 class="course-title">{{ course.courseName }}</h4>
-
               <div class="course-instructor">
                 <el-avatar :size="20" :src="getTeacherAvatar(course.teacherAvatar)" />
                 <span>{{ course.teacherName || '主讲教师' }}</span>
@@ -117,6 +126,11 @@
                 <span class="major-label"><el-icon><Collection /></el-icon> {{ course.major }}</span>
               </div>
 
+              <!-- 课程码 -->
+              <div v-if="course.courseCode" class="course-code-row">
+                <span class="course-code-label">课程码</span>
+                <span class="course-code-val">{{ course.courseCode }}</span>
+              </div>
 
               <div class="card-footer">
                 <!-- 已加入课程 -->
@@ -197,10 +211,63 @@ const {
   applyToCourse,
   getCourseImage,
   getTeacherAvatar,
-  formatDate
+  formatDate,
+  joinStatusOptions
 } = useCourseList()
 </script>
 
 <style scoped>
 @import '@/assets/css/student/course-list.css';
+</style>
+
+<!-- 强制覆盖：确保封面课程名在所有浏览器中正确显示 -->
+<style>
+.course-card-premium .card-cover-wrapper {
+    position: relative;
+    overflow: hidden;
+}
+
+.course-card-premium .cover-course-name {
+    position: absolute !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    padding: 32px 12px 12px !important;
+    z-index: 5 !important;
+    background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.35) 55%, transparent 100%) !important;
+    color: #fff !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    line-height: 1.45 !important;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.9) !important;
+    display: block !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    pointer-events: none !important;
+    transition: opacity 0.25s !important;
+}
+
+.course-card-premium:hover .cover-course-name {
+    opacity: 0 !important;
+}
+
+.course-card-premium .hover-overlay {
+    z-index: 4 !important;
+}
+
+/* 强制修复 course-title 显示，确保课程名在所有浏览器下可见 */
+.course-card-premium .card-info .course-title {
+    display: block !important;
+    margin: 0 0 12px !important;
+    font-size: 1.05rem !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
+    line-height: 1.45 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    min-height: auto !important;
+}
 </style>

@@ -1,4 +1,4 @@
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getStudentExamList } from '@/api/exam'
@@ -15,26 +15,56 @@ export function useStudentExamList() {
     const currentPage = ref(1)
     const pageSize = ref(6)
 
-    const loadExams = async () => {
+    let pollTimer = null
+    const prevStatusMap = ref({}) // track status changes to notify
+
+    const loadExams = async (silent = false) => {
         if (!studentId) {
             ElMessage.warning('身份信息已失效，请重新登录')
             return
         }
 
-        loading.value = true
+        if (!silent) loading.value = true
         try {
             const params = filterStatus.value || null
             const res = await getStudentExamList(studentId, params, null)
             if (res.success || res.code === 200) {
-                exams.value = res.data || []
+                const list = res.data || []
+
+                if (silent && exams.value.length > 0) {
+                    // Check for changes in statuses (like from submitted to graded)
+                    list.forEach(exam => {
+                        const prevStatus = prevStatusMap.value[exam.examId]
+                        const nowStatus = exam.studentStatus
+                        // If status changed from submitted (2) to graded (3)
+                        if (prevStatus === 2 && nowStatus === 3) {
+                            import('element-plus').then(module => {
+                                module.ElNotification({
+                                    title: '🎉 试卷已批改',
+                                    message: `《${exam.examTitle}》的成绩已出炉，得分为 ${exam.studentScore ?? '—'} 分。`,
+                                    type: 'success',
+                                    duration: 6000,
+                                    position: 'top-right'
+                                })
+                            })
+                        }
+                        prevStatusMap.value[exam.examId] = nowStatus
+                    })
+                } else {
+                    list.forEach(exam => {
+                        prevStatusMap.value[exam.examId] = exam.studentStatus
+                    })
+                }
+
+                exams.value = list
             } else {
-                ElMessage.error(res.message || '获取考试列表失败')
+                if (!silent) ElMessage.error(res.message || '获取考试列表失败')
             }
         } catch (error) {
             console.error('获取考试列表出错:', error)
-            ElMessage.error('网络连接异常，请检查网络')
+            if (!silent) ElMessage.error('网络连接异常，请检查网络')
         } finally {
-            loading.value = false
+            if (!silent) loading.value = false
         }
     }
 
@@ -150,6 +180,14 @@ export function useStudentExamList() {
 
     onMounted(() => {
         loadExams()
+        pollTimer = setInterval(() => loadExams(true), 2000)
+    })
+
+    onUnmounted(() => {
+        if (pollTimer) {
+            clearInterval(pollTimer)
+            pollTimer = null
+        }
     })
 
     return {

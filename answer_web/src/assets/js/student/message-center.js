@@ -9,9 +9,9 @@ import {
     sendChatMessage, getChatHistory, getChatContacts,
     getActiveContacts, markChatRead, getChatUnreadCount
 } from '@/api/chat'
-import { getMessageList, markAsRead, getUnreadCount } from '@/api/message'
+import { getMessageList, markAsRead, getUnreadCount, deleteMessage } from '@/api/message'
 import { getStudentNotifications } from '@/api/notification'
-import { addComment } from '@/api/comment'
+import { addComment, deleteComment } from '@/api/comment'
 
 export function useStudentMessageCenter() {
     const userStore = useUserInfo()
@@ -63,6 +63,14 @@ export function useStudentMessageCenter() {
         })
     })
 
+    const commentUnreadTotal = computed(() => {
+        return interactionList.value.filter(i => (i.type === 'COMMENT' || i.type === 'INTERACTION') && !i.isRead).length
+    })
+
+    const systemUnreadTotal = computed(() => {
+        return interactionList.value.filter(i => i.type === 'SYSTEM' && !i.isRead && i.source === 'MESSAGE').length
+    })
+
     // Methods
     const loadContacts = async (showLoading = true) => {
         if (showLoading) loadingContacts.value = true
@@ -74,8 +82,9 @@ export function useStudentMessageCenter() {
                 const activeContacts = activeRes.data || []
                 const chatSummaries = chatRes.code === 200 ? chatRes.data : []
 
-                teacherList.value = activeContacts.map(ac => {
-                    const summary = chatSummaries.find(cs => cs.contactId === ac.contactId)
+                const newList = activeContacts.map(ac => {
+                    const targetId = ac.contactId
+                    const summary = chatSummaries.find(cs => cs.contactId === targetId)
                     return {
                         ...ac,
                         lastMessage: summary?.lastMessage || '',
@@ -84,12 +93,22 @@ export function useStudentMessageCenter() {
                     }
                 })
 
-                teacherList.value.sort((a, b) => {
+                newList.forEach(newUser => {
+                    const isCurrent = currentChatTeacher.value && (currentChatTeacher.value.contactId == newUser.contactId)
+                    if (isCurrent && activeTab.value === 'chat') {
+                        // 活跃聊天窗口中，强制隐藏红点
+                        newUser.unreadCount = 0
+                    }
+                })
+
+                newList.sort((a, b) => {
                     if (!a.lastTime && !b.lastTime) return 0
                     if (!a.lastTime) return 1
                     if (!b.lastTime) return -1
                     return new Date(b.lastTime) - new Date(a.lastTime)
                 })
+
+                teacherList.value = newList
             }
 
             await updateUnreadCounts()
@@ -103,7 +122,18 @@ export function useStudentMessageCenter() {
     const updateUnreadCounts = async () => {
         try {
             const chatUnreadRes = await getChatUnreadCount(userType.value.toLowerCase(), studentId.value)
-            if (chatUnreadRes.code === 200) chatUnreadTotal.value = chatUnreadRes.data
+            if (chatUnreadRes.code === 200) {
+                let unread = chatUnreadRes.data
+                // 如果当前正在私信某位老师，且后端返回包含了他的未读（可能还没实时消费），我们在前端本地剔除它
+                if (currentChatTeacher.value && activeTab.value === 'chat') {
+                    // Find actual unread on server for this user
+                    const serverUnread = chatUnreadRes.data > 0 ? teacherList.value.reduce((acc, t) => acc + (t.contactId == currentChatTeacher.value.contactId ? 0 : t.unreadCount), 0) : 0
+                    // Actually an easier way is to just recount from the list, taking the forced 0 into account
+                    chatUnreadTotal.value = teacherList.value.reduce((sum, u) => sum + (u.unreadCount || 0), 0)
+                } else {
+                    chatUnreadTotal.value = unread
+                }
+            }
 
             const sysUnreadRes = await getUnreadCount(studentId.value, userType.value)
             if (sysUnreadRes.code === 200) interactionUnread.value = sysUnreadRes.data.unreadCount
@@ -245,7 +275,7 @@ export function useStudentMessageCenter() {
     }
 
     const handleInteractionDetail = async (item) => {
-        if (!item.isRead && item.type !== 'COMMENT' && item.source === 'MESSAGE') {
+        if (!item.isRead && item.source === 'MESSAGE') {
             try {
                 await markAsRead(item.id, studentId.value, userType.value)
                 item.isRead = true
@@ -253,7 +283,9 @@ export function useStudentMessageCenter() {
             } catch (e) { }
         }
 
-        if (item.courseId && (item.type === 'COMMENT' || item.type === 'INTERACTION')) {
+        if (item.type === 'SYSTEM' && (item.actionText?.includes('批改') || item.content?.includes('批改')) && item.relatedId) {
+            router.push(`/student/homework/${item.relatedId}/detail`)
+        } else if (item.courseId && (item.type === 'COMMENT' || item.type === 'INTERACTION')) {
             router.push({
                 path: `/student/course/detail/${item.courseId}`,
                 query: {
@@ -264,24 +296,38 @@ export function useStudentMessageCenter() {
         }
     }
 
-    const toggleQuickReply = (item) => {
+    const toggleQuickReply = async (item) => {
         item.showReply = !item.showReply
+        if (!item.isRead && item.source === 'MESSAGE') {
+            try {
+                await markAsRead(item.id, studentId.value, userType.value)
+                item.isRead = true
+                updateUnreadCounts()
+            } catch (e) { }
+        }
     }
 
     const handleQuickReply = async (item) => {
         if (!item.replyContent.trim()) return
 
+        // 屏蔽系统通知回复
+        if (!item.senderId || item.userName.includes('系统')) {
+            ElMessage.warning('系统通知无法直接回复')
+            return
+        }
+
         try {
+            // 区分是"公开回复评论"还是"私信回复"
             if (item.type === 'COMMENT' || item.type === 'INTERACTION') {
                 const commentData = {
                     userId: studentId.value,
                     userName: userStore.userName,
-                    userAvatar: userStore.avatar,
+                    userAvatar: userStore.avatar || userStore.avatarUrl,
                     userType: userType.value,
                     content: item.replyContent,
                     parentId: item.relatedId,
                     targetUserId: item.senderId,
-                    targetUserType: item.senderType || 'TEACHER'
+                    targetUserType: item.senderType || 'TEACHER' // 学生通常回复老师或助教
                 }
                 const res = await addComment(commentData)
                 if (res.code === 200) {
@@ -292,10 +338,11 @@ export function useStudentMessageCenter() {
                     ElMessage.error(res.message || '回复失败')
                 }
             } else {
+                // 普通私信回复
                 const msgData = {
-                    senderId: studentId.value,
+                    senderId: String(studentId.value),
                     senderType: userType.value,
-                    receiverId: item.senderId,
+                    receiverId: String(item.senderId),
                     receiverType: item.senderType || 'TEACHER',
                     content: `[回复] ${item.replyContent}`,
                     msgType: 'TEXT'
@@ -309,9 +356,59 @@ export function useStudentMessageCenter() {
                     ElMessage.error(res.message || '回复失败')
                 }
             }
+            // 实时更新页面内容
+            loadInteractions(false)
         } catch (error) {
             console.error(error)
             ElMessage.error('发送失败')
+        }
+    }
+
+    // 删除通知消息
+    const handleDeleteMessage = async (item) => {
+        try {
+            const isComment = item.type === 'COMMENT'
+
+            // 确认删除通知
+            await ElMessageBox.confirm(
+                isComment ? '确定要删除这条评论吗？' : '确定要删除这条通知消息吗？',
+                '删除确认',
+                {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }
+            )
+
+            let res;
+            if (isComment) {
+                // 物理删除评论自身
+                if (item.relatedId) {
+                    try {
+                        await deleteComment(item.relatedId)
+                    } catch (ignoredError) {
+                    }
+                }
+            }
+
+            // 删除通知本身
+            res = await deleteMessage(item.id, studentId.value, userType.value)
+
+            if (res.code === 200) {
+                ElMessage.success('删除成功')
+                const index = interactionList.value.findIndex(i => i.id === item.id)
+                if (index > -1) {
+                    interactionList.value.splice(index, 1)
+                }
+                updateUnreadCounts()
+            } else {
+                ElMessage.error(res.message || '删除失败')
+            }
+        } catch (error) {
+            if (error !== 'cancel') {
+                console.error(error)
+                ElMessage.error('网络错误，删除失败')
+            }
         }
     }
 
@@ -380,16 +477,37 @@ export function useStudentMessageCenter() {
                 user2Type: 'TEACHER'
             })
             if (res.code === 200 && res.data) {
-                if (Array.isArray(res.data) && res.data.length > currentMessages.value.length) {
-                    currentMessages.value = res.data
-                    scrollToBottom()
-                } else if (Array.isArray(res.data)) {
-                    const hasNewMessage = currentMessages.value.length > 0 &&
-                        res.data.length > 0 &&
-                        res.data[res.data.length - 1].createTime > currentMessages.value[currentMessages.value.length - 1].createTime
-                    if (hasNewMessage) {
-                        currentMessages.value = res.data
-                        scrollToBottom()
+                if (Array.isArray(res.data)) {
+                    const newMessagesList = res.data
+                    const currentLen = currentMessages.value.length
+
+                    const hasNewMessage = newMessagesList.length > currentLen ||
+                        (currentLen > 0 && newMessagesList.length > 0 &&
+                            newMessagesList[newMessagesList.length - 1].createTime > currentMessages.value[currentLen - 1].createTime)
+
+                    const oldStr = JSON.stringify(currentMessages.value)
+                    const newStr = JSON.stringify(newMessagesList)
+                    const hasChanges = oldStr !== newStr
+
+                    if (hasChanges) {
+                        currentMessages.value = newMessagesList
+
+                        if (hasNewMessage) {
+                            scrollToBottom()
+                        }
+
+                        if (activeTab.value === 'chat') {
+                            try {
+                                markChatRead({
+                                    currentUserId: studentId.value,
+                                    currentUserType: userType.value,
+                                    senderId: currentChatTeacher.value.contactId,
+                                    senderType: currentChatTeacher.value.contactType || 'TEACHER'
+                                }).then(() => {
+                                    updateUnreadCounts()
+                                })
+                            } catch (e) { /* silent fail */ }
+                        }
                     }
                 }
             }
@@ -407,12 +525,28 @@ export function useStudentMessageCenter() {
 
         refreshTimer = setInterval(() => {
             updateUnreadCounts()
+
+            // 1. 刷新联系人摘要排序 (不显示 loading)
             loadContacts(false)
 
+            // 2. 刷新互动通知 (不显示 loading)
+            // 保存当前选中教师
+            const savedChatTeacher = currentChatTeacher.value
             if (activeTab.value === 'interaction') {
+                loadInteractions(false)
+            } else {
+                // 后台静默刷新通知以维持角标正确
                 loadInteractions(false)
             }
 
+            if (savedChatTeacher && activeTab.value === 'chat') {
+                const found = teacherList.value.find(u => u.contactId === savedChatTeacher.contactId)
+                if (found && !currentChatTeacher.value) {
+                    currentChatTeacher.value = found
+                }
+            }
+
+            // 3. 如果在聊天窗口，刷新历史
             if (currentChatTeacher.value && activeTab.value === 'chat') {
                 refreshChatHistory()
             }
@@ -440,6 +574,8 @@ export function useStudentMessageCenter() {
         interactionList,
         interactionUnread,
         chatUnreadTotal,
+        commentUnreadTotal,
+        systemUnreadTotal,
         loadingContacts,
         interactionLoading,
         filteredTeacherList,
@@ -452,6 +588,7 @@ export function useStudentMessageCenter() {
         handleInteractionDetail,
         toggleQuickReply,
         handleQuickReply,
+        handleDeleteMessage,
         markAllRead,
         formatTime,
         formatExtendedTime,

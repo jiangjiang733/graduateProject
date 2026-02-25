@@ -38,7 +38,7 @@
             
             <!-- 通知 / 答疑入口 -->
             <div class="action-btn" @click="$router.push('/student/messages')" title="我的消息">
-              <el-badge :value="2" class="notification-badge" is-dot>
+              <el-badge :value="totalUnread" :hidden="totalUnread === 0" class="notification-badge">
                 <el-icon :size="20"><Bell /></el-icon>
               </el-badge>
             </div>
@@ -58,9 +58,6 @@
                 <el-dropdown-menu class="modern-dropdown">
                   <el-dropdown-item command="profile">
                     <el-icon><User /></el-icon>个人中心
-                  </el-dropdown-item>
-                  <el-dropdown-item command="settings">
-                    <el-icon><Setting /></el-icon>账户设置
                   </el-dropdown-item>
                   <el-dropdown-item divided command="logout">
                     <el-icon><SwitchButton /></el-icon>退出登录
@@ -94,7 +91,9 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { getUnreadCount } from '@/api/message'
+import { getChatUnreadCount } from '@/api/chat'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import '@/assets/css/teacher/modern-theme.css' // Reuse general modern styles
@@ -115,6 +114,30 @@ const settingsStore = useSettingsStore()
 
 // 注意: initSettings() 已由 App.vue 在 onMounted 中调用
 // 这里不再重复调用，避免竞态条件
+
+const totalUnread = ref(0)
+let unreadTimer = null
+
+const fetchUnread = async () => {
+  if (!userStore.userId) return
+  try {
+    const sysRes = await getUnreadCount(userStore.userId, userStore.userType || 'STUDENT')
+    const chatRes = await getChatUnreadCount(userStore.userType?.toLowerCase() || 'student', userStore.userId)
+    
+    let sys = sysRes.code === 200 ? (sysRes.data.unreadCount || 0) : 0
+    let chat = chatRes.code === 200 ? (chatRes.data || 0) : 0
+    totalUnread.value = sys + chat
+  } catch (e) {}
+}
+
+onMounted(() => {
+  fetchUnread()
+  unreadTimer = setInterval(fetchUnread, 3000)
+})
+
+onUnmounted(() => {
+  if (unreadTimer) clearInterval(unreadTimer)
+})
 
 const currentRouteName = computed(() => route.meta.title || '学生中心')
 

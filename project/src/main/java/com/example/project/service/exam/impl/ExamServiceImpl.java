@@ -634,7 +634,7 @@ public class ExamServiceImpl implements ExamService {
                             "SYSTEM", "SYSTEM",
                             teacherId, "TEACHER",
                             "SYSTEM_NOTIFICATION",
-                            title, content, String.valueOf(studentExam.getStudentExamId()));
+                            title, content, examId + "_" + studentId);
                 }
             } catch (Exception e) {
                 System.err.println("发送答卷批改通知失败: " + e.getMessage());

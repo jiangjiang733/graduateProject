@@ -90,6 +90,26 @@ export function useHomeworkDetail() {
         } catch (e) { return [] }
     })
 
+    // 按题型分组：选择（单/多） → 判断 → 简答，保留原始索引
+    const TYPE_ORDER = ['SINGLE', 'MULTIPLE', 'JUDGE', 'ESSAY']
+    const TYPE_LABELS = {
+        SINGLE: '选择题（单选）',
+        MULTIPLE: '选择题（多选）',
+        JUDGE: '判断题',
+        ESSAY: '简答题'
+    }
+    const groupedQuestions = computed(() => {
+        const groups = {}
+        questionList.value.forEach((q, idx) => {
+            const t = q.questionType || 'ESSAY'
+            if (!groups[t]) groups[t] = []
+            groups[t].push({ q, idx })
+        })
+        return TYPE_ORDER
+            .filter(t => groups[t] && groups[t].length > 0)
+            .map(t => ({ type: t, label: TYPE_LABELS[t], items: groups[t] }))
+    })
+
     // 结构化答案
     const structuredAnswers = computed(() => {
         if (!submission.value.structuredAnswers) return []
@@ -188,6 +208,7 @@ export function useHomeworkDetail() {
         homework,
         submission,
         questionList,
+        groupedQuestions,
         structuredAnswers,
         liveScore,
         formatDate,

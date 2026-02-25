@@ -3,6 +3,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getLabReportDetail, getSubmissions, gradeLabReport } from '@/api/homework.js'
 import { getProfile } from '@/api/student.js'
+import { buildFileUrl, downloadFile as downloadFileUtil, getFileName } from '@/utils/fileUtils.js'
 
 export function useHomeworkGrade() {
     const route = useRoute()
@@ -341,18 +342,9 @@ export function useHomeworkGrade() {
             ElMessage.warning('文件地址不存在')
             return
         }
-
-        try {
-            const link = document.createElement('a')
-            link.href = url.startsWith('http') ? url : `/api/${url}`
-            link.download = ''
-            link.target = '_blank'
-            document.body.appendChild(link)
-            link.click()
-            document.body.removeChild(link)
-        } catch (e) {
-            ElMessage.error('文件下载失败')
-        }
+        const fileName = getFileName(url)
+        ElMessage.info(`正在准备下载：${fileName}`)
+        downloadFileUtil(url, fileName)
     }
 
     // ===== 15. 提交批改（支持验证和确认） =====

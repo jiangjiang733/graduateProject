@@ -514,3 +514,42 @@ defineExpose({
 @import '@/assets/css/components/comment-section.css';
 </style>
 
+<!-- 非 scoped：处理 Element Plus 组件内部样式 + 暗黑模式 -->
+<style>
+/* textarea 宽度强制 100% */
+.comment-input-section .el-textarea,
+.comment-input-section .el-textarea__inner {
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+/* 暗黑模式：主评论输入框 */
+html.dark .comment-input-section .el-textarea__inner {
+    background-color: #0f172a !important;
+    color: #e2e8f0 !important;
+    border-color: #334155 !important;
+}
+
+html.dark .comment-input-section .el-input__count {
+    background: transparent !important;
+    color: #64748b !important;
+}
+
+/* 暗黑模式：回复输入框 */
+html.dark .reply-input .el-textarea__inner {
+    background-color: #1e293b !important;
+    color: #e2e8f0 !important;
+    border-color: #334155 !important;
+}
+
+/* 暗黑模式：el-empty 描述文字 */
+html.dark .comment-section .el-empty__description p {
+    color: #64748b !important;
+}
+
+/* 暗黑模式：评论区整体卡片背景 */
+html.dark .comment-section {
+    background: #1e293b !important;
+}
+</style>
+

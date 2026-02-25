@@ -90,7 +90,7 @@
             <div class="submission-meta">
               <span v-if="currentSubmission.attachmentUrl">
                 <el-button class="download-attachment-btn" link @click="downloadFile(currentSubmission.attachmentUrl)">
-                  <el-icon><Download /></el-icon> PDF 附件
+                  <el-icon><Download /></el-icon>  附件
                 </el-button>
               </span>
             </div>
