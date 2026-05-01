@@ -97,6 +97,7 @@
            >
               <el-icon class="icon-box bg-purple"><MessageIcon /></el-icon>
               <span>课程邀请</span>
+              <span v-if="invitationUnreadTotal > 0" class="sub-unread-badge">{{ invitationUnreadTotal }}</span>
               <el-icon class="arrow"><ArrowRight /></el-icon>
            </div>
         </div>
@@ -175,10 +176,16 @@
            <div v-loading="interactionLoading" class="interaction-list custom-scrollbar">
               <div v-for="(item, index) in filteredInteractionList" :key="index" class="interaction-item animate-slide-up" :class="{ 'unread-item': !item.isRead }">
                  <div class="item-avatar">
-                    <el-avatar :size="48" :src="getAvatarUrl(item.userAvatar)" shape="circle">
-                      <el-icon v-if="item.type === 'SYSTEM'"><BellFilled /></el-icon>
-                      <span v-else>{{ item.userName?.charAt(0) }}</span>
-                    </el-avatar>
+                    <template v-if="item.type === 'SYSTEM'">
+                      <div class="system-notify-avatar">
+                        <el-icon class="system-bell-icon"><BellFilled /></el-icon>
+                      </div>
+                    </template>
+                    <template v-else>
+                      <el-avatar :size="48" :src="getAvatarUrl(item.userAvatar)" shape="circle">
+                        <span>{{ item.userName?.charAt(0) }}</span>
+                      </el-avatar>
+                    </template>
                     <div v-if="!item.isRead" class="unread-badge"></div>
                  </div>
                  <div class="item-content">
@@ -221,7 +228,12 @@
                        <el-button v-if="item.type !== 'SYSTEM' && item.type !== 'COURSE_INVITATION' && !item.content?.includes('已删除')" link type="primary" size="small" @click="toggleQuickReply(item)">
                          {{ item.showReply ? '取消回复' : '快捷回复' }}
                        </el-button>
-                       <el-button v-if="item.type === 'SYSTEM' && item.type !== 'COURSE_INVITATION' && !item.content?.includes('已删除')" link size="small" @click="handleInteractionDetail(item)">查看详情</el-button>
+
+                       <template v-if="item.type === 'SYSTEM' && item.type !== 'COURSE_INVITATION' && !item.content?.includes('已删除')">
+                         <el-button v-if="!item.isRead" link type="primary" size="small" @click="handleInteractionDetail(item)">标为已读</el-button>
+                         <span v-else class="read-status-text">已读</span>
+                       </template>
+
                        <el-button link type="danger" size="small" class="delete-btn" @click="handleDeleteMessage(item)">
                          <el-icon><Delete /></el-icon> 删除
                        </el-button>
@@ -263,6 +275,7 @@ import {
   getActiveContacts, markChatRead, getChatUnreadCount 
 } from '@/api/chat'
 import { getMessageList, markAsRead, getUnreadCount, deleteMessage } from '@/api/message'
+import { getStudentNotifications } from '@/api/notification'
 import { getTeacherComments, addComment } from '@/api/comment'
 import { studentReviewEnrollment } from '@/api/enrollment'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -328,6 +341,10 @@ const commentUnreadTotal = computed(() => {
   ).length
 })
 
+const invitationUnreadTotal = computed(() => {
+  return interactionList.value.filter(item => item.type === 'COURSE_INVITATION' && !item.isRead).length
+})
+
 // Methods
 const loadContacts = async (silent = false) => {
     if (!silent) {
@@ -375,8 +392,20 @@ const updateUnreadCounts = async () => {
         const chatUnreadRes = await getChatUnreadCount(userType.value.toLowerCase(), studentId.value)
         if (chatUnreadRes.code === 200) chatUnreadTotal.value = chatUnreadRes.data
         
+        let total = 0
         const sysUnreadRes = await getUnreadCount(studentId.value, userType.value)
-        if (sysUnreadRes.code === 200) interactionUnread.value = sysUnreadRes.data.unreadCount
+        if (sysUnreadRes.code === 200) total += sysUnreadRes.data.unreadCount
+        
+        // Include system notifications unread count
+        const notifyRes = await getStudentNotifications({ pageSize: 20 })
+        if (notifyRes.code === 200 && notifyRes.data?.records) {
+            const readStatusObj = JSON.parse(localStorage.getItem(`read_notifications_${studentId.value}`) || '{}')
+            const deletedStatusObj = JSON.parse(localStorage.getItem(`deleted_notifications_${studentId.value}`) || '{}')
+            const notificationUnread = notifyRes.data.records.filter(n => !readStatusObj[n.notificationId] && !deletedStatusObj[n.notificationId]).length
+            total += notificationUnread
+        }
+        
+        interactionUnread.value = total
     } catch (e) {}
 }
 
@@ -385,40 +414,82 @@ const loadInteractions = async (forceReload = false) => {
         interactionLoading.value = true
     }
     try {
-        const res = await getMessageList(studentId.value, userType.value, { pageSize: 50 })
-        if (res.code === 200 && res.data) {
-            const newList = res.data.records.map(m => ({
-                id: m.messageId,
-                senderId: m.senderId, 
-                senderType: m.senderType || 'TEACHER', 
-                type: m.messageType || (m.title?.includes('系统通知') ? 'SYSTEM' : 'INTERACTION'),
-                userName: m.senderName || (m.title?.includes('系统通知') ? '系统' : '答疑助教'),
-                userAvatar: m.senderAvatar || '',
-                content: m.content,
-                time: m.createTime,
-                isRead: m.isRead === 1,
-                actionText: m.title || (m.messageType === 'INTERACTION' ? '回复了你的评论' : '发来一条消息'),
-                showReply: false, 
-                replyContent: '',
-                relatedId: m.relatedId,
-                courseId: m.courseId || '',
-                chapterId: m.chapterId || null,
-                enrollmentId: m.relatedId,
-                courseName: m.courseName || extractCourseName(m.content),
-                invitationStatus: m.invitationStatus || m.invitation_status || m.status || 'pending',
-                accepting: false,
-                rejecting: false
-            }))
-            
-            if (!forceReload || interactionList.value.length === 0) {
-                interactionList.value = newList
-            } else {
-                const existingIds = new Set(interactionList.value.map(item => item.id))
-                const hasChanges = newList.length !== interactionList.value.length ||
-                    newList.some(item => !existingIds.has(item.id))
-                if (hasChanges) {
-                    interactionList.value = newList
-                }
+        // 并行获取个人互动消息和系统公告
+        const [messageRes, notifyRes] = await Promise.all([
+            getMessageList(studentId.value, userType.value, { pageSize: 50 }),
+            getStudentNotifications({ pageSize: 20 })
+        ])
+
+        let combinedList = []
+
+        // 1. 处理个人互动消息
+        if (messageRes.code === 200 && messageRes.data?.records) {
+            const messages = messageRes.data.records.map(m => {
+                // 精准判定类型：如果标题或内容包含“课程邀请”或“邀请您加入”，则归类为 COURSE_INVITATION
+                const isInvitation = m.messageType === 'COURSE_INVITATION' || 
+                                   m.messageType === 'INVITATION' || 
+                                   m.title?.includes('课程邀请') || 
+                                   m.content?.includes('邀请您加入课程');
+                
+                return {
+                    id: m.messageId,
+                    senderId: m.senderId, 
+                    senderType: m.senderType || 'TEACHER', 
+                    type: isInvitation ? 'COURSE_INVITATION' : (m.messageType || (m.title?.includes('系统通知') ? 'SYSTEM' : 'INTERACTION')),
+                    userName: m.senderName || (m.title?.includes('系统通知') ? '系统公告' : '答疑助教'),
+                    userAvatar: m.senderAvatar || '',
+                    content: m.content,
+                    time: m.createTime,
+                    isRead: m.isRead === 1,
+                    actionText: m.title || (isInvitation ? '发送了课程邀请' : (m.messageType === 'INTERACTION' ? '回复了你的评论' : '发来一条消息')),
+                    showReply: false, 
+                    replyContent: '',
+                    relatedId: m.relatedId,
+                    courseId: m.courseId || '',
+                    chapterId: m.chapterId || null,
+                    enrollmentId: m.relatedId,
+                    courseName: m.courseName || extractCourseName(m.content),
+                    invitationStatus: m.invitationStatus || m.invitation_status || m.status || 'pending',
+                    accepting: false,
+                    rejecting: false
+                };
+            })
+            combinedList.push(...messages)
+        }
+
+        // 2. 处理系统公告（广播式，无特定receiverId）
+        if (notifyRes.code === 200 && notifyRes.data?.records) {
+            // Check read status logic based on localStorage/DB
+            const readStatusObj = JSON.parse(localStorage.getItem(`read_notifications_${studentId.value}`) || '{}');
+            const deletedStatusObj = JSON.parse(localStorage.getItem(`deleted_notifications_${studentId.value}`) || '{}')
+            const notifications = notifyRes.data.records
+                .filter(n => !deletedStatusObj[n.notificationId])
+                .map(n => ({
+                    id: n.notificationId,
+                    source: 'NOTIFICATION',
+                    type: 'SYSTEM',
+                    userName: '系统公告',
+                    userAvatar: '',
+                    content: n.content,
+                    time: n.createTime,
+                    isRead: !!readStatusObj[n.notificationId],
+                    actionText: `[${n.title}]`, // Ensure title is clearly displayed
+                    priority: n.priority
+                }))
+            combinedList.push(...notifications)
+        }
+
+        // 3. 排序：按时间倒序
+        combinedList.sort((a, b) => new Date(b.time) - new Date(a.time))
+
+        if (!forceReload || interactionList.value.length === 0) {
+            interactionList.value = combinedList
+        } else {
+            const existingIds = new Set(interactionList.value.map(item => item.id))
+            const hasChanges = combinedList.length !== interactionList.value.length ||
+                combinedList.some(item => !existingIds.has(item.id))
+            if (hasChanges) {
+                interactionList.value = combinedList
             }
         }
     } catch (error) {
@@ -507,26 +578,38 @@ const isMyMessage = (msg) => {
 
 const handleInteractionDetail = async (item) => {
     if (!item.isRead) {
-        try {
-            await markAsRead(item.id, studentId.value, userType.value)
+        if (item.source === 'NOTIFICATION') {
+            const readStatusObj = JSON.parse(localStorage.getItem(`read_notifications_${studentId.value}`) || '{}')
+            readStatusObj[item.id] = true
+            localStorage.setItem(`read_notifications_${studentId.value}`, JSON.stringify(readStatusObj))
             item.isRead = true
             interactionUnread.value = Math.max(0, interactionUnread.value - 1)
-        } catch (e) {}
-    }
-    
-    if (item.type === 'SYSTEM' && item.relatedId) {
-        router.push(`/student/homework/${item.relatedId}/detail`)
+        } else {
+            try {
+                await markAsRead(item.id, studentId.value, userType.value)
+                item.isRead = true
+                interactionUnread.value = Math.max(0, interactionUnread.value - 1)
+            } catch (e) {}
+        }
     }
 }
 
 const toggleQuickReply = async (item) => {
     item.showReply = !item.showReply
     if (!item.isRead) {
-        try {
-            await markAsRead(item.id, studentId.value, userType.value)
+        if (item.source === 'NOTIFICATION') {
+            const readStatusObj = JSON.parse(localStorage.getItem(`read_notifications_${studentId.value}`) || '{}')
+            readStatusObj[item.id] = true
+            localStorage.setItem(`read_notifications_${studentId.value}`, JSON.stringify(readStatusObj))
             item.isRead = true
             interactionUnread.value = Math.max(0, interactionUnread.value - 1)
-        } catch (e) {}
+        } else {
+            try {
+                await markAsRead(item.id, studentId.value, userType.value)
+                item.isRead = true
+                interactionUnread.value = Math.max(0, interactionUnread.value - 1)
+            } catch (e) {}
+        }
     }
 }
 
@@ -536,11 +619,19 @@ const handleQuickReply = async (item) => {
     try {
         // 先标记为已读
         if (!item.isRead) {
-            try {
-                await markAsRead(item.id, studentId.value, userType.value)
+            if (item.source === 'NOTIFICATION') {
+                const readStatusObj = JSON.parse(localStorage.getItem(`read_notifications_${studentId.value}`) || '{}')
+                readStatusObj[item.id] = true
+                localStorage.setItem(`read_notifications_${studentId.value}`, JSON.stringify(readStatusObj))
                 item.isRead = true
                 interactionUnread.value = Math.max(0, interactionUnread.value - 1)
-            } catch (e) {}
+            } else {
+                try {
+                    await markAsRead(item.id, studentId.value, userType.value)
+                    item.isRead = true
+                    interactionUnread.value = Math.max(0, interactionUnread.value - 1)
+                } catch (e) {}
+            }
         }
         
         // INTERACTION（被回复评论通知）和 COMMENT 类型都走评论 API
@@ -611,6 +702,15 @@ const handleAcceptInvitation = async (item) => {
         if (response.success || response.code === 200) {
             ElMessage.success('已接受邀请')
     
+            if (!item.isRead) {
+                try {
+                    await markAsRead(item.id, studentId.value, userType.value)
+                    interactionUnread.value = Math.max(0, Math.floor(interactionUnread.value) - 1)
+                } catch (e) {
+                    console.error('标记已读失败', e)
+                }
+            }
+
             const index = interactionList.value.findIndex(i => i.id === item.id)
             if (index !== -1) {
                 interactionList.value[index] = {
@@ -658,6 +758,15 @@ const handleRejectInvitation = async (item) => {
         if (response.success || response.code === 200) {
             ElMessage.success('已拒绝邀请')
             
+            if (!item.isRead) {
+                try {
+                    await markAsRead(item.id, studentId.value, userType.value)
+                    interactionUnread.value = Math.max(0, Math.floor(interactionUnread.value) - 1)
+                } catch (e) {
+                    console.error('标记已读失败', e)
+                }
+            }
+
             // Force reactive update by creating new object
             const index = interactionList.value.findIndex(i => i.id === item.id)
             if (index !== -1) {
@@ -687,8 +796,22 @@ const markAllRead = async () => {
     const unreadItems = filteredInteractionList.value.filter(item => !item.isRead)
     if (unreadItems.length === 0) return
     try {
-        await Promise.all(unreadItems.map(item => markAsRead(item.id, studentId.value, userType.value)))
-        unreadItems.forEach(item => item.isRead = true)
+        const notifications = unreadItems.filter(item => item.source === 'NOTIFICATION')
+        if (notifications.length > 0) {
+            const readStatusObj = JSON.parse(localStorage.getItem(`read_notifications_${studentId.value}`) || '{}')
+            notifications.forEach(item => {
+                readStatusObj[item.id] = true
+                item.isRead = true
+            })
+            localStorage.setItem(`read_notifications_${studentId.value}`, JSON.stringify(readStatusObj))
+        }
+
+        const messages = unreadItems.filter(item => item.source !== 'NOTIFICATION')
+        if (messages.length > 0) {
+            await Promise.all(messages.map(item => markAsRead(item.id, studentId.value, userType.value)))
+            messages.forEach(item => item.isRead = true)
+        }
+        
         updateUnreadCounts()
         ElMessage.success('已清空未读')
     } catch (error) {
@@ -709,6 +832,25 @@ const handleDeleteMessage = async (item) => {
             }
         )
 
+        if (item.source === 'NOTIFICATION') {
+            const deletedStatusObj = JSON.parse(localStorage.getItem(`deleted_notifications_${studentId.value}`) || '{}')
+            deletedStatusObj[item.id] = true
+            localStorage.setItem(`deleted_notifications_${studentId.value}`, JSON.stringify(deletedStatusObj))
+
+            // Also mark as read
+            const readStatusObj = JSON.parse(localStorage.getItem(`read_notifications_${studentId.value}`) || '{}')
+            readStatusObj[item.id] = true
+            localStorage.setItem(`read_notifications_${studentId.value}`, JSON.stringify(readStatusObj))
+
+            ElMessage.success('系统公告已移除')
+            const index = interactionList.value.findIndex(i => i.id === item.id)
+            if (index > -1) {
+                interactionList.value.splice(index, 1)
+            }
+            updateUnreadCounts()
+            return
+        }
+
         const res = await deleteMessage(item.id, studentId.value, userType.value)
         if (res.code === 200) {
             ElMessage.success('删除成功')
@@ -717,6 +859,7 @@ const handleDeleteMessage = async (item) => {
             if (index > -1) {
                 interactionList.value.splice(index, 1)
             }
+            updateUnreadCounts()
         } else {
             ElMessage.error(res.message || '删除失败')
         }
@@ -919,6 +1062,23 @@ onUnmounted(() => {
 .interaction-list { flex: 1; overflow-y: auto; }
 .interaction-item { display: flex; padding: 16px 24px; border-bottom: 1px solid var(--border-color, #f1f5f9); gap: 16px; }
 .item-avatar { position: relative; flex-shrink: 0; }
+
+/* System notification avatar - light gray circle + blue bell icon */
+.system-notify-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #e6f0fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid #d0e3ff;
+}
+.system-bell-icon {
+  font-size: 22px;
+  color: #1677ff;
+}
 .item-content { flex: 1; display: flex; flex-direction: column; gap: 4px; }
 .item-top { display: flex; gap: 8px; align-items: center; font-size: 13px; }
 .user-name { font-weight: 700; color: var(--text-main, #1f2937); }
@@ -1025,6 +1185,12 @@ onUnmounted(() => {
 
 .delete-btn:hover {
   color: #ef4444 !important;
+}
+
+.read-status-text {
+  font-size: 13px;
+  color: #9ca3af;
+  margin: 0 8px;
 }
 
 :global(.dark-theme) .invitation-card-modern {

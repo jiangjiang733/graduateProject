@@ -15,6 +15,7 @@ export function useChatManagement() {
     const searching = ref(false)
     const messageBox = ref<any>(null)
     const unreadTotal = ref(0)
+    const sendingMessages = ref<Map<string, boolean>>(new Map())
 
     const searchKeyword = ref('')
 
@@ -108,12 +109,27 @@ export function useChatManagement() {
                 user2Type: contact.contactType
             })
             if (res.code === 200 && res.data) {
-                if (res.data.length > messages.value.length) {
+                const hasNewMessages = res.data.length > messages.value.length || 
+                    (messages.value.length > 0 && res.data.length > 0 && 
+                     new Date(res.data[res.data.length - 1].createTime) > new Date(messages.value[messages.value.length - 1].createTime))
+                
+                if (hasNewMessages) {
                     messages.value = res.data
                     scrollToBottom()
+                    
+                    // 自动标记为已读
+                    await markRead({
+                        currentUserId,
+                        currentUserType,
+                        senderId: contact.contactId,
+                        senderType: contact.contactType
+                    })
+                    contact.unreadCount = 0
+                    refreshUnreadCount()
+                    loadContacts(false)
                 }
             }
-        } catch (e) { }
+        } catch (e) { console.error('Refresh history error:', e) }
     }
 
     const selectContact = (contact: any) => {
@@ -124,25 +140,64 @@ export function useChatManagement() {
     const handleSend = async () => {
         if (!inputText.value.trim() || !activeChat.value) return
 
-        const msgData = {
+        const tempId = Date.now().toString()
+        sendingMessages.value.set(tempId, true)
+
+        // 创建临时消息对象，显示发送中状态
+        const tempMessage = {
+            id: tempId,
             senderId: String(currentUserId),
             senderType: currentUserType,
             receiverId: String(activeChat.value.contactId),
             receiverType: activeChat.value.contactType,
             content: inputText.value,
+            msgType: 'TEXT',
+            createTime: new Date().toISOString(),
+            status: 'sending'
+        }
+
+        messages.value.push(tempMessage)
+        inputText.value = ''
+        scrollToBottom()
+
+        const msgData = {
+            senderId: String(currentUserId),
+            senderType: currentUserType,
+            receiverId: String(activeChat.value.contactId),
+            receiverType: activeChat.value.contactType,
+            content: tempMessage.content,
             msgType: 'TEXT'
         }
 
         try {
             const res: any = await sendMessage(msgData)
             if (res.code === 200) {
-                messages.value.push(res.data)
-                inputText.value = ''
+                // 更新消息状态为已发送
+                const index = messages.value.findIndex(m => m.id === tempId)
+                if (index !== -1) {
+                    messages.value[index] = {
+                        ...res.data,
+                        status: 'sent'
+                    }
+                }
+                sendingMessages.value.delete(tempId)
                 scrollToBottom()
             } else {
+                // 更新消息状态为发送失败
+                const index = messages.value.findIndex(m => m.id === tempId)
+                if (index !== -1) {
+                    messages.value[index].status = 'failed'
+                }
+                sendingMessages.value.delete(tempId)
                 ElMessage.error(res.message || '发送失败')
             }
         } catch (error) {
+            // 更新消息状态为发送失败
+            const index = messages.value.findIndex(m => m.id === tempId)
+            if (index !== -1) {
+                messages.value[index].status = 'failed'
+            }
+            sendingMessages.value.delete(tempId)
             ElMessage.error('网络错误，发送失败')
         }
     }

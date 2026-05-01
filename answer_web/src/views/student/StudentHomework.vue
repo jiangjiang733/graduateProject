@@ -106,7 +106,7 @@
                 <el-icon><Collection /></el-icon>
                 <span>满分: {{ homework.totalScore }} 分</span>
               </div>
-              <div v-if="homework.score !== null && homework.score !== undefined" class="info-item highlight-score">
+              <div v-show="homework.status === 2 || homework.status === 3" class="info-item highlight-score">
                 <el-icon><Trophy /></el-icon>
                 <span>最终得分: <strong>{{ homework.score }}</strong></span>
               </div>
@@ -116,8 +116,8 @@
               <div class="description-preview">
                 {{ homework.reportDescription || '点击查看作业详情及具体要求...' }}
               </div>
-              <!-- 教师评语提示（更醒目） -->
-              <div v-if="homework.teacherComment" class="comment-tip">
+              <!-- 教师评语提示（仅在已批改或退回后可见） -->
+              <div v-if="homework.teacherComment && (homework.status === 2 || homework.status === 3)" class="comment-tip">
                 <el-icon><ChatDotRound /></el-icon>
                 <div class="comment-tip-text">
                   <span class="tip-label">教师评语</span>

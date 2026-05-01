@@ -30,7 +30,8 @@ public class AdminAnnouncementController {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String type // targetType
     ) {
-        Page<SystemNotification> page = notificationService.getNotificationList(pageNumber, pageSize, keyword, type);
+        Page<SystemNotification> page = notificationService.getAdminNotificationList(pageNumber, pageSize, keyword,
+                type);
 
         Map<String, Object> data = new HashMap<>();
         data.put("list", page.getRecords());
@@ -99,11 +100,7 @@ public class AdminAnnouncementController {
      */
     @PutMapping("/{id}/publish")
     public Result<Void> publishAnnouncement(@PathVariable Long id) {
-        SystemNotification notification = notificationService.getNotificationById(id);
-        if (notification != null) {
-            notification.setExpireTime(null); // Make it active again
-            notificationService.updateNotification(notification);
-        }
+        notificationService.publishAnnouncement(id);
         return Result.success();
     }
 

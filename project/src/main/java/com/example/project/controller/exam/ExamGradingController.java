@@ -60,6 +60,40 @@ public class ExamGradingController {
             return Result.error(e.getMessage());
         }
     }
+
+    /**
+     * AI一键批改学生整份试卷
+     */
+    @PostMapping("/ai/grade-paper/{studentExamId}")
+    public Result<String> autoGradePaper(@PathVariable Long studentExamId) {
+        try {
+            examGradingService.autoAiGradeExamPaper(studentExamId);
+            return Result.success("AI辅助批阅完成，请预览详情并进行复核。");
+        } catch (Exception e) {
+            return Result.error("AI批阅出现异常：" + e.getMessage());
+        }
+    }
+
+    @Autowired
+    private com.example.project.service.ai.AiQuestionGeneratorService aiQuestionGeneratorService;
+
+    /**
+     * AI智能批改单道简答题
+     */
+    @PostMapping("/ai/grade-answer")
+    public Result<java.util.Map<String, Object>> autoGradeAnswer(@RequestBody java.util.Map<String, Object> requestInfo) {
+        try {
+            String questionContent = (String) requestInfo.get("questionContent");
+            String referenceAnswer = (String) requestInfo.get("referenceAnswer");
+            String studentAnswer = (String) requestInfo.get("studentAnswer");
+            int maxScore = requestInfo.get("maxScore") != null ? Integer.parseInt(requestInfo.get("maxScore").toString()) : 0;
+            
+            java.util.Map<String, Object> gradeResult = aiQuestionGeneratorService.gradeShortAnswer(questionContent, referenceAnswer, studentAnswer, maxScore);
+            return Result.success(gradeResult);
+        } catch (Exception e) {
+            return Result.error("AI批改失败：" + e.getMessage());
+        }
+    }
     
     /**
      * 获取考试统计
@@ -69,6 +103,32 @@ public class ExamGradingController {
         try {
             ExamStatisticsDTO statistics = examService.getExamStatistics(examId);
             return Result.success(statistics);
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 一键发布所有待发布成绩
+     */
+    @PostMapping("/publish-all/{examId}")
+    public Result<String> publishAllGrades(@PathVariable Long examId) {
+        try {
+            examGradingService.publishExamGrades(examId);
+            return Result.success("一键发布成功");
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 批量/多选发布学生成绩
+     */
+    @PostMapping("/publish-selected")
+    public Result<String> publishSelectedGrades(@RequestBody List<Long> studentExamIds) {
+        try {
+            examGradingService.publishSelectedExamGrades(studentExamIds);
+            return Result.success("选中答卷已成功发布");
         } catch (Exception e) {
             return Result.error(e.getMessage());
         }

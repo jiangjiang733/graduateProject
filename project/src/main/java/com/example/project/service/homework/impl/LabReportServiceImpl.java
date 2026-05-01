@@ -45,6 +45,9 @@ public class LabReportServiceImpl implements LabReportService {
     @Autowired
     private MessageService messageService;
 
+    @Autowired
+    private com.example.project.service.ai.AiQuestionGeneratorService aiQuestionGeneratorService;
+
     @Override
     @Transactional
     public Long publishLabReport(LabReport labReport, MultipartFile attachment) {
@@ -223,20 +226,25 @@ public class LabReportServiceImpl implements LabReportService {
         studentReport.setTeacherComment(gradingDTO.getTeacherComment());
         studentReport.setGradedBy(gradingDTO.getTeacherId());
         studentReport.setGradedTime(new Date());
-        if (gradingDTO.getStatus() != null && gradingDTO.getStatus() == 3) {
-            studentReport.setStatus(3); // 3-退回重写
+        if (gradingDTO.getStatus() != null) {
+            studentReport.setStatus(gradingDTO.getStatus());
         } else {
-            studentReport.setStatus(2); // 2-已批改
+            studentReport.setStatus(2); // 默认已批改
         }
 
         studentLabReportMapper.updateById(studentReport);
+        
+        // 如果是暂存状态(status=1)，则不发送系统通知给学生
+        if (studentReport.getStatus() == 1) {
+            return;
+        }
 
         // 发送系统通知给学生
         try {
             LabReport report = labReportMapper.selectById(studentReport.getReportId());
             String title;
             String content;
-            
+
             if (gradingDTO.getStatus() != null && gradingDTO.getStatus() == 3) {
                 title = "作业/实验报告被打回";
                 content = String.format("你的作业/实验报告《%s》已被打回，请重新修改后再提交。",
@@ -456,17 +464,19 @@ public class LabReportServiceImpl implements LabReportService {
                     for (int i = 0; i < qList.size(); i++) {
                         java.util.Map<String, Object> q = qList.get(i);
                         String qType = (String) q.getOrDefault("questionType", q.get("type"));
-                        if (qType != null) {
-                            qType = qType.toUpperCase();
-                            if (!java.util.Arrays.asList("SINGLE", "MULTIPLE", "JUDGE", "FILL", "SINGLE_CHOICE",
-                                    "MULTIPLE_CHOICE", "TRUE_FALSE", "1", "2", "3", "4").contains(qType)
-                                    && !qType.contains("CHOICE") && !qType.contains("SINGLE")
-                                    && !qType.contains("MULTIPLE") && !qType.equals("单选") && !qType.equals("多选")
-                                    && !qType.equals("判断") && !qType.equals("填空")) {
-                                isOnlyObjective = false;
-                                break;
-                            }
+                        if (qType == null)
+                            continue;
 
+                        qType = qType.toUpperCase();
+                        boolean isObjective = java.util.Arrays
+                                .asList("SINGLE", "MULTIPLE", "JUDGE", "FILL", "SINGLE_CHOICE",
+                                        "MULTIPLE_CHOICE", "TRUE_FALSE", "1", "2", "3", "4")
+                                .contains(qType)
+                                || qType.contains("CHOICE") || qType.contains("SINGLE")
+                                || qType.contains("MULTIPLE") || qType.equals("单选") || qType.equals("多选")
+                                || qType.equals("判断") || qType.equals("填空");
+
+                        if (isObjective) {
                             if (i < aList.size()) {
                                 String correctAns = (String) q.getOrDefault("correctAnswer", q.get("answer"));
                                 String studentAns = (String) aList.get(i).get("answer");
@@ -476,8 +486,23 @@ public class LabReportServiceImpl implements LabReportService {
                                     String normStudent = studentAns.trim().toUpperCase().replaceAll("[\\s,]+", "");
 
                                     boolean correct = false;
+                                    boolean partiallyCorrect = false;
+
                                     if (normCorrect.equals(normStudent)) {
                                         correct = true;
+                                    } else if (("MULTIPLE".equals(qType) || "MULTIPLE_CHOICE".equals(qType)
+                                            || qType.contains("多选")) && !normStudent.isEmpty()) {
+                                        // 多选题规则：漏选得分一半，多选不得分
+                                        boolean isSubset = true;
+                                        for (char c : normStudent.toCharArray()) {
+                                            if (normCorrect.indexOf(c) == -1) {
+                                                isSubset = false;
+                                                break;
+                                            }
+                                        }
+                                        if (isSubset) {
+                                            partiallyCorrect = true;
+                                        }
                                     } else if ("JUDGE".equals(qType) || "TRUE_FALSE".equals(qType)
                                             || qType.contains("判断")) {
                                         if (("A".equals(normCorrect) || "正确".equals(normCorrect)
@@ -495,26 +520,69 @@ public class LabReportServiceImpl implements LabReportService {
 
                                     if (correct) {
                                         Object scoreObj = q.get("score");
-                                        if (scoreObj != null) {
-                                            totalScore = totalScore.add(new java.math.BigDecimal(scoreObj.toString()));
-                                        } else {
-                                            totalScore = totalScore.add(new java.math.BigDecimal("5"));
+                                        totalScore = totalScore.add(
+                                                new java.math.BigDecimal(scoreObj != null ? scoreObj.toString() : "5"));
+                                    } else if (partiallyCorrect) {
+                                        Object scoreObj = q.get("score");
+                                        java.math.BigDecimal qScore = new java.math.BigDecimal(
+                                                scoreObj != null ? scoreObj.toString() : "5");
+                                        totalScore = totalScore.add(qScore.multiply(new java.math.BigDecimal("0.5")));
+
+                                        String existingComment = studentReport.getTeacherComment() != null
+                                                ? studentReport.getTeacherComment()
+                                                : "";
+                                        String newComment = String.format("%s[第%d题]: 答案不全，系统判分得一半成绩。\n",
+                                                existingComment, (i + 1));
+                                        studentReport.setTeacherComment(newComment);
+                                    }
+                                }
+                            }
+                        } else {
+                            // 主观题 (AI智能批改)
+                            isOnlyObjective = false;
+                            if (i < aList.size()) {
+                                String qContent = (String) q.get("questionContent");
+                                String refAns = (String) q.getOrDefault("correctAnswer", q.get("answer"));
+                                Object studentAnsObj = aList.get(i).get("answer");
+                                String stuAns = studentAnsObj != null ? studentAnsObj.toString() : "";
+                                int maxQScore = q.get("score") != null ? Integer.parseInt(q.get("score").toString())
+                                        : 10;
+
+                                if (stuAns != null && !stuAns.trim().isEmpty()) {
+                                    try {
+                                        java.util.Map<String, Object> aiRes = aiQuestionGeneratorService
+                                                .gradeShortAnswer(qContent, refAns, stuAns, maxQScore);
+                                        if (aiRes != null && aiRes.get("score") != null) {
+                                            java.math.BigDecimal aiScore = new java.math.BigDecimal(
+                                                    aiRes.get("score").toString());
+                                            totalScore = totalScore.add(aiScore);
+
+                                            String existingComment = studentReport.getTeacherComment() != null
+                                                    ? studentReport.getTeacherComment()
+                                                    : "";
+                                            String newComment = String.format("%s[第%d题]: %s\n", existingComment,
+                                                    (i + 1), aiRes.get("comment"));
+                                            studentReport.setTeacherComment(newComment);
                                         }
+                                    } catch (Exception e) {
+                                        System.err.println("批改异常: " + e.getMessage());
                                     }
                                 }
                             }
                         }
                     }
+                    studentReport.setScore(totalScore);
                     if (isOnlyObjective) {
                         studentReport.setStatus(2);
-                        studentReport.setScore(totalScore);
-                        studentReport.setGradedTime(new java.util.Date());
                         studentReport.setGradedBy("SYSTEM");
+                        studentReport.setGradedTime(new java.util.Date());
+                    } else {
+                        studentReport.setStatus(1); // 存在主观题，需教师复核
                     }
                 }
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            System.err.println("自动阅卷系统异常: " + e.getMessage());
         }
     }
 
@@ -540,13 +608,6 @@ public class LabReportServiceImpl implements LabReportService {
         List<String> enrolledCourseIds = enrolledCourses.stream()
                 .map(sc -> sc.getCourseId())
                 .collect(Collectors.toList());
-
-        Map<String, Date> courseJoinTimeMap = enrolledCourses.stream()
-                .collect(Collectors.toMap(
-                        com.example.project.entity.course.StudentCourse::getCourseId,
-                        sc -> sc.getJoinTime() != null ? sc.getJoinTime()
-                                : (sc.getCreateTime() != null ? sc.getCreateTime() : new Date(0)),
-                        (existing, replacement) -> existing));
 
         // 查询这些课程的所有作业
         QueryWrapper<LabReport> reportWrapper = new QueryWrapper<>();

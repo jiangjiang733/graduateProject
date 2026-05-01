@@ -167,6 +167,30 @@ export const gradeExam = (studentExamId, gradingData) => {
 }
 
 /**
+ * AI智能批改简答题
+ * @param {Object} data 
+ * @returns {Promise}
+ */
+export const aiGradeAnswer = (data) => {
+  return request.post(`/exam/grading/ai/grade-answer`, data)
+}
+
+// 自动AI批改整份试卷主观题
+export const autoAiGradeExamPaper = (studentExamId) => {
+  return request.post(`/exam/grading/ai/grade-paper/${studentExamId}`)
+}
+
+// 一键发布某考卷下所有待发布的成绩
+export const publishAllExamGrades = (examId) => {
+  return request.post(`/exam/grading/publish-all/${examId}`)
+}
+
+// 多选批量发布学生成绩
+export const publishSelectedExamGrades = (studentExamIds) => {
+  return request.post(`/exam/grading/publish-selected`, studentExamIds)
+}
+
+/**
  * 获取考试批改统计
  * @param {number} examId - 考试ID
  * @returns {Promise}
@@ -234,6 +258,7 @@ export default {
   getPendingExams,
   getStudentExamDetail,
   gradeExam,
+  aiGradeAnswer,
   getGradingStatistics,
   getStudentExams,
   // 学生端

@@ -185,7 +185,9 @@
                 </div>
                 <div class="q-actions">
                   <el-button link size="small" type="primary" @click="openEditQuestion(index)"><el-icon><Edit /></el-icon> 编辑</el-button>
-                  <el-button link size="small" type="success" @click="saveToBank(q)"><el-icon><Checked /></el-icon> 存入题库</el-button>
+                  <el-button link size="small" :type="q._savedToBank ? 'info' : 'success'" :disabled="q._savedToBank" @click="saveToBank(q)">
+                    <el-icon><Checked /></el-icon> {{ q._savedToBank ? '已存题库' : '存入题库' }}
+                  </el-button>
                   <el-button link size="small" :disabled="index === 0" @click="moveHomeworkQuestion(index, -1)"><el-icon><ArrowUp /></el-icon></el-button>
                   <el-button link size="small" :disabled="index === homeworkForm.questions.length - 1" @click="moveHomeworkQuestion(index, 1)"><el-icon><ArrowDown /></el-icon></el-button>
                   <el-button link type="danger" size="small" @click="removeHomeworkQuestion(index)"><el-icon><Delete /></el-icon></el-button>

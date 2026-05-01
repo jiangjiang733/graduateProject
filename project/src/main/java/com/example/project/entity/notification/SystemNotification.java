@@ -13,26 +13,26 @@ import java.util.Date;
 @Data
 @TableName("system_notification")
 public class SystemNotification implements Serializable {
-    
+
     private static final long serialVersionUID = 1L;
-    
-    @TableId(type = IdType.AUTO)
+
+    @TableId(value = "notification_id", type = IdType.AUTO)
     private Long notificationId;
-    
+
     private String title;
-    
+
     private String content;
-    
+
     private String targetType;
-    
+
     private Integer priority;
-    
+
     private String createBy;
-    
+
     @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date createTime;
-    
+
     @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date expireTime;

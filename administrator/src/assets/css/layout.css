@@ -82,6 +82,7 @@
     align-items: center;
     background: rgba(255, 255, 255, 0.8);
     backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--admin-border-light);
     padding: 0 32px;
     height: 64px;
@@ -129,7 +130,6 @@
     height: 32px;
     border-radius: 10px;
     background: var(--admin-primary);
-    color: white;
     display: flex;
     align-items: center;
     justify-content: center;

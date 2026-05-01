@@ -40,11 +40,20 @@ export function useStudentExamDetail() {
                 // Calculate remaining time
                 const now = new Date().getTime()
                 const end = new Date(exam.value.endTime).getTime()
+                const start = data.studentExam && data.studentExam.startTime 
+                                ? new Date(data.studentExam.startTime).getTime() 
+                                : now
 
+                // Time until absolute exam end time
                 const timeUntilEnd = Math.max(0, Math.floor((end - now) / 1000))
+                
+                // Duration limit from actual start time
                 const durationSeconds = (exam.value.duration || 60) * 60
+                const elapsedSeconds = Math.max(0, Math.floor((now - start) / 1000))
+                const timeFromDuration = Math.max(0, durationSeconds - elapsedSeconds)
 
-                timeLeft.value = Math.min(timeUntilEnd, durationSeconds)
+                // Actual time left is the minimum of both constraints
+                timeLeft.value = Math.min(timeUntilEnd, timeFromDuration)
 
                 startTimer()
 

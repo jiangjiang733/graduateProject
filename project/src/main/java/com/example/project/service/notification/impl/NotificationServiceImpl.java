@@ -23,7 +23,7 @@ public class NotificationServiceImpl implements NotificationService {
         Page<SystemNotification> page = new Page<>(pageNumber, pageSize);
         QueryWrapper<SystemNotification> queryWrapper = new QueryWrapper<>();
 
-        // 基础过滤：未过期
+        // 基础过滤：未过期 (Users only see active announcements)
         queryWrapper.and(wrapper -> wrapper
                 .isNull("expire_time")
                 .or()
@@ -36,6 +36,29 @@ public class NotificationServiceImpl implements NotificationService {
 
         // 角色匹配逻辑：指定角色消息 + 全体系统消息 (ALL)
         if (StringUtils.hasText(type)) {
+            queryWrapper.and(wrapper -> wrapper
+                    .eq("target_type", type.toUpperCase())
+                    .or()
+                    .eq("target_type", "ALL"));
+        }
+
+        queryWrapper.orderByDesc("priority", "create_time");
+
+        return systemNotificationMapper.selectPage(page, queryWrapper);
+    }
+
+    @Override
+    public Page<SystemNotification> getAdminNotificationList(Integer pageNumber, Integer pageSize, String keyword,
+            String type) {
+        Page<SystemNotification> page = new Page<>(pageNumber, pageSize);
+        QueryWrapper<SystemNotification> queryWrapper = new QueryWrapper<>();
+
+        // 关键词过滤 (Admin sees ALL)
+        if (StringUtils.hasText(keyword)) {
+            queryWrapper.like("title", keyword);
+        }
+
+        if (StringUtils.hasText(type) && !"ALL".equalsIgnoreCase(type)) {
             queryWrapper.and(wrapper -> wrapper
                     .eq("target_type", type.toUpperCase())
                     .or()
@@ -84,5 +107,13 @@ public class NotificationServiceImpl implements NotificationService {
         notification.setNotificationId(id);
         notification.setExpireTime(new Date());
         systemNotificationMapper.updateById(notification);
+    }
+
+    @Override
+    public void publishAnnouncement(Long id) {
+        // Force set expire_time to null to reactivate it
+        com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper<SystemNotification> updateWrapper = new com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper<>();
+        updateWrapper.eq("notification_id", id).set("expire_time", null);
+        systemNotificationMapper.update(null, updateWrapper);
     }
 }

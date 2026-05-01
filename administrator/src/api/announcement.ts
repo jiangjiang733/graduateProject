@@ -2,7 +2,7 @@
  * 公告管理 API
  */
 import request from './request'
-
+// 避免缺失，格式问题bug
 export interface Announcement {
   notificationId: number
   title: string

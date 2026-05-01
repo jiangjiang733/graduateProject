@@ -9,9 +9,15 @@ public interface NotificationService {
      * 获取系统通知列表
      */
     /**
-     * Get system notification list
+     * Get system notification list (for users, active only)
      */
     Page<SystemNotification> getNotificationList(Integer pageNumber, Integer pageSize, String keyword, String type);
+
+    /**
+     * Get system notification list for Admin (all including withdrawn)
+     */
+    Page<SystemNotification> getAdminNotificationList(Integer pageNumber, Integer pageSize, String keyword,
+            String type);
 
     /**
      * Get notification by ID
@@ -23,6 +29,11 @@ public interface NotificationService {
      */
     SystemNotification pushNotification(String title, String content, String targetType,
             Integer priority, String createBy);
+
+    /**
+     * Publish announcement (reset expire time)
+     */
+    void publishAnnouncement(Long id);
 
     /**
      * Update notification

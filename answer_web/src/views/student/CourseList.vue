@@ -138,9 +138,14 @@
                   <el-button type="primary" class="action-btn" @click.stop="goToLearn(course.id)">
                     进入学习
                   </el-button>
-                  <el-button link class="more-btn" @click.stop="goToCourseDetail(course.id)">
-                    详情 <el-icon><ArrowRight /></el-icon>
-                  </el-button>
+                  <div class="custom-links-container">
+                    <span class="custom-text-link" @click.stop="goToCourseDetail(course.id)">
+                      详情
+                    </span>
+                    <span class="custom-text-link danger-link" @click.stop="dropCourse(course)">
+                      退课
+                    </span>
+                  </div>
                 </template>
 
                 <!-- 审核中 -->
@@ -148,9 +153,11 @@
                   <el-button type="warning" class="action-btn" disabled>
                     审核中...
                   </el-button>
-                  <el-button link class="more-btn" @click.stop="goToCourseDetail(course.id)">
-                    详情 <el-icon><ArrowRight /></el-icon>
-                  </el-button>
+                  <div class="custom-links-container">
+                    <span class="custom-text-link" @click.stop="goToCourseDetail(course.id)">
+                      详情 <el-icon><ArrowRight /></el-icon>
+                    </span>
+                  </div>
                 </template>
 
                 <!-- 未加入 -->
@@ -158,9 +165,11 @@
                   <el-button type="success" class="action-btn" @click.stop="applyToCourse(course)">
                     申请加入
                   </el-button>
-                  <el-button link class="more-btn" @click.stop="goToCourseDetail(course.id)">
-                    详情 <el-icon><ArrowRight /></el-icon>
-                  </el-button>
+                  <div class="custom-links-container">
+                    <span class="custom-text-link" @click.stop="goToCourseDetail(course.id)">
+                      详情 <el-icon><ArrowRight /></el-icon>
+                    </span>
+                  </div>
                 </template>
               </div>
             </div>
@@ -185,7 +194,7 @@
 
 <script setup>
 import {
-  Search, User, Clock, Reading, ArrowRight, VideoPlay, Collection
+  Search, User, Clock, Reading, ArrowRight, VideoPlay, Collection, ArrowDown
 } from '@element-plus/icons-vue'
 import { useCourseList } from '@/assets/js/student/course-list.js'
 
@@ -209,6 +218,7 @@ const {
   goToCourseDetail,
   goToLearn,
   applyToCourse,
+  dropCourse,
   getCourseImage,
   getTeacherAvatar,
   formatDate,
@@ -257,7 +267,6 @@ const {
     z-index: 4 !important;
 }
 
-/* 强制修复 course-title 显示，确保课程名在所有浏览器下可见 */
 .course-card-premium .card-info .course-title {
     display: block !important;
     margin: 0 0 12px !important;
@@ -269,5 +278,65 @@ const {
     text-overflow: ellipsis !important;
     white-space: nowrap !important;
     min-height: auto !important;
+}
+
+/* 课程码样式 */
+.course-code-row {
+    margin-top: 8px;
+    padding: 6px 10px;
+    background: #f1f5f9;
+    border-radius: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+}
+.course-code-label {
+    color: #64748b;
+    font-weight: 500;
+}
+.course-code-val {
+    color: #3b82f6;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    user-select: all;
+}
+
+/* 保证纯文本链稳定的按钮区 */
+.custom-links-container {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-shrink: 0;
+    margin-left: auto; /* Push to the right if space allows */
+}
+
+.custom-text-link {
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-main);
+    display: inline-flex;
+    align-items: center;
+    transition: color 0.1s;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.custom-text-link:hover {
+    color: var(--primary);
+}
+
+.custom-text-link.danger-link {
+    color: #f56c6c;
+}
+
+.custom-text-link.danger-link:hover {
+    color: #f89898;
+}
+
+.custom-text-link .el-icon {
+    margin-left: 2px;
+    font-size: 13px;
 }
 </style>

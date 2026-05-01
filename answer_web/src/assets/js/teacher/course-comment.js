@@ -26,22 +26,31 @@ export function useCourseComment(props) {
 
     // 工具函数：将平铺列表转换为树形结构（以适应回复层级）
     // 工具函数：将平铺列表转换为树形结构，并将所有子评论平铺到根评论的 replies 中
+    // 工具函数：将平铺列表或嵌套树转换为统一树形结构
     const buildCommentTree = (list) => {
+        const flatList = [];
+        const extractNodes = (nodes) => {
+            if (!nodes) return;
+            nodes.forEach(node => {
+                flatList.push(node);
+                if (node.replies && node.replies.length > 0) {
+                    extractNodes(node.replies);
+                }
+            });
+        };
+        extractNodes(list);
+
         const map = {};
         const roots = [];
         const childrenMap = {};
 
-        // 1. 初始化 map 和 childrenMap
-        list.forEach(item => {
-            // 重置 replies，防止重复累加
+        flatList.forEach(item => {
             item.replies = [];
-
-            // 确保使用 String 类型 key
             const id = String(item.commentId || item.id);
             map[id] = item;
 
             const pid = item.parentId ? String(item.parentId) : null;
-            if (pid) {
+            if (pid && pid !== "0") {
                 if (!childrenMap[pid]) childrenMap[pid] = [];
                 childrenMap[pid].push(item);
             } else {
@@ -49,17 +58,14 @@ export function useCourseComment(props) {
             }
         });
 
-        // 2. 为每个根节点收集所有后代（平铺）
         roots.forEach(root => {
             const allReplies = [];
-            // 使用队列进行广度优先遍历查找所有后代
             const rootId = String(root.commentId || root.id);
             const queue = [...(childrenMap[rootId] || [])];
 
             while (queue.length > 0) {
                 const node = queue.shift();
 
-                // 确保 targetUserName 存在，如果接口未返回但有 parentId，尝试从本地 map 获取
                 if (!node.targetUserName && node.parentId) {
                     const parent = map[String(node.parentId)];
                     if (parent) {
@@ -70,16 +76,13 @@ export function useCourseComment(props) {
 
                 allReplies.push(node);
 
-                // 将该节点的直接子节点加入队列
                 const nodeId = String(node.commentId || node.id);
                 if (childrenMap[nodeId]) {
                     queue.push(...childrenMap[nodeId]);
                 }
             }
 
-            // 按时间正序排序（旧的在前）
             allReplies.sort((a, b) => new Date(a.createTime).getTime() - new Date(b.createTime).getTime());
-
             root.replies = allReplies;
         });
 

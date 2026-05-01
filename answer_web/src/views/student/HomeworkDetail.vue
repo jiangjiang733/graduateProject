@@ -28,10 +28,9 @@
           <span class="label">提交时间</span>
           <span class="value">{{ formatDate(submission.submitTime) }}</span>
         </div>
-        <div class="info-item">
+        <div class="info-item" v-if="submission.status === 2 || submission.status === 3">
           <span class="label">得分</span>
           <span class="value score-val">{{ liveScore }}</span>
-          <el-tag v-if="submission.status !== 2" type="info" size="small" style="margin-left:8px">预评分</el-tag>
         </div>
       </div>
 
@@ -89,7 +88,7 @@
                 <span class="q-text">{{ q.questionContent }}</span>
                 <!-- 客观题对错状态（简洁小标） -->
                 <span
-                  v-if="['SINGLE','MULTIPLE','JUDGE'].includes(q.questionType)"
+                  v-if="['SINGLE','MULTIPLE','JUDGE'].includes(q.questionType) && submission.status === 2"
                   class="q-result-dot"
                   :class="isStudentCorrect(idx, q) ? 'dot-ok' : 'dot-err'"
                   :title="isStudentCorrect(idx, q) ? '回答正确' : '回答错误'"
@@ -104,19 +103,19 @@
                   class="opt-line"
                   :class="{
                     'ol-student': isOptionSelectedByStudent(idx, q, oIdx),
-                    'ol-correct': isOptionCorrect(q, oIdx)
+                    'ol-correct': submission.status === 2 && isOptionCorrect(q, oIdx)
                   }"
                 >
                   <span class="opt-bubble"
                     :class="{
-                      'bubble-student-ok':  isOptionSelectedByStudent(idx, q, oIdx) && isOptionCorrect(q, oIdx),
-                      'bubble-student-err': isOptionSelectedByStudent(idx, q, oIdx) && !isOptionCorrect(q, oIdx),
-                      'bubble-correct':     !isOptionSelectedByStudent(idx, q, oIdx) && isOptionCorrect(q, oIdx)
+                      'bubble-student-ok':  submission.status === 2 && isOptionSelectedByStudent(idx, q, oIdx) && isOptionCorrect(q, oIdx),
+                      'bubble-student-err': submission.status === 2 && isOptionSelectedByStudent(idx, q, oIdx) && !isOptionCorrect(q, oIdx),
+                      'bubble-correct':     submission.status === 2 && !isOptionSelectedByStudent(idx, q, oIdx) && isOptionCorrect(q, oIdx)
                     }"
                   >{{ String.fromCharCode(65 + oIdx) }}</span>
                   <span class="opt-body">{{ opt.text || opt }}</span>
                   <span v-if="isOptionSelectedByStudent(idx, q, oIdx)" class="ol-tag my-tag">我的选择</span>
-                  <span v-if="isOptionCorrect(q, oIdx)" class="ol-tag ans-tag">正确答案</span>
+                  <span v-if="submission.status === 2 && isOptionCorrect(q, oIdx)" class="ol-tag ans-tag">正确答案</span>
                 </div>
               </div>
 
@@ -127,19 +126,19 @@
                   class="opt-line"
                   :class="{
                     'ol-student': getRawStudentAnswer(idx) === judgeOpt.val,
-                    'ol-correct': q.correctAnswer === judgeOpt.val
+                    'ol-correct': submission.status === 2 && q.correctAnswer === judgeOpt.val
                   }"
                 >
                   <span class="opt-bubble"
                     :class="{
-                      'bubble-student-ok':  getRawStudentAnswer(idx) === judgeOpt.val && q.correctAnswer === judgeOpt.val,
-                      'bubble-student-err': getRawStudentAnswer(idx) === judgeOpt.val && q.correctAnswer !== judgeOpt.val,
-                      'bubble-correct':     getRawStudentAnswer(idx) !== judgeOpt.val && q.correctAnswer === judgeOpt.val
+                      'bubble-student-ok':  submission.status === 2 && getRawStudentAnswer(idx) === judgeOpt.val && q.correctAnswer === judgeOpt.val,
+                      'bubble-student-err': submission.status === 2 && getRawStudentAnswer(idx) === judgeOpt.val && q.correctAnswer !== judgeOpt.val,
+                      'bubble-correct':     submission.status === 2 && getRawStudentAnswer(idx) !== judgeOpt.val && q.correctAnswer === judgeOpt.val
                     }"
                   >{{ judgeOpt.val }}</span>
                   <span class="opt-body">{{ judgeOpt.label }}</span>
                   <span v-if="getRawStudentAnswer(idx) === judgeOpt.val" class="ol-tag my-tag">我的选择</span>
-                  <span v-if="q.correctAnswer === judgeOpt.val" class="ol-tag ans-tag">正确答案</span>
+                  <span v-if="submission.status === 2 && q.correctAnswer === judgeOpt.val" class="ol-tag ans-tag">正确答案</span>
                 </div>
               </div>
 
@@ -150,7 +149,7 @@
               </div>
 
               <!-- 解析 -->
-              <div v-if="q.analysis" class="q-analysis">
+              <div v-if="submission.status === 2 && q.analysis" class="q-analysis">
                 <el-icon><InfoFilled /></el-icon>
                 <span class="analysis-label">解析：</span>
                 <span class="analysis-text">{{ q.analysis }}</span>
@@ -160,8 +159,8 @@
         </div>
       </template>
 
-      <!-- 教师批改（已批改且有内容才显示） -->
-      <template v-if="submission.status === 2 && (submission.score !== null || submission.teacherComment)">
+      <!-- 教师批改（已批改或已退回，且有内容才显示） -->
+      <template v-if="(submission.status === 2 || submission.status === 3) && (submission.score !== null || submission.teacherComment)">
         <el-divider />
         <div class="section">
           <div class="feedback-card">

@@ -101,7 +101,7 @@
           <template #header>
             <div class="header-title">
               <el-icon color="#3b82f6"><Odometer /></el-icon>
-              <span>模拟盾牌测试</span>
+              <span>测试</span>
             </div>
           </template>
           
@@ -165,13 +165,7 @@
         <el-form-item label="执行动作" prop="action">
           <el-radio-group v-model="form.action">
             <el-radio label="BLOCK">直接拦截 (拒绝发布)</el-radio>
-            <el-radio label="REPLACE">掩码处理 (替换关键词)</el-radio>
-            <el-radio label="REVIEW">标记异常 (进入人工审核)</el-radio>
           </el-radio-group>
-        </el-form-item>
-
-        <el-form-item label="替换占位符" prop="replacement" v-if="form.action === 'REPLACE'">
-          <el-input v-model="form.replacement" placeholder="默认：***" />
         </el-form-item>
       </el-form>
       

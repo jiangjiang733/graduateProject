@@ -6,6 +6,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { getUnreadCount } from '@/api/message.js'
 import { getChatUnreadCount } from '@/api/chat.js'
 import { getProfile } from '@/api/teacher.js'
+import { getTeacherEnrollments } from '@/api/enrollment.js'
 
 export function useTeacherLayout() {
     const route = useRoute()
@@ -24,6 +25,7 @@ export function useTeacherLayout() {
         { path: '/teacher/questions', label: '题库', icon: 'List' },
         { path: '/teacher/messages', label: '消息中心', icon: 'Bell' },
         { path: '/teacher/profile', label: '个人中心', icon: 'UserFilled' },
+        // { path: '', label: '智能助手', icon: 'UserFilled' },
     ]
 
     const isActive = (path) => {
@@ -60,17 +62,23 @@ export function useTeacherLayout() {
             const teacherType = 'TEACHER'
             let totalUnread = 0
 
-            const [chatRes, sysRes] = await Promise.all([
+            const [chatRes, sysRes, enrollRes] = await Promise.all([
                 getChatUnreadCount(teacherType.toLowerCase(), teacherId),
-                getUnreadCount(teacherId, teacherType)
+                getUnreadCount(teacherId, teacherType),
+                getTeacherEnrollments(teacherId)
             ])
 
-            if (chatRes.code === 200) {
+            if (chatRes && chatRes.code === 200) {
                 totalUnread += chatRes.data
             }
 
-            if (sysRes.code === 200) {
+            if (sysRes && sysRes.code === 200) {
                 totalUnread += sysRes.data.unreadCount || 0
+            }
+
+            if (enrollRes && enrollRes.success && enrollRes.data) {
+                const pendingCount = enrollRes.data.filter(e => e.status === 'pending' && e.enrollmentType !== 'INVITE').length
+                totalUnread += pendingCount
             }
 
             teacherStore.setUnreadCount(totalUnread)

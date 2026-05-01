@@ -83,20 +83,27 @@
                 </div>
               </div>
               
-              <!-- 手动评分区域（仅主观题且未批改） -->
+              <!-- 批改区域（仅主观题且试卷待批改2） -->
               <div v-if="isSubjective(answer.questionType) && studentInfo.status == 2" class="grade-panel">
-                <div class="grade-input-row">
+                <div class="grade-input-row" style="display:flex; align-items:center; flex-wrap: wrap;">
                   <span class="grade-label">评分：</span>
                   <el-input-number v-model="answer.gradeScore" :min="0" :max="answer.questionScore || 0" controls-position="right" size="small" />
-                  <span class="text-slate-500">/ {{ answer.questionScore || 0 }} 分</span>
+                  <span class="text-slate-500" style="margin-left: 8px; margin-right: 15px;">/ {{ answer.questionScore || 0 }} 分</span>
+                  <el-button type="primary" size="small" :loading="answer.aiGrading" @click="autoGradeAnswer(answer)">
+                    <el-icon><MagicStick /></el-icon>&nbsp;AI智能批改
+                  </el-button>
+                </div>
+                <div class="grade-input-row" style="margin-top:10px;">
+                  <span class="grade-label" style="margin-bottom: 5px; display: inline-block;">批语：</span>
+                  <el-input v-model="answer.teacherCommentInput" type="textarea" :rows="2" placeholder="请输入批语，或点击上方[AI智能批改]自动生成" />
                 </div>
               </div>
               
               <!-- 正确答案/解析 -->
               <div class="analysis-area">
                 <div class="analysis-row">
-                  <span class="analysis-label">正确答案：</span>
-                  <span class="correct-ans">{{ formatCorrectAnswer(answer) }}</span>
+                  <span class="analysis-label">主观题参考答案：</span>
+                  <span class="correct-ans">{{ formatCorrectAnswer(answer) || '无' }}</span>
                 </div>
               </div>
               
@@ -139,8 +146,8 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ArrowLeft } from '@element-plus/icons-vue'
-import { getStudentExamDetail, gradeExam } from '@/api/exam'
+import { ArrowLeft, MagicStick } from '@element-plus/icons-vue'
+import { getStudentExamDetail, gradeExam, aiGradeAnswer } from '@/api/exam'
 import * as echarts from 'echarts'
 import '@/assets/css/teacher/student-answer-detail.css'
 
@@ -286,6 +293,38 @@ const scrollToQuestion = (index) => {
   const el = document.getElementById('question-' + index)
   if (el) {
     el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+}
+
+const autoGradeAnswer = async (answer) => {
+  if (!answer.studentAnswer || answer.studentAnswer.trim() === '') {
+    ElMessage.warning('该题无学生作答记录，无法AI批改')
+    return
+  }
+  answer.aiGrading = true
+  try {
+    const res = await aiGradeAnswer({
+      questionContent: answer.questionContent || '',
+      referenceAnswer: formatCorrectAnswer(answer) || '',
+      studentAnswer: answer.studentAnswer || '',
+      maxScore: answer.questionScore || 0
+    })
+    if (res.code === 200 || res.success) {
+      if (res.data) {
+        answer.gradeScore = res.data.score != null ? res.data.score : 0;
+        answer.teacherCommentInput = res.data.comment || '';
+        ElMessage.success('智能批改成功');
+      } else {
+        ElMessage.warning('未能获取有效的批改数据')
+      }
+    } else {
+      ElMessage.error(res.message || 'AI批改失败');
+    }
+  } catch (error) {
+    console.error(error);
+    ElMessage.error('请求网络错误或格式解析失败');
+  } finally {
+    answer.aiGrading = false
   }
 }
 

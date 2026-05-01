@@ -39,6 +39,7 @@
         <el-menu-item index="/chats">
           <el-icon><ChatDotRound /></el-icon>
           <span>咨询反馈</span>
+          <el-badge :value="unreadTotal" :hidden="unreadTotal === 0" class="nav-badge" />
         </el-menu-item>
       </el-menu>
     </el-aside>
@@ -77,15 +78,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { HomeFilled, User, UserFilled, Bell, Warning, Avatar, CaretBottom, SwitchButton, ChatDotRound } from '@element-plus/icons-vue'
+import { getUnreadCount } from '@/api/chat'
 
 const router = useRouter()
 const route = useRoute()
 
 const adminInfo = ref<any>(null)
+const unreadTotal = ref(0)
+let timer: any = null
 
 const activeMenu = computed(() => route.path)
 
@@ -100,6 +104,21 @@ const pageTitle = computed(() => {
   }
   return titles[route.path] || '管理系统'
 })
+
+const refreshUnreadCount = async () => {
+  try {
+    const adminInfo = JSON.parse(localStorage.getItem('adminInfo') || '{}')
+    const currentUserId = adminInfo.id || '1'
+    const currentUserType = 'ADMIN'
+    
+    const res: any = await getUnreadCount(currentUserType, currentUserId)
+    if (res.code === 200) {
+      unreadTotal.value = res.data
+    }
+  } catch (e) {
+    console.error('Refresh unread count error:', e)
+  }
+}
 
 const handleCommand = async (command: string) => {
   if (command === 'logout') {
@@ -126,10 +145,67 @@ onMounted(() => {
   if (info) {
     adminInfo.value = JSON.parse(info)
   }
+  
+  // 初始化未读消息计数
+  refreshUnreadCount()
+  
+  // 实时监听未读消息计数
+  timer = setInterval(() => {
+    refreshUnreadCount()
+  }, 1000) // 每2秒刷新一次，满足消息监听延迟不超过2秒的要求
+})
+
+onUnmounted(() => {
+  if (timer) {
+    clearInterval(timer)
+  }
 })
 </script>
 
 <style scoped>
 @import '@/assets/css/variables.css';
 @import '@/assets/css/layout.css';
+
+/* 导航栏未读消息计数样式 */
+.nav-badge {
+  margin-left: 8px;
+  transform: translate(0, -50%);
+}
+
+:deep(.el-menu-item) {
+  position: relative;
+}
+
+/* 重置el-badge的默认样式 */
+:deep(.el-menu-item .el-badge) {
+  position: absolute;
+  top: 50%;
+  right: 20px;
+  transform: translateY(-50%);
+  font-size: 12px;
+  min-width: 20px;
+  height: 20px;
+  line-height: 20px;
+  text-align: center;
+  color: white;
+  border-radius: 10px;
+  padding: 0 6px;
+}
+
+/* 确保隐藏状态下不显示 */
+:deep(.el-menu-item .el-badge.is-hidden) {
+  display: none !important;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 77, 79, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(255, 77, 79, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 77, 79, 0);
+  }
+}
 </style>

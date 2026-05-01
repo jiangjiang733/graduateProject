@@ -9,16 +9,15 @@ import org.springframework.format.annotation.DateTimeFormat;
 
 import java.io.Serializable;
 import java.util.Date;
-
 @Data
 @TableName("course_comment")
 public class CourseComment implements Serializable {
-
+//序列号版本号
     private static final long serialVersionUID = 1L;
 
     @TableId(value = "comment_id", type = IdType.AUTO)
     private Long commentId;
-
+//字段名对应
     @com.baomidou.mybatisplus.annotation.TableField("course_id")
     private String courseId;
 

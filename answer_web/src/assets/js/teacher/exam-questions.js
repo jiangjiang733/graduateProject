@@ -343,26 +343,26 @@ export function useExamQuestions(examId) {
         if (isEditIndex.value > -1) {
             questions.value[isEditIndex.value] = qObj
             createDialogVisible.value = false
-            ElMessage.success('试题已修改')
+            ElMessage.success('试题已在卷内修改')
         } else {
             questions.value.push(qObj)
             createDialogVisible.value = false
 
+            // 同步到题库提示词修正，并完善同步逻辑
             ElMessageBox.confirm(
-                '试题已添加到试卷。是否同时也将其保存到【公共题库】中，以便在其他考试中复用？',
-                '同步到题库',
+                '该试题已添加到当前试卷。是否同时也将其【切实】存入题库？存入后，您可以在其他试卷中通过“引用题库”直接调用它。',
+                '同步到公共题库',
                 {
-                    confirmButtonText: '保存到题库',
-                    cancelButtonText: '仅保存到试卷',
-                    type: 'info',
-                    distinguishCancelAndClose: true
+                    confirmButtonText: '确定存入题库',
+                    cancelButtonText: '仅保留在试卷',
+                    type: 'success',
                 }
             ).then(async () => {
                 try {
-                    const userId = localStorage.getItem('teacherId')
-                    await createBankQuestion({
+                    const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id') || '1'
+                    const res = await createBankQuestion({
                         courseId: exam.value.courseId,
-                        teacherId: userId,
+                        teacherId: teacherId,
                         type: f.questionType,
                         content: f.questionContent,
                         options: optsStr,
@@ -370,11 +370,19 @@ export function useExamQuestions(examId) {
                         difficulty: 1,
                         analysis: f.analysis
                     })
-                    ElMessage.success('已成功同步到题库')
+                    if(res.success || res.code === 200) {
+                        ElMessage.success('【操作成功】试题已切切实实存入公共题库！')
+                        // 刷新左侧题库列表
+                        searchBank()
+                    } else {
+                        ElMessage.error(res.message || '存入失败（后端返回错误）')
+                    }
                 } catch (e) {
-                    ElMessage.warning('添加到题库失败，但试题已保留在试卷中')
+                    console.error('Sync failed:', e)
+                    ElMessage.warning('添加到题库失败，但试题已保留在当前试卷中')
                 }
             }).catch(() => {
+                ElMessage.info('已选择：仅保留在当前试卷')
             })
         }
     }

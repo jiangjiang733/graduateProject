@@ -9,12 +9,15 @@
         <h1 class="page-title">{{ homework.reportTitle || '作业批改' }}</h1>
       </div>
       <div class="header-right">
+        <el-button type="success" class="batch-grade-btn" @click="batchAiGrading" :loading="batchGradingLoading" style="margin-right: 15px;">
+           一键批改发布
+        </el-button>
         <div class="progress-info">
           <span class="progress-num">{{ currentIndex + 1 }}</span>
           <span class="progress-total">/ {{ filteredSubmissions.length }}</span>
         </div>
         <el-button type="primary" class="save-next-btn" @click="saveAndNext">
-          保存并批改下一份
+          保存
         </el-button>
       </div>
     </div>
@@ -61,7 +64,7 @@
                 </div>
                 <div class="student-id">SNO: {{ sub.studentId }}</div>
               </div>
-              <div class="score-badge" v-if="sub.status == 2 || sub.status === 'GRADED' || sub.status == 3">
+              <div class="score-badge" v-if="(sub.score > 0) || sub.status == 2 || sub.status === 'GRADED' || sub.status == 3">
                 <span v-if="sub.status == 3" style="font-size: 11px;">被退回</span>
                 <span v-else>{{ sub.score || 0 }}分</span>
               </div>
@@ -114,7 +117,17 @@
                   <div class="q-title">
                     <span class="q-num">{{ index + 1 }}</span>
                     <span class="q-text">{{ q.questionContent || q.content }}</span>
-                    <span class="q-score-tag">{{ q.score || 0 }}分</span>
+                    <div class="q-score-ops">
+                       <el-input-number 
+                         v-model="questionScores[index]" 
+                         :min="0" 
+                         :max="q.score || 100" 
+                         size="small" 
+                         controls-position="right"
+                         class="score-input-mini"
+                       />
+                       <span class="q-total-score">/ {{ q.score || 0 }}分</span>
+                    </div>
                   </div>
                   
                   <!-- 选项显示区 -->
@@ -212,7 +225,12 @@
 
         <!-- 快捷评语 -->
         <div class="quick-comments-section">
-          <div class="quick-comments-title">快捷评语</div>
+          <div class="quick-comments-title" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>快捷评语</span>
+            <el-button v-if="hasQuestions" type="primary" link size="small" @click="applyAiGrading" :loading="aiGrading">
+              <el-icon><MagicStick /></el-icon>&nbsp;一键AI智能批阅(简答题)
+            </el-button>
+          </div>
           <div class="quick-comment-tags">
             <button class="quick-comment-tag" @click="addComment('逻辑清晰，代码规范')">逻辑清晰</button>
             <button class="quick-comment-tag" @click="addComment('代码优秀')">代码优秀</button>
@@ -240,8 +258,8 @@
           <button class="return-btn" @click="returnForRevision" v-if="currentSubmission.status != 3">
             <el-icon><RefreshLeft /></el-icon> 退回重写
           </button>
-          <button class="save-btn over-grade-btn" @click="submitGrade" :disabled="submitting">
-            <el-icon><Check /></el-icon> {{ submitting ? '覆盖批改中...' : '重新批改/覆盖' }}
+          <button class="save-btn over-grade-btn" @click="submitGrade(2)" :disabled="submitting">
+            <el-icon><Check /></el-icon> {{ submitting ? '覆盖发布中...' : '重新批改并发布' }}
           </button>
         </template>
         
@@ -249,8 +267,8 @@
           <button class="return-btn" @click="returnForRevision">
             <el-icon><RefreshLeft /></el-icon> 退回重写
           </button>
-          <button class="save-btn" @click="submitGrade" :disabled="submitting">
-            <el-icon><Check /></el-icon> {{ submitting ? '批改中...' : '提交批改' }}
+          <button class="save-btn" @click="submitGrade(2)" :disabled="submitting">
+            <el-icon><Check /></el-icon> {{ submitting ? '批改发布中...' : '确认批改并发布' }}
           </button>
         </template>
       </div>
@@ -261,7 +279,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { 
-  ArrowLeft, Search, Document, Download, User, Edit, EditPen, Picture, RefreshLeft, Check
+  ArrowLeft, Search, Document, Download, User, Edit, EditPen, Picture, RefreshLeft, Check, MagicStick
 } from '@element-plus/icons-vue'
 import { useHomeworkGrade } from '@/assets/js/teacher/homework-grade'
 
@@ -286,6 +304,11 @@ const {
   getCorrectAnswer,
   isCorrect,
   parseOptions,
+  aiGrading,
+  applyAiGrading,
+  batchAiGrading,
+  batchGradingLoading,
+  questionScores
 } = useHomeworkGrade()
 
 const currentIndex = ref(0)
@@ -351,7 +374,8 @@ const addComment = (text) => {
 }
 
 const saveAndNext = async () => {
-  await submitGrade()
+  // 只暂存，不发布，状态保持在1
+  await submitGrade(1)
   if (currentIndex.value < filteredSubmissions.value.length - 1) {
     selectSubmission(filteredSubmissions.value[currentIndex.value + 1], currentIndex.value + 1)
   }

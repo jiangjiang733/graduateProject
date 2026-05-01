@@ -1,8 +1,8 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { getCourseDetail, getCourseChapters, getCourseStudents } from '@/api/course.js'
-import { applyEnrollment, checkEnrollmentStatus } from '@/api/enrollment.js'
+import { applyEnrollment, checkEnrollmentStatus, cancelEnrollment } from '@/api/enrollment.js'
 
 export function useCourseDetail() {
     const route = useRoute()
@@ -16,7 +16,9 @@ export function useCourseDetail() {
     const activeTab = ref('intro')
     const loading = ref(false)
     const enrollmentStatus = ref('none')
+    const enrollmentType = ref('APPLY')
     const isEnrolled = ref(false)
+    const enrollmentId = ref(null)
 
     // 方法
     const loadData = async () => {
@@ -44,6 +46,8 @@ export function useCourseDetail() {
                 const statusRes = await checkEnrollmentStatus(studentId, courseId)
                 if (statusRes.success && statusRes.data) {
                     enrollmentStatus.value = statusRes.data.status || 'none'
+                    enrollmentType.value = statusRes.data.enrollmentType || 'APPLY'
+                    enrollmentId.value = statusRes.data.enrollmentId || null
                     isEnrolled.value = enrollmentStatus.value === 'approved'
 
                     // 如果已加入，获取班级成员
@@ -103,6 +107,7 @@ export function useCourseDetail() {
             if (res.success || res.code === 200) {
                 ElMessage.success('申请提交成功，请等待教师审核')
                 enrollmentStatus.value = 'pending'
+                enrollmentType.value = 'APPLY'
             } else {
                 ElMessage.error(res.message || '申请失败')
             }
@@ -112,11 +117,42 @@ export function useCourseDetail() {
         }
     }
 
+    const handleDropCourse = async () => {
+        if (!enrollmentId.value) return
+        
+        try {
+            await ElMessageBox.confirm('确定要退出该课程吗？这将会清除您的学习进度与相关记录，且不可恢复。', '系统提示', {
+                confirmButtonText: '确定退课',
+                cancelButtonText: '取消',
+                type: 'warning'
+            })
+            
+            const res = await cancelEnrollment(enrollmentId.value)
+            if (res.success || res.code === 200) {
+                ElMessage.success('退课成功')
+                enrollmentStatus.value = 'none'
+                isEnrolled.value = false
+                enrollmentId.value = null
+            } else {
+                ElMessage.error(res.message || '退课失败')
+            }
+        } catch (error) {
+            if (error !== 'cancel') {
+                console.error('退课失败:', error)
+                ElMessage.error('操作失败')
+            }
+        }
+    }
+
     const startLearning = () => {
         if (enrollmentStatus.value === 'approved') {
             router.push(`/student/learn/${courseId}`)
         } else if (enrollmentStatus.value === 'pending') {
-            ElMessage.info('您的报名申请正在审核中，请稍后再试')
+            if (enrollmentType.value === 'INVITE') {
+                ElMessage.info('教师已向您发送邀请，请前往「消息中心」接受或拒绝。')
+            } else {
+                ElMessage.info('您的报名申请正在审核中，请稍后再试')
+            }
         } else {
             handleEnroll()
         }
@@ -134,7 +170,10 @@ export function useCourseDetail() {
         loading,
         isEnrolled,
         enrollmentStatus,
+        enrollmentType,
+        enrollmentId,
         handleEnroll,
+        handleDropCourse,
         startLearning
     }
 }

@@ -1,8 +1,8 @@
 import { ref, onMounted, reactive, computed, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { searchCourses, getStudentJoinedCourses } from '@/api/course.js'
-import { applyEnrollment } from '@/api/enrollment.js'
+import { searchCourses } from '@/api/course.js'
+import { applyEnrollment, getStudentEnrollments, cancelEnrollment } from '@/api/enrollment.js'
 
 export function useCourseList() {
     const router = useRouter()
@@ -58,19 +58,21 @@ export function useCourseList() {
 
         loading.value = true
         try {
-            // 并行获取：全部课程 + 已加入课程
-            const [allRes, joinedRes] = await Promise.all([
+            // 并行获取：全部课程 + 已加入课程对应的报名记录 (需 enrollmentId 以便后期退课)
+            const [allRes, enrolledRes] = await Promise.all([
                 searchCourses({ filterType: 'ALL' }),
-                getStudentJoinedCourses(studentId).catch(() => ({ data: [] }))
+                getStudentEnrollments(studentId).catch(() => ({ data: [] }))
             ])
 
-            // 构建已加入课程ID集合
-            const joinedIds = new Set()
-            const rawJoined = Array.isArray(joinedRes) ? joinedRes
-                : (Array.isArray(joinedRes?.data) ? joinedRes.data : [])
-            rawJoined.forEach(c => {
-                const cid = c.courseId || c.course_id || c.id
-                if (cid) joinedIds.add(String(cid))
+            // 构建已加入课程ID -> enrollmentId 的映射
+            const enrollmentMap = new Map()
+            const rawEnrolled = enrolledRes.success && enrolledRes.data ? enrolledRes.data : []
+            
+            rawEnrolled.forEach(e => {
+                // 仅记录状态为 approved 的，以便后期退课
+                if (e.status === 'approved') {
+                    enrollmentMap.set(String(e.courseId), String(e.id || e.enrollmentId))
+                }
             })
 
             if (allRes.success && allRes.data) {
@@ -78,7 +80,8 @@ export function useCourseList() {
 
                 allJoinedCourses.value = rawCourses.map(item => {
                     const cId = item.courseId || item.course_id || item.id
-                    const isJoined = joinedIds.has(String(cId))
+                    const enrollmentId = enrollmentMap.get(String(cId))
+                    const isJoined = enrollmentId !== undefined
                     return {
                         id: cId,
                         courseName: item.courseName || item.course_name || item.name,
@@ -92,6 +95,7 @@ export function useCourseList() {
                         progress: item.progress || 0,
                         lastStudyTime: item.updateTime || item.update_time || item.createTime || item.create_time,
                         isJoined,
+                        enrollmentId,
                         enrollmentStatus: isJoined ? 'approved' : null
                     }
                 })
@@ -229,6 +233,41 @@ export function useCourseList() {
         }
     }
 
+    // 退课操作
+    const dropCourse = async (course) => {
+        if (!course.enrollmentId) {
+            // 兜底：如果加载时没拿到ID，尝试重新加载一次或提示
+            ElMessage.error('无法确定报名记录，请刷新列表后再试')
+            return
+        }
+
+        try {
+            await ElMessageBox.confirm(
+                `确定要退出课程"${course.courseName}"吗？退课后将无法继续学习该课程。`,
+                '确认退课',
+                {
+                    confirmButtonText: '确定退课',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }
+            )
+
+            const res = await cancelEnrollment(course.enrollmentId)
+            if (res.success || res.code === 200) {
+                ElMessage.success('已成功退课')
+                // 刷新列表
+                loadCourses()
+            } else {
+                ElMessage.error(res.message || '退课失败')
+            }
+        } catch (error) {
+            if (error !== 'cancel') {
+                console.error('退课异常:', error)
+                ElMessage.error('操作失败')
+            }
+        }
+    }
+
     // 获取课程图片
     const getCourseImage = (image) => {
         if (!image) return 'https://via.placeholder.com/300x200?text=Course'
@@ -285,6 +324,7 @@ export function useCourseList() {
         goToCourseDetail,
         goToLearn,
         applyToCourse,
+        dropCourse,
         getCourseImage,
         getTeacherAvatar,
         formatDate

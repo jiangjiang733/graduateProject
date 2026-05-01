@@ -10,7 +10,9 @@ export function useQuestionBank() {
     const loading = ref(false)
     const dialogVisible = ref(false)
     const isEdit = ref(false)
+    // 条数
     const pagination = ref({ current: 1, size: 6, total: 0 })
+    // 当前日期时刻监听
     const currentDate = ref(new Date().toLocaleDateString())
 
     const form = ref({
@@ -22,6 +24,9 @@ export function useQuestionBank() {
         answer: '',
         analysis: ''
     })
+
+    const cachedOptions = ref([])
+    const cachedAnswer = ref('')
 
     const getTeacherId = () => localStorage.getItem('teacherId') || '1'
 
@@ -41,8 +46,25 @@ export function useQuestionBank() {
             })
             if (res.success) {
                 questions.value = res.data.records.map(q => {
-                    if (typeof q.options === 'string') q.options = JSON.parse(q.options)
-                    return q
+                    // 字段归一化处理 (处理后端可能返回的 snake_case)
+                    const normalized = {
+                        ...q,
+                        id: q.id,
+                        content: q.content || q.qContent || '',
+                        type: q.type || q.qType || 'SINGLE',
+                        options: q.options || q.qOptions || null,
+                        answer: q.answer || q.qAnswer || '',
+                        courseId: q.courseId || q.course_id || '',
+                        analysis: q.analysis || q.qAnalysis || ''
+                    }
+                    if (typeof normalized.options === 'string') {
+                        try {
+                            normalized.options = JSON.parse(normalized.options)
+                        } catch (e) {
+                            normalized.options = []
+                        }
+                    }
+                    return normalized
                 })
                 pagination.value.total = res.data.total
             }
@@ -58,6 +80,8 @@ export function useQuestionBank() {
 
     const openCreateDialog = () => {
         isEdit.value = false
+        cachedOptions.value = []
+        cachedAnswer.value = ''
         form.value = {
             courseId: courses.value[0]?.id || '',
             type: 'SINGLE',
@@ -72,11 +96,72 @@ export function useQuestionBank() {
 
     const editQuestion = (q) => {
         isEdit.value = true
+        loading.value = true
+        cachedOptions.value = []
+        cachedAnswer.value = ''
+        // 深拷贝，避免引用问题
         const qCopy = JSON.parse(JSON.stringify(q))
-        if (qCopy.type === 'SINGLE') {
-            qCopy.correctIndex = qCopy.options.findIndex(o => o.isCorrect)
+        // 理选项格式，防止 UI 无法回显
+        if (qCopy.options) {
+            try {
+                let opts = typeof qCopy.options === 'string' ? JSON.parse(qCopy.options) : qCopy.options
+                if (Array.isArray(opts)) {
+                    qCopy.options = opts.map(opt => {
+                        if (typeof opt === 'string') return { text: opt, isCorrect: false }
+                        return { text: opt.text || '', isCorrect: !!opt.isCorrect }
+                    })
+                } else {
+                    qCopy.options = []
+                }
+            } catch (e) {
+                qCopy.options = []
+            }
+        } else {
+            qCopy.options = []
         }
+
+        // 处理正确答案回显
+        if (qCopy.type === 'SINGLE') {
+            // 先从选项中找正确选项
+            let correctIdx = qCopy.options.findIndex(o => o.isCorrect)
+
+            // 如果选项中没找到，尝试从 answer 字段恢复
+            if (correctIdx === -1 && qCopy.answer) {
+                correctIdx = qCopy.answer.charCodeAt(0) - 65
+            }
+
+            // 确保 correctIndex 有效
+            qCopy.correctIndex = correctIdx >= 0 && correctIdx < qCopy.options.length ? correctIdx : 0
+
+            // 重新设置选项的正确标记（确保单选只有一个正确）
+            qCopy.options.forEach((o, i) => {
+                o.isCorrect = (i === qCopy.correctIndex)
+            })
+
+        } else if (qCopy.type === 'MULTIPLE') {
+            // 多选题：从 answer 字段恢复正确选项标记
+            if (qCopy.answer && qCopy.options.length > 0) {
+                const answerArray = qCopy.answer.split('')
+                qCopy.options.forEach((o, i) => {
+                    const optionLetter = String.fromCharCode(65 + i)
+                    o.isCorrect = answerArray.includes(optionLetter)
+                })
+            }
+
+        } else if (qCopy.type === 'JUDGE') {
+            // 判断題：确保选项和答案一致
+            if (!qCopy.answer && qCopy.options.length > 0) {
+                qCopy.answer = qCopy.options[0].isCorrect ? 'A' : 'B'
+            }
+            // 重新设置判断題的选项
+            qCopy.options = [
+                { text: '正确', isCorrect: qCopy.answer === 'A' },
+                { text: '错误', isCorrect: qCopy.answer === 'B' }
+            ]
+        }
+        
         form.value = qCopy
+        loading.value = false
         dialogVisible.value = true
     }
 
@@ -131,29 +216,64 @@ export function useQuestionBank() {
         })
     }
 
-    const handleTypeChange = (newType, oldType) => {
-        // 当切换题目类型时，初始化相应的选项和答案
+    const handleTabClick = (newType) => {
+        if (form.value.type === newType) return;
+        const oldType = form.value.type;
+
+        // Cache current state before switching
+        if (oldType === 'SINGLE' || oldType === 'MULTIPLE') {
+            cachedOptions.value = JSON.parse(JSON.stringify(form.value.options));
+        } else if (oldType === 'ESSAY') {
+            cachedAnswer.value = form.value.answer;
+        }
+
+        form.value.type = newType;
+
         if (newType === 'JUDGE') {
-            // 判断题默认选择"正确"
             form.value.answer = 'A'
             form.value.options = [
                 { text: '正确', isCorrect: true },
                 { text: '错误', isCorrect: false }
             ]
         } else if (newType === 'SINGLE' || newType === 'MULTIPLE') {
-            // 如果之前不是选择题，需要初始化选项
             if (oldType === 'JUDGE' || oldType === 'ESSAY') {
-                form.value.options = [
-                    { text: '', isCorrect: false },
-                    { text: '', isCorrect: false }
-                ]
-                form.value.correctIndex = 0
-                form.value.answer = ''
+                if (cachedOptions.value && cachedOptions.value.length > 0) {
+                    form.value.options = JSON.parse(JSON.stringify(cachedOptions.value));
+                    if (newType === 'SINGLE') {
+                        let idx = form.value.options.findIndex(o => o.isCorrect);
+                        if (idx === -1) {
+                            form.value.options[0].isCorrect = true;
+                            idx = 0;
+                        }
+                        form.value.correctIndex = idx;
+                        form.value.options.forEach((o, i) => o.isCorrect = (i === idx));
+                    }
+                } else {
+                    form.value.options = [
+                        { text: '', isCorrect: false },
+                        { text: '', isCorrect: false }
+                    ]
+                    form.value.correctIndex = 0
+                }
+            } else {
+                // Switching between SINGLE and MULTIPLE
+                if (newType === 'SINGLE') {
+                    let idx = form.value.options.findIndex(o => o.isCorrect);
+                    if (idx === -1) {
+                        form.value.options[0].isCorrect = true;
+                        idx = 0;
+                    }
+                    form.value.correctIndex = idx;
+                    form.value.options.forEach((o, i) => o.isCorrect = (i === idx));
+                }
             }
         } else if (newType === 'ESSAY') {
-            // 简答题清空选项
-            form.value.options = []
-            form.value.answer = ''
+            if (cachedAnswer.value) {
+                form.value.answer = cachedAnswer.value;
+            } else {
+                form.value.answer = '';
+            }
+            form.value.options = [];
         }
     }
 
@@ -198,7 +318,7 @@ export function useQuestionBank() {
         editQuestion,
         saveQuestion,
         handleDeleteQuestion,
-        handleTypeChange,
+        handleTabClick,
         addOption,
         removeOption,
         getTypeLabel,

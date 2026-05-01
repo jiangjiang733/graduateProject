@@ -50,7 +50,7 @@ export function useClassManagement() {
         description: '',
         maxStudents: 50
     })
-
+    // 校验规则
     const rules = {
         className: [
             { required: true, message: '请输入班级名称', trigger: 'blur' },

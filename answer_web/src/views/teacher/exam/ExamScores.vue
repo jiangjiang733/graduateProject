@@ -91,11 +91,14 @@
               @input="handleSearch"
             />
             <el-button type="primary" size="small" @click="refreshStudents">刷新列表</el-button>
+            <el-button type="success" size="small" @click="handlePublishAll" :loading="publishing">一键发布(AI批后)</el-button>
+            <el-button type="warning" size="small" @click="handlePublishSelected" :disabled="selectedExams.length === 0" :loading="publishing">多选发布</el-button>
           </div>
         </div>
       </template>
       
-      <el-table :data="paginatedStudents" stripe border style="width: 100%" v-loading="studentsLoading">
+      <el-table :data="paginatedStudents" stripe border style="width: 100%" v-loading="studentsLoading" @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="55" :selectable="canSelectToPublish" />
         <el-table-column label="头像" width="70" align="center">
           <template #default="{ row }">
             <el-avatar :size="36" :src="getAvatarUrl(row.studentAvatar)" style="background:#e0e7ff;color:#4f46e5;">
@@ -136,7 +139,7 @@
         <el-table-column label="操作" min-width="150">
           <template #default="{ row }">
             <el-button v-if="row.status === 2" type="warning" link @click="viewStudentAnswer(row)">
-              批改简答题
+              修改
             </el-button>
             <el-button v-else-if="row.status >= 2" type="primary" link @click="viewStudentAnswer(row)">
               查看详情
@@ -170,7 +173,7 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, Search } from '@element-plus/icons-vue'
-import { getExamDetail, getStudentExams, getExamStatistics, returnStudentExam as returnStudentExamApi } from '@/api/exam'
+import { getExamDetail, getStudentExams, getExamStatistics, returnStudentExam as returnStudentExamApi, publishAllExamGrades, publishSelectedExamGrades } from '@/api/exam'
 import { getCourseDetail } from '@/api/course'
 import * as echarts from 'echarts'
 
@@ -179,8 +182,10 @@ const router = useRouter()
 
 const loading = ref(false)
 const studentsLoading = ref(false)
+const publishing = ref(false)
 const exam = ref({})
 const studentExams = ref([])
+const selectedExams = ref([])
 const statistics = ref(null)
 const chartRef = ref(null)
 let scoreChart = null
@@ -349,6 +354,63 @@ const fetchExamInfo = async () => {
   } finally {
     loading.value = false
   }
+}
+
+// 选项：仅允许选中"待批改"状态用于发布
+const canSelectToPublish = (row) => row.status === 2
+
+const handleSelectionChange = (val) => {
+  selectedExams.value = val
+}
+
+const handlePublishAll = () => {
+  ElMessageBox.confirm(
+    '确定要一键发布所有待发布的 AI初步批改成绩 吗？发布后学生将能查看到分数。',
+    '提示',
+    { confirmButtonText: '确定发布', cancelButtonText: '取消', type: 'warning' }
+  ).then(async () => {
+    publishing.value = true
+    try {
+      const res = await publishAllExamGrades(route.params.id)
+      if (res.code === 200 || res.success) {
+        ElMessage.success('一键发布成功！')
+        fetchStudentExams()
+      } else {
+        ElMessage.error(res.message || '发布失败')
+      }
+    } catch (err) {
+      console.error(err)
+      ElMessage.error('网络或服务器异常')
+    } finally {
+      publishing.value = false
+    }
+  }).catch(()=>{})
+}
+
+const handlePublishSelected = () => {
+  if (selectedExams.value.length === 0) return
+  const ids = selectedExams.value.map(e => e.studentExamId)
+  ElMessageBox.confirm(
+    `确定要发布这 ${ids.length} 份试卷的成绩吗？`,
+    '提示',
+    { confirmButtonText: '发布', cancelButtonText: '取消', type: 'warning' }
+  ).then(async () => {
+    publishing.value = true
+    try {
+      const res = await publishSelectedExamGrades(ids)
+      if (res.code === 200 || res.success) {
+        ElMessage.success('所选试卷发布成功！')
+        fetchStudentExams()
+      } else {
+        ElMessage.error(res.message || '发布失败')
+      }
+    } catch (err) {
+      console.error(err)
+      ElMessage.error('网络或服务器异常')
+    } finally {
+      publishing.value = false
+    }
+  }).catch(()=>{})
 }
 
 // 获取课程名称

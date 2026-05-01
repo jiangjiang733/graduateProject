@@ -175,20 +175,128 @@ public class ExamGradingServiceImpl implements ExamGradingService {
 
                 // 判断答案是否正确
                 boolean isCorrect = false;
+                BigDecimal score = BigDecimal.ZERO;
+                String comment = null;
+
                 if (studentAnswer != null && correctAnswer != null) {
-                    // 对于多选题，需要比较排序后的答案
-                    if ("MULTIPLE".equals(questionType)) {
-                        isCorrect = normalizeAnswer(studentAnswer).equals(normalizeAnswer(correctAnswer));
+                    String normStudent = normalizeAnswer(studentAnswer);
+                    String normCorrect = normalizeAnswer(correctAnswer);
+
+                    if ("MULTIPLE".equals(questionType) || "MULTIPLE_CHOICE".equals(questionType)) {
+                        if (normStudent.equals(normCorrect)) {
+                            isCorrect = true;
+                            score = new BigDecimal(question.getScore());
+                        } else if (!normStudent.isEmpty()) {
+                            boolean isSubset = true;
+                            for (char c : normStudent.toCharArray()) {
+                                if (normCorrect.indexOf(c) == -1) {
+                                    isSubset = false;
+                                    break;
+                                }
+                            }
+                            if (isSubset) {
+                                isCorrect = true; // 部分正确也标记为1以便前端不显示大红叉
+                                score = new BigDecimal(question.getScore()).multiply(new BigDecimal("0.5"));
+                                comment = "[系统自动判分] 漏选得一半分数";
+                            }
+                        }
                     } else {
-                        isCorrect = studentAnswer.trim().equalsIgnoreCase(correctAnswer.trim());
+                        if (studentAnswer.trim().equalsIgnoreCase(correctAnswer.trim())) {
+                            isCorrect = true;
+                            score = new BigDecimal(question.getScore());
+                        }
                     }
                 }
 
                 // 更新答题记录
                 answer.setIsCorrect(isCorrect ? 1 : 0);
-                answer.setScore(isCorrect ? new BigDecimal(question.getScore()) : BigDecimal.ZERO);
+                answer.setScore(score);
+                if (comment != null) {
+                    answer.setTeacherComment(comment);
+                } else if (answer.getTeacherComment() != null && answer.getTeacherComment().contains("漏选得一半分数")) {
+                    answer.setTeacherComment(null); // 清除旧的漏选注释
+                }
+
                 studentAnswerMapper.updateById(answer);
             }
+        }
+    }
+
+    @Autowired
+    private com.example.project.service.ai.AiQuestionGeneratorService aiQuestionGeneratorService;
+
+    @Override
+    @org.springframework.scheduling.annotation.Async
+    @Transactional
+    public void autoAiGradeExamPaper(Long studentExamId) {
+        // 获取所有答题记录
+        QueryWrapper<StudentAnswer> wrapper = new QueryWrapper<>();
+        wrapper.eq("student_exam_id", studentExamId);
+        List<StudentAnswer> studentAnswers = studentAnswerMapper.selectList(wrapper);
+
+        for (StudentAnswer answer : studentAnswers) {
+            // 获取试题信息
+            ExamQuestion question = examQuestionMapper.selectById(answer.getQuestionId());
+            if (question == null) {
+                continue;
+            }
+
+            // 只处理主观题
+            String questionType = question.getQuestionType();
+            boolean isObjective = "SINGLE".equals(questionType) || "SINGLE_CHOICE".equals(questionType) ||
+                    "MULTIPLE".equals(questionType) || "MULTIPLE_CHOICE".equals(questionType) ||
+                    "JUDGE".equals(questionType) || "TRUE_FALSE".equals(questionType);
+
+            if (!isObjective) {
+                String studentAns = answer.getStudentAnswer();
+                if (studentAns != null && !studentAns.trim().isEmpty()) {
+                    try {
+                        java.util.Map<String, Object> aiGrade = aiQuestionGeneratorService.gradeShortAnswer(
+                                question.getQuestionContent(),
+                                question.getAnswer(),
+                                studentAns,
+                                question.getScore());
+
+                        if (aiGrade != null && aiGrade.get("score") != null) {
+                            BigDecimal aiScore = new BigDecimal(aiGrade.get("score").toString());
+                            String aiComment = (String) aiGrade.get("comment");
+
+                            answer.setScore(aiScore);
+                            answer.setTeacherComment(aiComment);
+                        } else {
+                            answer.setScore(BigDecimal.ZERO);
+                            answer.setTeacherComment("[AI批改失败] 无法获取评分结果");
+                        }
+                    } catch (Exception e) {
+                        System.err.println("试卷整卷AI批改异常: " + e.getMessage());
+                        answer.setScore(BigDecimal.ZERO);
+                        answer.setTeacherComment("[AI服务出错] 请继续人工批改");
+                    }
+                } else {
+                    answer.setScore(BigDecimal.ZERO);
+                    answer.setTeacherComment("未作答");
+                }
+                studentAnswerMapper.updateById(answer);
+            }
+        }
+
+        // AI批改完成后，重新计算总分，并将状态设置为已批改
+        BigDecimal totalObtainedScore = BigDecimal.ZERO;
+        List<StudentAnswer> allAnswers = studentAnswerMapper
+                .selectList(new QueryWrapper<StudentAnswer>().eq("student_exam_id", studentExamId));
+        for (StudentAnswer ans : allAnswers) {
+            if (ans.getScore() != null) {
+                totalObtainedScore = totalObtainedScore.add(ans.getScore());
+            }
+        }
+
+        StudentExam studentExam = studentExamMapper.selectById(studentExamId);
+        if (studentExam != null) {
+            studentExam.setObtainedScore(totalObtainedScore);
+            // 保持为状态2（待批改/待发布），等待教师确认后发布
+            studentExam.setGradedBy("AI系统初步批改");
+            studentExam.setGradedTime(new Date());
+            studentExamMapper.updateById(studentExam);
         }
     }
 
@@ -203,5 +311,39 @@ public class ExamGradingServiceImpl implements ExamGradingService {
         char[] chars = answer.trim().toUpperCase().toCharArray();
         java.util.Arrays.sort(chars);
         return new String(chars);
+    }
+
+    @Override
+    @Transactional
+    public void publishExamGrades(Long examId) {
+        // 将某考试下所有状态为2的(待批改的)更新为3(已发布)
+        QueryWrapper<StudentExam> wrapper = new QueryWrapper<>();
+        wrapper.eq("exam_id", examId);
+        wrapper.eq("status", 2);
+
+        List<StudentExam> unpubExams = studentExamMapper.selectList(wrapper);
+        for (StudentExam se : unpubExams) {
+            se.setStatus(3);
+            se.setGradedTime(new Date());
+            se.setGradedBy("教师一键发布");
+            studentExamMapper.updateById(se);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void publishSelectedExamGrades(List<Long> studentExamIds) {
+        if (studentExamIds == null || studentExamIds.isEmpty())
+            return;
+
+        for (Long seId : studentExamIds) {
+            StudentExam se = studentExamMapper.selectById(seId);
+            if (se != null && se.getStatus() == 2) {
+                se.setStatus(3);
+                se.setGradedTime(new Date());
+                se.setGradedBy("教师批量发布");
+                studentExamMapper.updateById(se);
+            }
+        }
     }
 }

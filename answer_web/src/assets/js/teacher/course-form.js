@@ -737,7 +737,6 @@ export function useCourseForm() {
         addDialogVisible.value = true
     }
 
-    // Helper: extract filename from URL path
     const extractFileName = (url) => {
         if (!url) return ''
         const parts = url.split('/')
@@ -745,7 +744,6 @@ export function useCourseForm() {
         return decodeURIComponent(last.split('?')[0])
     }
 
-    // Helper: format bytes to human-readable
     const formatFileSize = (bytes) => {
         if (!bytes) return ''
         if (bytes < 1024) return bytes + ' B'

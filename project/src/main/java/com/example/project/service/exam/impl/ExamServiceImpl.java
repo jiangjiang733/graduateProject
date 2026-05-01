@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.example.project.dto.exam.ExamCreateDTO;
 import com.example.project.dto.exam.ExamQuestionDTO;
 import com.example.project.dto.exam.ExamStatisticsDTO;
-import com.example.project.entity.Student;
 import com.example.project.entity.exam.Exam;
 import com.example.project.entity.exam.ExamQuestion;
 import com.example.project.entity.exam.StudentExam;
@@ -45,6 +44,10 @@ public class ExamServiceImpl implements ExamService {
 
     @Autowired
     private com.example.project.mapper.StudentUserMapper studentUserMapper;
+
+    @Autowired
+    @org.springframework.context.annotation.Lazy
+    private com.example.project.service.exam.ExamGradingService examGradingService;
 
     @Autowired
     private com.example.project.service.notification.MessageService messageService;
@@ -591,25 +594,53 @@ public class ExamServiceImpl implements ExamService {
                         String studentAns = ansDTO.getAnswer();
 
                         // 移除空格和无关字符进行比较
-                        boolean correctMatch = false;
-                        if (correct != null && studentAns != null) {
-                            correctMatch = correct.trim().equalsIgnoreCase(studentAns.trim());
-                        }
+                        String normCorrect = correct != null ? correct.trim().toUpperCase() : "";
+                        String normStudent = studentAns != null ? studentAns.trim().toUpperCase() : "";
 
-                        if (correctMatch) {
+                        if (normCorrect.equals(normStudent)) {
                             answer.setIsCorrect(1);
                             BigDecimal qScore = new BigDecimal(question.getScore());
                             answer.setScore(qScore);
                             totalScore = totalScore.add(qScore);
+                        } else if (("MULTIPLE".equals(type) || "MULTIPLE_CHOICE".equals(type))
+                                && !normStudent.isEmpty()) {
+                            // 多选题特殊规则：漏选得一半分数，多选/错选不得分
+                            boolean isSubset = true;
+                            for (char c : normStudent.toCharArray()) {
+                                if (normCorrect.indexOf(c) == -1) {
+                                    isSubset = false;
+                                    break;
+                                }
+                            }
+
+                            if (isSubset) {
+                                answer.setIsCorrect(1); // 标记为正确（或部分正确）
+                                BigDecimal halfScore = new BigDecimal(question.getScore())
+                                        .multiply(new BigDecimal("0.5"));
+                                answer.setScore(halfScore);
+                                answer.setTeacherComment("[系统自动判分] 漏选得一半分数");
+                                totalScore = totalScore.add(halfScore);
+                            } else {
+                                answer.setIsCorrect(0);
+                                answer.setScore(BigDecimal.ZERO);
+                            }
                         } else {
                             answer.setIsCorrect(0);
                             answer.setScore(BigDecimal.ZERO);
                         }
                     } else {
-                        // 主观题
+                        // 主观题：不再在此处进行自动批改，标记为0分待教师从后台调用AI批改
                         hasSubjective = true;
-                        answer.setIsCorrect(0); // 待批改
-                        answer.setScore(BigDecimal.ZERO);
+                        answer.setIsCorrect(0); // 待批改状态
+
+                        String studentAns = ansDTO.getAnswer();
+                        if (studentAns != null && !studentAns.trim().isEmpty()) {
+                            answer.setScore(BigDecimal.ZERO);
+                            answer.setTeacherComment(""); // 留空，教师批阅时填写或由AI填写
+                        } else {
+                            answer.setScore(BigDecimal.ZERO);
+                            answer.setTeacherComment("未作答");
+                        }
                     }
                 }
 
@@ -634,7 +665,7 @@ public class ExamServiceImpl implements ExamService {
                             "SYSTEM", "SYSTEM",
                             teacherId, "TEACHER",
                             "SYSTEM_NOTIFICATION",
-                            title, content, examId + "_" + studentId);
+                            title, content, examId + "_" + studentExam.getStudentExamId());
                 }
             } catch (Exception e) {
                 System.err.println("发送答卷批改通知失败: " + e.getMessage());
@@ -645,6 +676,14 @@ public class ExamServiceImpl implements ExamService {
 
         studentExamMapper.updateById(studentExam);
 
+        if (hasSubjective) {
+            try {
+                // 后台异步触发全部主观题的智能预判
+                examGradingService.autoAiGradeExamPaper(studentExam.getStudentExamId());
+            } catch (Exception e) {
+                System.err.println("触发自动AI批改失败：" + e.getMessage());
+            }
+        }
     }
 
     @Override

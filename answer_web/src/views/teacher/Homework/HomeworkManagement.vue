@@ -206,7 +206,7 @@
                 <el-icon><List /></el-icon> 引用题库
               </el-button>
               <el-button link type="primary" class="ai-btn" @click="openAiDialog">
-                <el-icon><MagicStick /></el-icon> AI 出题
+                AI 出题
               </el-button>
             </div>
           </div>
@@ -222,7 +222,9 @@
                 </div>
                 <div class="q-actions">
                   <el-button link size="small" type="primary" @click="openEditQuestion(index)"><el-icon><Edit /></el-icon> 编辑</el-button>
-                  <el-button link size="small" type="success" @click="saveToBank(q)"><el-icon><Checked /></el-icon> 存入题库</el-button>
+                  <el-button link size="small" :type="q._savedToBank ? 'info' : 'success'" :disabled="q._savedToBank" @click="saveToBank(q)">
+                    <el-icon><Checked /></el-icon> {{ q._savedToBank ? '已存题库' : '存入题库' }}
+                  </el-button>
                   <el-button link size="small" :disabled="index === 0" @click="moveHomeworkQuestion(index, -1)"><el-icon><ArrowUp /></el-icon></el-button>
                   <el-button link size="small" :disabled="index === homeworkForm.questions.length - 1" @click="moveHomeworkQuestion(index, 1)"><el-icon><ArrowDown /></el-icon></el-button>
                   <el-button link type="danger" size="small" @click="removeHomeworkQuestion(index)"><el-icon><Delete /></el-icon></el-button>
@@ -402,7 +404,7 @@
           </el-form-item>
           
           <el-form-item label="题目数量">
-            <el-slider v-model="aiForm.count" :min="1" :max="10" show-input />
+            <el-input-number  v-model="aiForm.count" :min="1"  show-input />
           </el-form-item>
           
           <el-form-item label="包含题型">

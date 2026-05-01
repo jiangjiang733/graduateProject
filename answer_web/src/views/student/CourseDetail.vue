@@ -36,20 +36,40 @@
             </template>
             
             <template v-else-if="enrollmentStatus === 'pending'">
-              <el-button type="warning" size="large" disabled round class="action-btn">
-                <el-icon><Clock /></el-icon>&nbsp;审核中
-              </el-button>
+              <template v-if="enrollmentType === 'INVITE'">
+                <el-button type="warning" size="large" @click="startLearning" round class="action-btn">
+                  <el-icon><Message /></el-icon>&nbsp;待接受邀请
+                </el-button>
+              </template>
+              <template v-else>
+                <el-button type="warning" size="large" disabled round class="action-btn">
+                  <el-icon><Clock /></el-icon>&nbsp;审核中
+                </el-button>
+              </template>
             </template>
 
             <template v-else-if="enrollmentStatus === 'rejected'">
-              <el-button type="danger" size="large" @click="handleEnroll" round class="action-btn">
-                <el-icon><Refresh /></el-icon>&nbsp;重新报名
-              </el-button>
+              <template v-if="enrollmentType === 'INVITE'">
+                <el-button type="danger" size="large" disabled round class="action-btn">
+                  <el-icon><Close /></el-icon>&nbsp;已拒绝邀请
+                </el-button>
+                <el-button type="primary" size="large" @click="handleEnroll" round class="action-btn" style="margin-left: 10px;">
+                  <el-icon><Plus /></el-icon>&nbsp;重新报名
+                </el-button>
+              </template>
+              <template v-else>
+                <el-button type="danger" size="large" @click="handleEnroll" round class="action-btn">
+                  <el-icon><Refresh /></el-icon>&nbsp;重新报名
+                </el-button>
+              </template>
             </template>
 
             <template v-else-if="enrollmentStatus === 'approved'">
               <el-button type="success" size="large" @click="startLearning" round class="action-btn">
                 <el-icon><VideoPlay /></el-icon>&nbsp;继续学习
+              </el-button>
+              <el-button type="info" plain size="large" @click="handleDropCourse" round class="action-btn drop-btn" style="margin-left: 10px;">
+                <el-icon><Delete /></el-icon>&nbsp;退出课程
               </el-button>
             </template>
           </div>
@@ -129,7 +149,11 @@ import {
   Plus,
   Refresh,
   Folder,
-  Loading
+  Loading,
+  Message,
+  Close,
+  Clock,
+  Delete
 } from '@element-plus/icons-vue'
 import { useCourseDetail } from '@/assets/js/student/course-detail.js'
 import { useRouter } from 'vue-router'
@@ -145,7 +169,9 @@ const {
   loading,
   isEnrolled,      // 是否已通过审核并确认报名
   enrollmentStatus, // 详细状态：none, pending, approved, rejected
+  enrollmentType,  // 报名类型: APPLY, INVITE
   handleEnroll,    // 报名申请方法
+  handleDropCourse, // 退课操作
   startLearning    // 学习方法
 } = useCourseDetail()
 

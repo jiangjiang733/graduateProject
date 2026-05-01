@@ -1,15 +1,15 @@
 package com.example.project.common;
 
 import lombok.Data;
+//序列化，字节流，数据结构不会缺失
 import java.io.Serializable;
-
 /**
  * 统一响应结果类
  * @param <T> 数据类型
  */
 @Data
 public class Result<T> implements Serializable {
-    
+//    序列号版本号
     private static final long serialVersionUID = 1L;
     
     /**
@@ -27,9 +27,7 @@ public class Result<T> implements Serializable {
      */
     private T data;
     
-    /**
-     * 响应代码
-     */
+//    状态码
     private Integer code;
     
     /**

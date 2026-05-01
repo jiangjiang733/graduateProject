@@ -3,6 +3,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getLabReportDetail, getSubmissions, gradeLabReport } from '@/api/homework.js'
 import { getProfile } from '@/api/student.js'
+import { aiGradeAnswer } from '@/api/exam.js'
 import { buildFileUrl, downloadFile as downloadFileUtil, getFileName } from '@/utils/fileUtils.js'
 
 export function useHomeworkGrade() {
@@ -22,6 +23,24 @@ export function useHomeworkGrade() {
         score: 0,
         teacherComment: ''
     })
+
+    const questionScores = ref([]) // 用于存储每道题的实际得分
+    let isInternalUpdating = false // 内部赋值标记，避免循环触发
+
+    // 监听每道题得分的变化，自动更新总分
+    watch(questionScores, (newScores) => {
+        if (isInternalUpdating) return
+        const total = newScores.reduce((sum, s) => sum + (Number(s) || 0), 0)
+        gradeForm.score = total
+        
+        // 实时同步到左侧学生列表，增强视觉反馈
+        if (currentSubmission.value) {
+            const sub = submissions.value.find(s => s.studentReportId === currentSubmission.value.studentReportId)
+            if (sub) {
+                sub.score = total
+            }
+        }
+    }, { deep: true })
 
     const filterStatus = ref('ALL') // 'ALL', 'PENDING', 'GRADED'
 
@@ -101,6 +120,31 @@ export function useHomeworkGrade() {
         return studentAnswer === correctAnswer
     }
 
+    // 独立检测多选题部分正确逻辑
+    const getMultipleChoiceScoreRatio = (idx, q) => {
+        const sAns = getStudentAnswer(idx, q)
+        const cAns = getCorrectAnswer(q)
+        if (!sAns || !cAns) return 0
+        const studentAnswer = String(sAns).trim().toUpperCase()
+        const correctAnswer = String(cAns).trim().toUpperCase()
+
+        const sArr = studentAnswer.split(/[,，;；\s]+/).filter(Boolean)
+        const cArr = correctAnswer.split(/[,，;；\s]+/).filter(Boolean)
+
+        let isSubset = true
+        for (const item of sArr) {
+            if (!cArr.includes(item)) {
+                isSubset = false
+                break
+            }
+        }
+        if (isSubset && sArr.length > 0) {
+            if (sArr.length === cArr.length) return 1 // 满分
+            return 0.5 // 漏选一半
+        }
+        return 0 // 多选错选0分
+    }
+
     // ===== 6. 自动评分（支持多种题型） =====
     const applyAutoScore = (showMessage = true) => {
         if (!hasQuestions.value) {
@@ -113,16 +157,28 @@ export function useHomeworkGrade() {
         let correctCount = 0
         let objectiveCount = 0
 
+        // 临时标记，避免在内部更新questionScores时触发watch
+        isInternalUpdating = true
         questionList.value.forEach((q, idx) => {
             // 只对客观题自动评分
             if (['SINGLE', 'MULTIPLE', 'JUDGE', 'FILL'].includes(q.questionType)) {
                 objectiveCount++
-                if (isCorrect(idx, q)) {
-                    total += (q.score || 0)
+                let qScore = 0
+                if (q.questionType === 'MULTIPLE') {
+                    const ratio = getMultipleChoiceScoreRatio(idx, q)
+                    if (ratio > 0) {
+                        qScore = (q.score || 0) * ratio
+                        if (ratio === 1) correctCount++
+                    }
+                } else if (isCorrect(idx, q)) {
+                    qScore = (q.score || 0)
                     correctCount++
                 }
+                total += qScore
+                questionScores.value[idx] = qScore
             }
         })
+        isInternalUpdating = false // 恢复标记
 
         gradeForm.score = total
 
@@ -134,6 +190,170 @@ export function useHomeworkGrade() {
         }
 
         autoGrading.value = false
+    }
+
+    // ===== 6.5 AI智能批改简答题 =====
+    const aiGrading = ref(false)
+    const applyAiGrading = async (silent = false) => {
+        if (!hasQuestions.value) {
+            if (!silent) ElMessage.warning('没有在线题目，无法AI批阅')
+            return
+        }
+
+        const subjectiveQuestions = []
+        questionList.value.forEach((q, idx) => {
+            const type = (q.questionType || q.type || '').toString().toUpperCase()
+            if (['SHORT', 'SHORT_ANSWER', 'ESSAY'].includes(type) || type.includes('简答')) {
+                subjectiveQuestions.push({ idx, q })
+            }
+        })
+
+        if (subjectiveQuestions.length === 0) {
+            if (!silent) ElMessage.info('未找到需要AI批阅的简答题')
+            return
+        }
+
+        aiGrading.value = true
+        let aiScoreSum = 0
+        let aiComments = []
+
+        try {
+            if (!silent) ElMessage.info('AI正在疯狂批阅中，请稍候...')
+            // 先应用客观题分数作为底分
+            let baseObjectiveScore = 0
+            questionList.value.forEach((q, idx) => {
+                const type = (q.questionType || q.type || '').toString().toUpperCase()
+                if (['SINGLE', 'MULTIPLE', 'JUDGE', 'FILL', 'SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE', '1', '2', '3', '4'].includes(type) ||
+                    ['单选', '多选', '判断', '填空'].includes(type) ||
+                    type.includes('CHOICE') || type.includes('SINGLE') || type.includes('MULTIPLE')) {
+
+                    if (type.includes('MULTIPLE') || type.includes('多选')) {
+                        const ratio = getMultipleChoiceScoreRatio(idx, q)
+                        baseObjectiveScore += (q.score || 0) * ratio
+                    } else if (isCorrect(idx, q)) {
+                        baseObjectiveScore += (q.score || 0)
+                    }
+                }
+            })
+
+            for (const item of subjectiveQuestions) {
+                const sAns = getStudentAnswer(item.idx, item.q)
+                if (!sAns || sAns === '') {
+                    aiComments.push(`第${item.idx + 1}题 [0分]: 缺答`)
+                    continue
+                }
+                const res = await aiGradeAnswer({
+                    questionContent: item.q.questionContent || item.q.content || '',
+                    referenceAnswer: getCorrectAnswer(item.q) || '',
+                    studentAnswer: String(sAns),
+                    maxScore: item.q.score || 0
+                })
+                if (res.code === 200 || res.success) {
+                    if (res.data) {
+                        const qScore = res.data.score || 0
+                        aiScoreSum += qScore
+                        questionScores.value[item.idx] = qScore
+                    }
+                }
+            }
+
+            gradeForm.score = baseObjectiveScore + aiScoreSum
+            // 不再向评语框自动填充详细的 AI 批改过程，保持界面简洁，仅供控制台检查或未来扩展使用
+            if (!silent && aiComments.length > 0) {
+                console.log('AI批改详情已生成:', aiComments)
+            }
+
+            if (!silent) ElMessage.success('智能批阅完成！分值已合并到最终得分。')
+        } catch (error) {
+            console.error('AI批阅异常', error)
+            if (!silent) ElMessage.error('智能批改出错')
+        } finally {
+            aiGrading.value = false
+        }
+    }
+
+    // ===== 6.6 一键批量批改发布 =====
+    const batchGradingLoading = ref(false)
+    const batchAiGrading = async () => {
+        const pendingList = submissions.value.filter(s => s.status == 1)
+        if (pendingList.length === 0) {
+            ElMessage.warning('没有待批改的作业，或者全被退回了')
+            return
+        }
+
+        try {
+            await ElMessageBox.confirm(`确认使用AI一键批改发布 ${pendingList.length} 份作业？系统将自动判分并保存提交。`, '一键批改发布', {
+                confirmButtonText: '确认一键发布',
+                cancelButtonText: '取消',
+                type: 'warning'
+            })
+        } catch {
+            return
+        }
+
+        batchGradingLoading.value = true
+        let successCount = 0
+        // Save old status
+        const originalSubId = currentSubmission.value?.studentReportId
+
+        try {
+            const loadingInstance = ElMessage({
+                message: `正在批量AI批阅中 (0/${pendingList.length})...`,
+                type: 'info',
+                duration: 0
+            })
+
+            for (let i = 0; i < pendingList.length; i++) {
+                const sub = pendingList[i]
+                loadingInstance.message = `正在批量AI批阅中 (${i + 1}/${pendingList.length}): ${sub.studentName}`
+                // 1. Select student gently
+                selectSubmission(sub)
+
+                // 2. Score via objective rules (applyAutoScore logic but without message)
+                applyAutoScore(false)
+
+                // 3. AI grading for subjective (silent)
+                await applyAiGrading(true)
+
+                // 4. Submit logic (bypassing user confirm step, silent)
+                const maxScore = homework.value.totalScore || 100
+                if (gradeForm.score < 0 || gradeForm.score > maxScore) {
+                    // fall back
+                    gradeForm.score = Math.min(Math.max(gradeForm.score, 0), maxScore)
+                }
+
+                const teacherId = localStorage.getItem('teacherId') || localStorage.getItem('t_id')
+                const res = await gradeLabReport(currentSubmission.value.studentReportId, {
+                    score: gradeForm.score,
+                    teacherComment: gradeForm.teacherComment,
+                    teacherId: teacherId,
+                    gradedAt: new Date().toISOString()
+                })
+
+                if (res.success) {
+                    successCount++
+                    currentSubmission.value.status = 2
+                    currentSubmission.value.score = gradeForm.score
+                    currentSubmission.value.teacherComment = gradeForm.teacherComment
+                }
+            }
+            loadingInstance.close()
+            ElMessage.success(`一键批改发布完成！共成功批阅 ${successCount} 份作业。`)
+
+            // Restore selection or select next pending
+            const nextPending = submissions.value.find(s => s.status == 1)
+            if (nextPending) {
+                selectSubmission(nextPending)
+            } else if (originalSubId) {
+                const orig = submissions.value.find(s => s.studentReportId === originalSubId)
+                if (orig) selectSubmission(orig)
+            }
+        } catch (e) {
+            console.error('批量批阅中断', e)
+            ElMessage.error('一键批阅中断，部分作业可能未保存')
+        } finally {
+            batchGradingLoading.value = false
+        }
     }
 
     // ===== 7. 题型文本映射 =====
@@ -178,16 +398,57 @@ export function useHomeworkGrade() {
     const selectSubmission = (sub) => {
         if (!sub) return
 
+        isInternalUpdating = true
         currentSubmission.value = sub
         gradeForm.score = sub.score || 0
         gradeForm.teacherComment = sub.teacherComment || ''
 
+        // 1. 初始化题目得分列表为0
+        questionScores.value = new Array(questionList.value.length).fill(0)
+
+        // 2. 即使已批改，也尝试静默执行一次自动评分以展示客观题的分数分布
+        if (hasQuestions.value) {
+            // 这里我们手动执行客观题评分逻辑，不要改变 gradeForm.score
+            questionList.value.forEach((q, idx) => {
+                if (['SINGLE', 'MULTIPLE', 'JUDGE', 'FILL'].includes(q.questionType)) {
+                    let qScore = 0
+                    if (q.questionType === 'MULTIPLE') {
+                        const ratio = getMultipleChoiceScoreRatio(idx, q)
+                        qScore = (q.score || 0) * ratio
+                    } else if (isCorrect(idx, q)) {
+                        qScore = (q.score || 0)
+                    }
+                    questionScores.value[idx] = qScore
+                }
+            })
+        }
+
+        // 3. 如果当前是从数据库加载的有分数值的状态，尝试分配剩余分数到主观题，防止总分被重置
+        if (sub.score > 0) {
+            const objectiveSum = questionScores.value.reduce((a, b) => a + b, 0)
+            const gap = sub.score - objectiveSum
+            if (gap > 0) {
+                // 找到第一个主观题，把差额补上去，保证页面显示的总分和列表一致
+                const firstSubjectiveIdx = questionList.value.findIndex(q => 
+                    !['SINGLE', 'MULTIPLE', 'JUDGE', 'FILL'].includes(q.questionType)
+                )
+                if (firstSubjectiveIdx !== -1) {
+                    questionScores.value[firstSubjectiveIdx] = gap
+                }
+            }
+        }
+
+        isInternalUpdating = false
+
+        // 4. 重置总分，确保与列表一致
+        gradeForm.score = sub.score || 0
+
         // 智能选择默认标签页
         if (hasQuestions.value) {
             activeTab.value = 'questions'
-            // 未批改且未评分的，自动应用客观题评分
+            // 如果还未有任何打分记录，且不是已批改状态，触发提示型的自动打分
             if (sub.status != 2 && sub.status !== 'GRADED' && (!sub.score || sub.score === 0)) {
-                setTimeout(() => applyAutoScore(false), 300)
+                setTimeout(() => applyAutoScore(true), 300)
             }
         } else if (hasAttachment.value) {
             activeTab.value = 'attachment'
@@ -347,12 +608,14 @@ export function useHomeworkGrade() {
         downloadFileUtil(url, fileName)
     }
 
-    // ===== 15. 提交批改（支持验证和确认） =====
-    const submitGrade = async () => {
+    // ===== 15. 提交批改（支持验证和确认，新增 targetStatus 参数支持暂存/发布） =====
+    const submitGrade = async (targetStatus = 2) => {
         if (!currentSubmission.value) {
             ElMessage.warning('请先选择一个学生提交')
             return
         }
+        
+        const isDraft = targetStatus === 1
 
         // 验证分数
         const maxScore = homework.value.totalScore || 100
@@ -364,17 +627,18 @@ export function useHomeworkGrade() {
         // 确认提交
         try {
             await ElMessageBox.confirm(
-                `确认给 ${currentSubmission.value.studentName} 评分 ${gradeForm.score} 分吗？`,
-                '确认批改',
+                isDraft ? `确定暂存 ${currentSubmission.value.studentName} 的成绩吗？（学生暂时不可见）` : `确认给 ${currentSubmission.value.studentName} 评分并发布吗？`,
+                isDraft ? '确认暂存' : '确认批改发布',
                 {
                     confirmButtonText: '确认',
                     cancelButtonText: '取消',
-                    type: 'warning'
+                    type: isDraft ? 'info' : 'warning'
                 }
             )
         } catch {
             return
         }
+
 
         submitting.value = true
         try {
@@ -388,25 +652,31 @@ export function useHomeworkGrade() {
                 score: gradeForm.score,
                 teacherComment: gradeForm.teacherComment,
                 teacherId: teacherId,
+                status: targetStatus,
                 gradedAt: new Date().toISOString()
             })
 
             if (response.success) {
-                ElMessage.success('批改成功！')
+                ElMessage.success(isDraft ? '暂存成功！' : '批改并发布成功！')
 
-                // 更新当前提交状态
-                currentSubmission.value.status = 2
+                // 更新当前提交状态和列表中的数据
+                currentSubmission.value.status = targetStatus
                 currentSubmission.value.score = gradeForm.score
                 currentSubmission.value.teacherComment = gradeForm.teacherComment
-
-                // 自动跳转到下一个未批改的提交
+                
+                // 同步到 submissions 列表
+                const subIndex = submissions.value.findIndex(s => s.studentReportId === currentSubmission.value.studentReportId)
+                if (subIndex !== -1) {
+                    submissions.value[subIndex].status = targetStatus
+                    submissions.value[subIndex].score = gradeForm.score
+                }
                 const pendingIndex = submissions.value.findIndex(s => s.status == 1)
-                if (pendingIndex !== -1) {
+                if (pendingIndex !== -1 && !isDraft) { // 只有非暂存才跳到下一个
                     setTimeout(() => {
                         selectSubmission(submissions.value[pendingIndex])
                         ElMessage.info('已自动切换到下一个待批改作业')
                     }, 500)
-                } else {
+                } else if (!isDraft) {
                     ElMessage.success('所有作业已批改完成！')
                 }
             } else {
@@ -504,6 +774,11 @@ export function useHomeworkGrade() {
         getCorrectAnswer,
         isCorrect,
         applyAutoScore,
+        aiGrading,
+        applyAiGrading,
+        batchAiGrading,
+        batchGradingLoading,
+        questionScores, // 暴露 questionScores
         getQuestionTypeText,
         getQuestionTypeTag,
         getStudentAvatarUrl,

@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 @Service
 public class AiQuestionGeneratorService {
@@ -173,6 +175,66 @@ public class AiQuestionGeneratorService {
             System.err.println("AI生成失败: " + e.getMessage());
             e.printStackTrace();
             throw new RuntimeException("AI 题目生成失败: " + e.getMessage(), e);
+        }
+    }
+
+    public Map<String, Object> gradeShortAnswer(String questionContent, String referenceAnswer, String studentAnswer, int maxScore) {
+        System.out.println("\n=== AI智能批改简答题开始 ===");
+        if (apiKey == null || apiKey.isEmpty() || apiKey.startsWith("${")) {
+            throw new RuntimeException("AI服务未配置：请检查后端 application.yml 中的 aliyun.bailian.apiKey");
+        }
+
+        // 构造提示词
+        String prompt = String.format(
+                "作为一名严谨的教师，请你给出客观的简答题批改。\n" +
+                        "【题目内容】：%s\n" +
+                        "【参考答案】：%s\n" +
+                        "【学生答案】：%s\n" +
+                        "【该题满分】：%d分\n" +
+                        "要求：\n" +
+                        "1. 根据学生的回答与参考答案的契合度，给出合理且严谨的得分（必须是整数，且不能超过满分）。\n" +
+                        "2. 给出一段针对性的批语，解释得分原因，或者指出学生哪些点没答上。\n" +
+                        "3. 只需要返回 STRICT JSON 格式，包含两个字段：'score' (数字类型) 和 'comment' (字符串类型)。\n" +
+                        "不要给出任何额外解释文本",
+                questionContent, referenceAnswer != null ? referenceAnswer : "无", studentAnswer != null ? studentAnswer : "无", maxScore);
+
+        System.out.println("提示词:\n" + prompt);
+
+        JSONObject requestBody = new JSONObject();
+        requestBody.put("model", "qwen-max");
+        JSONObject input = new JSONObject();
+        JSONArray messages = new JSONArray();
+        messages.add(new JSONObject().fluentPut("role", "user").fluentPut("content", prompt));
+        input.put("messages", messages);
+        requestBody.put("input", input);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + apiKey);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<String> entity = new HttpEntity<>(requestBody.toJSONString(), headers);
+
+        try {
+            ResponseEntity<String> response = restTemplate.postForEntity(apiUrl, entity, String.class);
+            if (response.getStatusCode() != HttpStatus.OK) {
+                throw new RuntimeException("AI调用失败");
+            }
+            JSONObject jsonResponse = JSON.parseObject(response.getBody());
+            JSONObject output = jsonResponse.getJSONObject("output");
+            String aiResponse = null;
+            if (output.containsKey("text")) aiResponse = output.getString("text");
+            else if (output.containsKey("choices")) aiResponse = output.getJSONArray("choices").getJSONObject(0).getJSONObject("message").getString("content");
+            
+            String jsonContent = "{" + aiResponse.substring(aiResponse.indexOf("{") + 1, aiResponse.lastIndexOf("}")) + "}";
+            JSONObject resData = JSON.parseObject(jsonContent);
+            
+            Map<String, Object> finalResult = new HashMap<>();
+            finalResult.put("score", resData.getInteger("score"));
+            finalResult.put("comment", resData.getString("comment"));
+            System.out.println("AI批改结果: " + finalResult);
+            return finalResult;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("智能批改失败: " + e.getMessage());
         }
     }
 

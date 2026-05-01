@@ -143,35 +143,95 @@
 }
 
 .msg-bubble {
-    padding: 12px 16px;
-    border-radius: 12px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    font-size: 0.95rem;
-    line-height: 1.5;
+    padding: 14px 18px;
+    border-radius: 14px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    font-size: 0.98rem;
+    line-height: 1.6;
     position: relative;
+    word-wrap: break-word;
+    white-space: pre-wrap;
 }
 
 .message-item:not(.me) .msg-bubble {
     background: white;
-    color: var(--text-primary);
-    border-top-left-radius: 2px;
+    color: #333333;
+    border-top-left-radius: 4px;
 }
 
 .message-item.me .msg-bubble {
     background: var(--primary-color);
-    color: white;
-    border-top-right-radius: 2px;
+
+    border-top-right-radius: 4px;
+}
+
+.msg-sender-info {
+    font-size: 0.75rem;
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+
+.message-item:not(.me) .msg-sender-info {
+    color: #64748b;
+}
+
+.message-item.me .msg-sender-info {
+    color: rgba(255, 255, 255, 0.8);
+    text-align: right;
+}
+
+.msg-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 5px;
 }
 
 .msg-time {
     font-size: 0.75rem;
     color: #94a3b8;
-    margin-top: 5px;
-    display: block;
+    display: inline-block;
 }
 
-.message-item.me .msg-time {
-    text-align: right;
+.message-item.me .msg-footer {
+    flex-direction: row-reverse;
+}
+
+.msg-status {
+    font-size: 0.7rem;
+    margin-left: 8px;
+    display: inline-block;
+}
+
+.status-icon {
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-weight: 400;
+}
+
+.status-icon.sending {
+    background: rgba(255, 193, 7, 0.1);
+    color: #ffc107;
+}
+
+.status-icon.sent {
+    background: rgba(40, 167, 69, 0.1);
+    color: #28a745;
+}
+
+.status-icon.delivered {
+    background: rgba(0, 123, 255, 0.1);
+    color: #007bff;
+}
+
+.status-icon.read {
+    background: rgba(108, 117, 125, 0.1);
+    color: #6c757d;
+}
+
+.status-icon.failed {
+    background: rgba(220, 53, 69, 0.1);
+    color: #dc3545;
 }
 
 .chat-input-area {

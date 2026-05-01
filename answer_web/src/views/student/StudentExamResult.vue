@@ -29,7 +29,7 @@
               <div class="student-info-form">
                 <div class="form-item">姓名：<u>{{ studentName }}</u></div>
                 <div class="form-item">准考证号：<u>{{ studentId }}</u></div>
-                <div class="form-item">得分：<u class="score-u">{{ studentExam.obtainedScore }}</u></div>
+                <div class="form-item">得分：<u class="score-u">{{ studentExam.status === 3 ? studentExam.obtainedScore : '待批改' }}</u></div>
               </div>
 
               <!-- B. 官方得分汇总表 -->
@@ -52,9 +52,9 @@
                     <td>{{ getPartScore(['SINGLE', 'SINGLE_CHOICE']) }}</td>
                     <td>{{ getPartScore(['MULTIPLE', 'MULTIPLE_CHOICE']) }}</td>
                     <td>{{ getPartScore(['JUDGE', 'TRUE_FALSE', 'JUDGEMENT']) }}</td>
-                    <td>{{ getPartScore(['SHORT_ANSWER']) }}</td>
-                    <td class="total-val">{{ studentExam.obtainedScore }}</td>
-                    <td><span class="sign">系统自动批阅</span></td>
+                    <td>{{ getPartScore(['SHORT_ANSWER', 'SHORT', 'ESSAY', 'FILL', 'COMPLETION']) }}</td>
+                    <td class="total-val">{{ studentExam.status === 3 ? studentExam.obtainedScore : '-' }}</td>
+                    <td><span class="sign">{{ studentExam.status === 3 ? '系统自动批阅' : '-' }}</span></td>
                   </tr>
                   </tbody>
                 </table>
@@ -80,7 +80,8 @@
                 </div>
                 <div class="q-mark" :class="getAnswerStatus(q).type">
                   <span v-if="getAnswerStatus(q).type === 'success'" class="correct-stamp">✔ 正确</span>
-                  <span v-else class="wrong-stamp">✘ 错误</span>
+                  <span v-else-if="getAnswerStatus(q).type === 'warning'" class="partial-stamp" style="color: #e6a23c; border: 2px solid #e6a23c; transform: rotate(-10deg);">部分得分</span>
+                  <span v-else-if="getAnswerStatus(q).type === 'danger'" class="wrong-stamp">✘ 错误</span>
                   <span class="actual-val">本题得分：{{ getQuestionScore(q) }}</span>
                 </div>
               </div>
@@ -108,16 +109,25 @@
                     <div class="ans-label">【考生回答】</div>
                     <div class="ans-text">{{ getStudentAnswer(q) || '（未作答）' }}</div>
                   </div>
-                  <div class="ans-box standard">
+                  <div class="ans-box standard" v-if="studentExam.status === 3">
                     <div class="ans-label">【参考答案】</div>
                     <div class="ans-text">{{ q.answer }}</div>
                   </div>
                 </div>
 
-                <!-- 批注解析 -->
-                <div class="commentary-box" v-if="q.analysis">
-                  <div class="com-head"><el-icon><Memo /></el-icon> 【名师批注】</div>
-                  <div class="com-content">{{ q.analysis }}</div>
+                <!-- 批注与评语 -->
+                <div class="feedback-container">
+                  <!-- 教师评语 / AI 评分记录 -->
+                  <div class="teacher-comment-box" v-if="getTeacherComment(q)">
+                    <div class="com-head"><el-icon><CopyDocument /></el-icon> 【评语】</div>
+                    <div class="com-content" style="color: #c0392b; font-weight: 600; background: #fff1f0; border-left: 4px solid #f56c6c; padding: 10px; margin-top: 10px; white-space: pre-wrap;">{{ getTeacherComment(q) }}</div>
+                  </div>
+
+                  <!-- 官方解析 -->
+                  <div class="commentary-box" v-if="q.analysis && studentExam.status === 3" style="margin-top: 15px;">
+                    <div class="com-head"><el-icon><Memo /></el-icon> 【名师解析】</div>
+                    <div class="com-content">{{ q.analysis }}</div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -140,9 +150,13 @@
         <!-- 右侧：题目导航 (支持多次点击定位) -->
         <aside class="sidebar-column">
           <div class="navigation-card">
-            <div class="navigation-meta">
+            <div class="navigation-meta" v-if="studentExam.status === 3">
               <div class="m-item">正确：<span class="green">{{ questions.filter(q => getAnswerStatus(q).type==='success').length }}</span></div>
+              <div class="m-item">部分：<span style="color:#e6a23c;">{{ questions.filter(q => getAnswerStatus(q).type==='warning').length }}</span></div>
               <div class="m-item">错误：<span class="red">{{ questions.filter(q => getAnswerStatus(q).type==='danger').length }}</span></div>
+            </div>
+            <div class="navigation-meta" v-else>
+              <div class="m-item" style="color:#64748b;">试卷评分中...</div>
             </div>
 
             <div class="navigation-grid">
@@ -157,6 +171,7 @@
             <div class="navigation-footer">
               <div class="legend">
                 <span class="l-i"><i class="b-ok"></i>正确</span>
+                <span class="l-i"><i class="b-partial" style="background:#e6a23c;"></i>部分得分</span>
                 <span class="l-i"><i class="b-no"></i>错误</span>
               </div>
               <el-button type="success" class="export-btn" plain icon="Printer" @click="handlePrint">打印分析报告</el-button>
@@ -172,7 +187,7 @@
 <script setup>
 import {
   Check, Close, ArrowLeft, HomeFilled, DocumentChecked,
-  Memo, Printer
+  Memo, Printer, CopyDocument
 } from '@element-plus/icons-vue'
 import { useStudentExamResult } from '@/assets/js/student/student-exam-result'
 
@@ -191,6 +206,7 @@ const {
   getPartScore,
   getOptions,
   getStudentAnswer,
+  getTeacherComment,
   getQuestionScore,
   isCorrectOption,
   isWrongOption,

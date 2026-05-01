@@ -6,16 +6,34 @@ import { checkEnrollmentStatus } from '@/api/enrollment.js'
 import { getCourseChapters, getChapterDetail } from '@/api/chapter.js'
 import { getChapterComments, getCourseComments, addComment, deleteComment } from '@/api/comment.js'
 import { getUserAvatar } from '@/utils/resource.js'
+import { useUserInfo } from '@/stores/user'
 
 export function useCourseLearn() {
     const router = useRouter()
     const route = useRoute()
+    const userInfoStore = useUserInfo()
 
-    // 用户信息
-    const currentUserId = computed(() => localStorage.getItem('studentId') || localStorage.getItem('userId') || localStorage.getItem('s_id') || localStorage.getItem('teacherId') || localStorage.getItem('t_id'))
-    const currentUserName = computed(() => localStorage.getItem('studentName') || localStorage.getItem('userName') || localStorage.getItem('s_name') || localStorage.getItem('teacherName') || localStorage.getItem('t_name'))
-    const currentUserAvatar = computed(() => localStorage.getItem('studentAvatar') || localStorage.getItem('userAvatar') || localStorage.getItem('avatar') || localStorage.getItem('s_avatar') || localStorage.getItem('t_avatar'))
-    const isTeacher = computed(() => !!(localStorage.getItem('teacherId') || localStorage.getItem('t_id')))
+    // 用户信息 (优先使用角色判断，避免老师用学生ID)
+    const currentUserId = computed(() => {
+        if (userInfoStore.userType === 'TEACHER' || localStorage.getItem('userRole') === 'teacher') {
+            return userInfoStore.userId || localStorage.getItem('teacherId') || localStorage.getItem('t_id') || localStorage.getItem('userId');
+        }
+        return userInfoStore.userId || localStorage.getItem('studentId') || localStorage.getItem('s_id') || localStorage.getItem('userId') || localStorage.getItem('teacherId') || localStorage.getItem('t_id');
+    })
+    
+    const currentUserName = computed(() => {
+        if (userInfoStore.userType === 'TEACHER' || localStorage.getItem('userRole') === 'teacher') {
+            return userInfoStore.userName || localStorage.getItem('teacherName') || localStorage.getItem('t_name') || localStorage.getItem('userName');
+        }
+        return userInfoStore.userName || localStorage.getItem('studentName') || localStorage.getItem('s_name') || localStorage.getItem('userName') || localStorage.getItem('teacherName') || localStorage.getItem('t_name');
+    })
+    
+    // 使用 userInfoStore 的正确头像地址
+    const currentUserAvatar = computed(() => {
+        return userInfoStore.avatarUrl || localStorage.getItem('studentAvatar') || localStorage.getItem('userAvatar') || localStorage.getItem('avatar');
+    })
+    
+    const isTeacher = computed(() => userInfoStore.userType === 'TEACHER' || localStorage.getItem('userRole') === 'teacher' || !!(localStorage.getItem('teacherId') || localStorage.getItem('t_id')))
 
     // 状态
     const loading = ref(true)
@@ -199,10 +217,20 @@ export function useCourseLearn() {
 
                 if (enrollmentResponse.data.status !== 'approved') {
                     canLearn.value = false
+                    const isInvite = enrollmentResponse.data.enrollmentType === 'INVITE'
+                    
                     if (enrollmentResponse.data.status === 'pending') {
-                        accessMessage.value = '您的报名申请正在审核中，请等待教师审核通过'
+                        if (isInvite) {
+                            accessMessage.value = '教师已向您发送课程邀请，请前往「消息中心」接收或拒绝该邀请。'
+                        } else {
+                            accessMessage.value = '您的报名申请正在审核中，请等待教师审核通过'
+                        }
                     } else if (enrollmentResponse.data.status === 'rejected') {
-                        accessMessage.value = '您的报名申请已被拒绝，无法学习该课程'
+                        if (isInvite) {
+                            accessMessage.value = '您已拒绝该课程的邀请。若需学习，请重新报名。'
+                        } else {
+                            accessMessage.value = '您的报名申请已被拒绝，无法学习该课程'
+                        }
                     } else {
                         accessMessage.value = '您暂时无法学习该课程'
                     }

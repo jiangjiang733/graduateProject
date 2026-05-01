@@ -7,7 +7,7 @@
           <div class="logo-icon-bg">
             <el-icon :size="28" color="#ffffff"><Reading /></el-icon>
           </div>
-          <h1 class="logo-text">智慧教学平台</h1>
+          <h1 class="logo-text">智慧教学</h1>
         </div>
 
         <nav class="side-nav">
@@ -74,6 +74,9 @@
 
     <!-- 联系工作人员 -->
     <CustomerService userType="TEACHER" :userId="teacherStore.teacherId" />
+
+    <!-- AI智能助手悬浮面板（固定在右侧，教师端） -->
+    <AiChatPanel />
   </div>
 </template>
 
@@ -85,6 +88,7 @@ import {
 } from '@element-plus/icons-vue'
 import { useTeacherLayout } from '@/assets/js/teacher/layout.js'
 import CustomerService from '@/components/CustomerService.vue'
+import AiChatPanel from '@/components/AiChatPanel.vue'  // AI助手浮动面板
 
 const {
   teacherStore,

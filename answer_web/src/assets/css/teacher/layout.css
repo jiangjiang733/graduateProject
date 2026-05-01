@@ -58,6 +58,7 @@
   background: linear-gradient(135deg, #4A7AFF, #2563EB);
   border-radius: 14px;
   display: flex;
+  margin-left: 18px;
   align-items: center;
   justify-content: center;
   box-shadow: 0 8px 16px rgba(37, 99, 235, 0.2);
@@ -66,7 +67,7 @@
 
 .logo-text {
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 300;
   margin: 0;
   white-space: nowrap;
   transition: opacity 0.3s;
@@ -76,7 +77,6 @@
   cursor: pointer;
 }
 
-/* User Profile Card */
 .user-profile-card {
   display: flex;
   align-items: center;

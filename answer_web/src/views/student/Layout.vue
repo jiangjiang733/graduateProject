@@ -87,6 +87,9 @@
       <!-- 联系工作人员 -->
       <CustomerService userType="STUDENT" :userId="userStore.userId" />
     </el-container>
+
+    <!-- AI智能助手悬浮面板（固定在右侧，学生端） -->
+    <AiChatPanel />
   </div>
 </template>
 
@@ -94,6 +97,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { getUnreadCount } from '@/api/message'
 import { getChatUnreadCount } from '@/api/chat'
+import { getStudentNotifications } from '@/api/notification'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import '@/assets/css/teacher/modern-theme.css' // Reuse general modern styles
@@ -106,6 +110,7 @@ import {
 import { useUserInfo } from '@/stores/user.js'
 import { useSettingsStore } from '@/stores/settings.js'
 import CustomerService from '@/components/CustomerService.vue'
+import AiChatPanel from '@/components/AiChatPanel.vue'  // AI助手浮动面板
 
 const route = useRoute()
 const router = useRouter()
@@ -121,12 +126,22 @@ let unreadTimer = null
 const fetchUnread = async () => {
   if (!userStore.userId) return
   try {
+    let total = 0
     const sysRes = await getUnreadCount(userStore.userId, userStore.userType || 'STUDENT')
     const chatRes = await getChatUnreadCount(userStore.userType?.toLowerCase() || 'student', userStore.userId)
     
-    let sys = sysRes.code === 200 ? (sysRes.data.unreadCount || 0) : 0
-    let chat = chatRes.code === 200 ? (chatRes.data || 0) : 0
-    totalUnread.value = sys + chat
+    if (sysRes.code === 200) total += sysRes.data.unreadCount || 0
+    if (chatRes.code === 200) total += chatRes.data || 0
+
+    // Include system notifications unread count
+    const notifyRes = await getStudentNotifications({ pageSize: 20 })
+    if (notifyRes.code === 200 && notifyRes.data?.records) {
+        const readStatusObj = JSON.parse(localStorage.getItem(`read_notifications_${userStore.userId}`) || '{}')
+        const notificationUnread = notifyRes.data.records.filter(n => !readStatusObj[n.notificationId]).length
+        total += notificationUnread
+    }
+    
+    totalUnread.value = total
   } catch (e) {}
 }
 

@@ -63,11 +63,26 @@
               {{ msg.senderType === 'ADMIN' ? '管' : activeChat.contactName?.charAt(0) }}
             </el-avatar>
             <div class="msg-content">
-              <div class="msg-bubble">
-                {{ msg.content }}
+                <div class="msg-sender-info">
+                  {{ msg.senderType === 'ADMIN' ? '管理员' : activeChat.contactName }} 
+                  <span class="sender-type">
+                    ({{ msg.senderType === 'ADMIN' ? '管理员' : msg.senderType === 'TEACHER' ? '教师' : '学生' }})
+                  </span>
+                </div>
+                <div class="msg-bubble">
+                  {{ msg.content }}
+                </div>
+                <div class="msg-footer">
+                  <span class="msg-time">{{ formatTime(msg.createTime) }}</span>
+                  <span v-if="msg.senderType === 'ADMIN'" class="msg-status" :class="msg.status">
+                    <span v-if="msg.status === 'sending'" class="status-icon sending">发送中...</span>
+                    <span v-else-if="msg.status === 'sent'" class="status-icon sent">已发送</span>
+                    <span v-else-if="msg.status === 'delivered'" class="status-icon delivered">已送达</span>
+                    <span v-else-if="msg.status === 'read'" class="status-icon read">已读</span>
+                    <span v-else-if="msg.status === 'failed'" class="status-icon failed">发送失败</span>
+                  </span>
+                </div>
               </div>
-              <span class="msg-time">{{ formatTime(msg.createTime) }}</span>
-            </div>
           </div>
         </div>
 
@@ -130,7 +145,7 @@ onMounted(() => {
     if (activeChat.value) {
        refreshHistory(activeChat.value)
     }
-  }, 5000)
+  }, 2000)
 })
 
 onUnmounted(() => {

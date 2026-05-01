@@ -96,10 +96,10 @@
           </div>
 
           <div class="custom-tabs">
-               <div class="tab-item" :class="{ active: form.type === 'SINGLE' }" @click="form.type = 'SINGLE'">单选题</div>
-               <div class="tab-item" :class="{ active: form.type === 'MULTIPLE' }" @click="form.type = 'MULTIPLE'">多选题</div>
-               <div class="tab-item" :class="{ active: form.type === 'JUDGE' }" @click="form.type = 'JUDGE'">判断题</div>
-               <div class="tab-item" :class="{ active: form.type === 'ESSAY' }" @click="form.type = 'ESSAY'">简答题</div>
+               <div class="tab-item" :class="{ active: form.type === 'SINGLE' }" @click="handleTabClick('SINGLE')">单选题</div>
+               <div class="tab-item" :class="{ active: form.type === 'MULTIPLE' }" @click="handleTabClick('MULTIPLE')">多选题</div>
+               <div class="tab-item" :class="{ active: form.type === 'JUDGE' }" @click="handleTabClick('JUDGE')">判断题</div>
+               <div class="tab-item" :class="{ active: form.type === 'ESSAY' }" @click="handleTabClick('ESSAY')">简答题</div>
           </div>
 
           <!-- Content Section -->
@@ -131,23 +131,19 @@
                            <span v-if="!opt.isCorrect">{{ String.fromCharCode(65+idx) }}</span>
                            <el-icon v-else><Check /></el-icon>
                        </div>
-                       
-                       <!-- Input -->
+
                        <el-input 
                            v-model="opt.text" 
                            :placeholder="`请输入选项 ${String.fromCharCode(65+idx)} 内容...`" 
                            class="clean-input"
                        />
-                       
-                       <!-- Delete -->
+
                        <el-button link type="danger" class="del-btn" @click="removeOption(idx)" v-if="form.options.length > 2">
                            <el-icon><Delete /></el-icon>
                        </el-button>
                    </div>
                </div>
            </div>
-
-           <!-- Answer Section for Judge/Essay -->
            <div class="form-section" v-if="['JUDGE', 'ESSAY'].includes(form.type)">
                <div class="section-title">正确答案/参考</div>
                
@@ -219,7 +215,7 @@ const {
   editQuestion,
   saveQuestion,
   handleDeleteQuestion,
-  handleTypeChange,
+  handleTabClick,
   addOption,
   removeOption,
   getTypeLabel,
@@ -228,15 +224,6 @@ const {
   toggleCorrect,
   currentDate
 } = useQuestionBank()
-
-// 监听题目类型变化，自动初始化选项
-let previousType = form.value.type
-watch(() => form.value.type, (newType) => {
-  if (dialogVisible.value) {
-    handleTypeChange(newType, previousType)
-    previousType = newType
-  }
-})
 </script>
 
 <style>

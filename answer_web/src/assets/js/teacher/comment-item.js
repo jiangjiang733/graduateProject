@@ -9,12 +9,16 @@ export function useCommentItem(props, emit) {
     const showReply = ref(false);
     const replyContent = ref('');
     const isReplying = ref(false);
+    // 没有设置的默认的头像
     const defaultAvatar = 'https://cube.elemecdn.com/9/c2/f0ee8a3c7c9636ef921315944d5671d8.png';
 
     // 用户信息
     const userInfoStore = useUserInfo();
     userInfoStore.initUserInfo();
     const currentUserId = computed(() => {
+        if (userInfoStore.userType === 'TEACHER' || localStorage.getItem('userRole') === 'teacher') {
+            return userInfoStore.userId || localStorage.getItem('teacherId') || localStorage.getItem('t_id');
+        }
         return userInfoStore.userId || localStorage.getItem('studentId') || localStorage.getItem('s_id') || localStorage.getItem('teacherId') || localStorage.getItem('t_id');
     });
 
@@ -48,8 +52,8 @@ export function useCommentItem(props, emit) {
                 courseId: props.courseId,
                 chapterId: props.comment.chapterId || null, // Inherit chapterId from parent
                 userId: currentUserId.value,
-                userName: userInfoStore.userName || localStorage.getItem('userName') || localStorage.getItem('studentName') || '匿名用户',
-                userType: userInfoStore.userType || (localStorage.getItem('studentId') ? 'STUDENT' : 'TEACHER'),
+                userName: userInfoStore.userType === 'TEACHER' || localStorage.getItem('userRole') === 'teacher' ? (userInfoStore.userName || localStorage.getItem('teacherName') || localStorage.getItem('t_name') || '匿名教师') : (userInfoStore.userName || localStorage.getItem('studentName') || '匿名学生'),
+                userType: userInfoStore.userType === 'TEACHER' || localStorage.getItem('userRole') === 'teacher' ? 'TEACHER' : 'STUDENT',
                 userAvatar: userInfoStore.avatarUrl || defaultAvatar,
                 content: replyContent.value,
                 parentId: props.comment.commentId || props.comment.id,
@@ -82,8 +86,7 @@ export function useCommentItem(props, emit) {
             cancelButtonText: '取消',
             type: 'warning',
         }).then(async () => {
-            // 再次确认权限 (Skip complex async check in UI for responsiveness, server will validate)
-            // if (!(await canDeleteComment(props.courseId))) { ... } 
+            // if (!(await canDeleteComment(props.courseId))) { ... }
 
             try {
                 const res = await deleteComment(actualId);

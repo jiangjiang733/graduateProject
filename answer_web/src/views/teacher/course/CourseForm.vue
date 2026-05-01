@@ -237,12 +237,13 @@
                          <el-icon><Delete /></el-icon>
                        </el-button>
                      </div>
-                   </div>
-                   
-                   <div class="add-child-btn-clean" @click="openAddDialog(chapter)">
-                     <el-icon><Plus /></el-icon> 添加课件内容
-                   </div>
+                   </div>              
                 </div>
+              </div>
+              
+              <!-- 循环结束后，提供一个按钮用于添加大纲新一级章节 -->
+              <div class="add-chapter-btn-clean" style="margin-top: 20px; text-align: center; border: 2px dashed #cbd5e1; background: #f8fafc; color: #64748b; padding: 16px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.3s;" @click="openAddDialog(null)" onmouseover="this.style.borderColor='#3b82f6'; this.style.color='#3b82f6'; this.style.background='#f0f9ff';" onmouseout="this.style.borderColor='#cbd5e1'; this.style.color='#64748b'; this.style.background='#f8fafc';">
+                <el-icon><Plus /></el-icon> 添加新章节
               </div>
             </div>
             
@@ -282,7 +283,7 @@
     >
       <el-form :model="chapterForm" label-width="100px">
         <el-form-item label="章节类型">
-          <el-radio-group v-model="chapterForm.type" :disabled="isEditChapter">
+          <el-radio-group v-model="chapterForm.type" :disabled="isEditChapter&&chapterForm.type==='FOLDER'">
             <el-radio label="FOLDER">📁 文件夹</el-radio>
             <el-radio label="MIXED">📚 混合内容（视频+PDF+文本）</el-radio>
             <el-radio label="VIDEO">🎬 仅视频</el-radio>

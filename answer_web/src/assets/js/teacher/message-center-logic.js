@@ -216,6 +216,19 @@ export function useMessageCenter() {
                 interactionUnread.value = sysRes.data.unreadCount
                 totalUnread += sysRes.data.unreadCount
             }
+            // Fetch notifications and calculate unread
+            const notifyRes = await getTeacherNotifications({ pageSize: 20 })
+            if (notifyRes.code === 200 && notifyRes.data?.records) {
+                const readStatusObj = JSON.parse(localStorage.getItem(`read_notifications_${teacherId}`) || '{}')
+                const deletedStatusObj = JSON.parse(localStorage.getItem(`deleted_notifications_${teacherId}`) || '{}')
+                const notificationUnread = notifyRes.data.records.filter(n => !readStatusObj[n.notificationId] && !deletedStatusObj[n.notificationId]).length
+                interactionUnread.value += notificationUnread
+                totalUnread += notificationUnread
+            }
+
+            // 包含报名审核的待处理条数（不包括教师发出的邀请）
+            const pendingEnrollments = enrollments.value.filter(e => e.status === 'pending' && e.enrollmentType !== 'INVITE').length
+            totalUnread += pendingEnrollments
 
             // 实时更新全局未读数
             teacherStore.setUnreadCount(totalUnread)
@@ -282,18 +295,22 @@ export function useMessageCenter() {
 
             // 2. 处理系统公告（广播式，无特定receiverId）
             if (notifyRes.code === 200 && notifyRes.data?.records) {
-                const notifications = notifyRes.data.records.map(n => ({
-                    id: n.notificationId,
-                    source: 'NOTIFICATION',
-                    type: 'SYSTEM',
-                    userName: '系统公告',
-                    userAvatar: '', // 可使用特定图标
-                    content: n.content,
-                    time: n.createTime,
-                    isRead: true, // 广播式公告暂不维护个人读写状态，设为已读或根据本地存储判断
-                    actionText: n.title,
-                    priority: n.priority
-                }))
+                const readStatusObj = JSON.parse(localStorage.getItem(`read_notifications_${teacherId}`) || '{}')
+                const deletedStatusObj = JSON.parse(localStorage.getItem(`deleted_notifications_${teacherId}`) || '{}')
+                const notifications = notifyRes.data.records
+                    .filter(n => !deletedStatusObj[n.notificationId])
+                    .map(n => ({
+                        id: n.notificationId,
+                        source: 'NOTIFICATION',
+                        type: 'SYSTEM',
+                        userName: '系统公告',
+                        userAvatar: '', // 可使用特定图标
+                        content: n.content,
+                        time: n.createTime,
+                        isRead: !!readStatusObj[n.notificationId], // 广播式公告暂不维护个人读写状态，设为已读或根据本地存储判断
+                        actionText: n.title,
+                        priority: n.priority
+                    }))
                 combinedList.push(...notifications)
             }
 
@@ -383,19 +400,41 @@ export function useMessageCenter() {
         return sId === tId && (msg.senderType === 'TEACHER' || msg.senderRole === 'TEACHER')
     }
 
-    const handleInteractionDetail = async (item) => {
-        if (!item.isRead && item.source === 'MESSAGE') {
-            try {
-                await markAsRead(item.id, userStore.userId, 'TEACHER')
-                item.isRead = true
-                updateUnreadCounts()
-            } catch (e) { }
+    const isActionableMessage = (item) => {
+        if (!item || item.type !== 'SYSTEM' || item.source !== 'MESSAGE' || !item.relatedId) return false
+        
+        // 排除：课程申请、入班邀请等不需要跳转到具体页面的系统消息 (这些应只作为标记已读)
+        if (item.actionText?.includes('申请') || item.content?.includes('申请') || 
+            item.actionText?.includes('入班') || item.content?.includes('邀请')) {
+            return false
         }
 
-        if (item.type === 'SYSTEM' && item.source === 'MESSAGE') {
-            if ((item.actionText?.includes('作业/实验报告') || item.content?.includes('作业/实验报告')) && item.relatedId) {
+        if (item.actionText?.includes('作业/实验报告') || item.content?.includes('作业/实验报告')) return true
+        if (item.actionText?.includes('试卷') || item.content?.includes('试卷') || item.content?.includes('考试')) return true
+        return false
+    }
+
+    const handleInteractionDetail = async (item) => {
+        if (!item.isRead) {
+            if (item.source === 'NOTIFICATION') {
+                const readStatusObj = JSON.parse(localStorage.getItem(`read_notifications_${userStore.userId}`) || '{}')
+                readStatusObj[item.id] = true
+                localStorage.setItem(`read_notifications_${userStore.userId}`, JSON.stringify(readStatusObj))
+                item.isRead = true
+                updateUnreadCounts()
+            } else if (item.source === 'MESSAGE') {
+                try {
+                    await markAsRead(item.id, userStore.userId, 'TEACHER')
+                    item.isRead = true
+                    updateUnreadCounts()
+                } catch (e) { }
+            }
+        }
+
+        if (isActionableMessage(item)) {
+            if ((item.actionText?.includes('作业/实验报告') || item.content?.includes('作业/实验报告'))) {
                 router.push(`/teacher/homework/${item.relatedId}/grade`)
-            } else if ((item.actionText?.includes('试卷') || item.content?.includes('试卷') || item.content?.includes('考试')) && item.relatedId) {
+            } else if ((item.actionText?.includes('试卷') || item.content?.includes('试卷') || item.content?.includes('考试'))) {
                 // Assuming relatedId is formatted as "examId_studentId"
                 if (item.relatedId.includes('_')) {
                     const [examId, studentId] = item.relatedId.split('_')
@@ -508,6 +547,25 @@ export function useMessageCenter() {
                 }
             }
 
+            if (item.source === 'NOTIFICATION') {
+                const deletedStatusObj = JSON.parse(localStorage.getItem(`deleted_notifications_${userStore.userId}`) || '{}')
+                deletedStatusObj[item.id] = true
+                localStorage.setItem(`deleted_notifications_${userStore.userId}`, JSON.stringify(deletedStatusObj))
+
+                // Also mark as read when deleted
+                const readStatusObj = JSON.parse(localStorage.getItem(`read_notifications_${userStore.userId}`) || '{}')
+                readStatusObj[item.id] = true
+                localStorage.setItem(`read_notifications_${userStore.userId}`, JSON.stringify(readStatusObj))
+
+                ElMessage.success('系统公告已移除')
+                const index = interactionList.value.findIndex(i => i.id === item.id)
+                if (index > -1) {
+                    interactionList.value.splice(index, 1)
+                }
+                updateUnreadCounts()
+                return // Exit early
+            }
+
             // 执行所有类型消息的通知物理删除
             res = await deleteMessage(item.id, userStore.userId, 'TEACHER')
 
@@ -534,8 +592,21 @@ export function useMessageCenter() {
         const unread = filteredInteractionList.value.filter(i => !i.isRead)
         if (unread.length === 0) return
         try {
-            await Promise.all(unread.map(i => markAsRead(i.id, userStore.userId, 'TEACHER')))
-            unread.forEach(i => i.isRead = true)
+            const notifications = unread.filter(item => item.source === 'NOTIFICATION')
+            if (notifications.length > 0) {
+                const readStatusObj = JSON.parse(localStorage.getItem(`read_notifications_${userStore.userId}`) || '{}')
+                notifications.forEach(item => {
+                    readStatusObj[item.id] = true
+                    item.isRead = true
+                })
+                localStorage.setItem(`read_notifications_${userStore.userId}`, JSON.stringify(readStatusObj))
+            }
+
+            const messages = unread.filter(item => item.source !== 'NOTIFICATION')
+            if (messages.length > 0) {
+                await Promise.all(messages.map(i => markAsRead(i.id, userStore.userId, 'TEACHER')))
+                messages.forEach(i => i.isRead = true)
+            }
             updateUnreadCounts()
             ElMessage.success('已全部标记已读')
         } catch (e) { }
@@ -714,6 +785,7 @@ export function useMessageCenter() {
         selectChatUser,
         handleSendMessage,
         isMyMessage,
+        isActionableMessage,
         handleInteractionDetail,
         toggleQuickReply,
         handleQuickReply,

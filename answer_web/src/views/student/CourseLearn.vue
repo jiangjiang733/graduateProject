@@ -37,14 +37,21 @@
         <!-- 2. 内容视窗 -->
         <div class="content-viewer-window">
           <!-- 视频模式 -->
-          <div v-if="activeTask?.type === 'VIDEO'" class="renderer-video">
-             <video 
-               :src="getMediaUrl(activeTask.url)" 
-               controls 
-               controlsList="nodownload"
-               class="w-full h-full object-contain"
-             ></video>
-          </div>
+        <div v-if="activeTask?.type === 'VIDEO'" class="renderer-video">
+        <video
+          controls
+          controlsList="ddownload"
+          class="w-full h-full object-contain"
+          preload="metadata"
+          playsinline
+          :muted="false"
+          :autoplay="false"
+        >
+          <source :src="getMediaUrl(activeTask.url)" type="video/mp4">
+          <source :src="getMediaUrl(activeTask.url)" type="video/webm">
+          您的浏览器不支持HTML5视频播放。
+        </video>
+      </div>
 
           <!-- PDF 模式 -->
           <div v-else-if="activeTask?.type === 'PDF'" class="renderer-pdf">

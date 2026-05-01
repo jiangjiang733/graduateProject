@@ -94,6 +94,7 @@ public class CourseEnrollmentServiceImpl implements CourseEnrollmentService {
             result.put("enrolled", true);
             result.put("status", enrollment.getStatus());
             result.put("enrollmentId", enrollment.getId());
+            result.put("enrollmentType", enrollment.getEnrollmentType());
             result.put("applyTime", enrollment.getApplyTime());
             result.put("reviewTime", enrollment.getReviewTime());
             result.put("rejectReason", enrollment.getRejectReason());
@@ -146,6 +147,7 @@ public class CourseEnrollmentServiceImpl implements CourseEnrollmentService {
             data.put("courseId", enrollment.getCourseId());
             data.put("courseName", enrollment.getCourseName());
             data.put("status", enrollment.getStatus());
+            data.put("enrollmentType", enrollment.getEnrollmentType());
             data.put("applyTime", enrollment.getApplyTime());
             data.put("reviewTime", enrollment.getReviewTime());
             data.put("rejectReason", enrollment.getRejectReason());
@@ -180,6 +182,7 @@ public class CourseEnrollmentServiceImpl implements CourseEnrollmentService {
             data.put("courseId", enrollment.getCourseId());
             data.put("courseName", enrollment.getCourseName());
             data.put("status", enrollment.getStatus());
+            data.put("enrollmentType", enrollment.getEnrollmentType());
             data.put("applyTime", enrollment.getApplyTime());
             data.put("reviewTime", enrollment.getReviewTime());
             data.put("rejectReason", enrollment.getRejectReason());
@@ -447,32 +450,6 @@ public class CourseEnrollmentServiceImpl implements CourseEnrollmentService {
             messageService.saveMessage(notifyTeacherMsg);
         } catch (Exception e) {
             System.err.println("发送通知给教师失败: " + e.getMessage());
-        }
-
-        // 发送通知给学生 (系统消息类型)
-        try {
-            com.example.project.entity.notification.Message notifyStudentMsg = new com.example.project.entity.notification.Message();
-            notifyStudentMsg.setReceiverId(enrollment.getStudentId());
-            notifyStudentMsg.setReceiverType("STUDENT");
-            notifyStudentMsg.setSenderId(enrollment.getTeacherId());
-            notifyStudentMsg.setSenderType("TEACHER");
-            notifyStudentMsg.setMessageType("SYSTEM"); // 系统通知
-
-            if ("approved".equals(status)) {
-                notifyStudentMsg.setTitle("已成功加入课程");
-                notifyStudentMsg.setContent("您已接受邀请，成功加入课程：" + enrollment.getCourseName());
-            } else {
-                notifyStudentMsg.setTitle("已拒绝课程邀请");
-                notifyStudentMsg.setContent("您已拒绝加入课程：" + enrollment.getCourseName());
-            }
-
-            notifyStudentMsg.setRelatedId(String.valueOf(enrollment.getId()));
-            notifyStudentMsg.setIsRead(0);
-            notifyStudentMsg.setCreateTime(new Date());
-
-            messageService.saveMessage(notifyStudentMsg);
-        } catch (Exception e) {
-            System.err.println("发送通知给学生失败: " + e.getMessage());
         }
     }
 }

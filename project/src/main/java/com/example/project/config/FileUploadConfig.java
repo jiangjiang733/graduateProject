@@ -41,7 +41,7 @@ public class FileUploadConfig {
     @Setter
     public static class VideoConfig {
         private String uploadDir = "./uploads/video";
-        private long maxSize = 524288000L; // 500MB
+        private long maxSize = 524288000L; // 500MB大小
         private String allowedExtensions = "mp4,avi,mov,wmv";
         
         public List<String> getAllowedExtensionsList() {

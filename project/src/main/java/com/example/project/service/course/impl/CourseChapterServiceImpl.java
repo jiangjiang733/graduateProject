@@ -269,9 +269,9 @@ public class CourseChapterServiceImpl implements CourseChapterService {
     private void deleteChapterComments(Long chapterId) {
         try {
             courseCommentService.deleteChapterComments(chapterId);
-            System.out.println("      ✅ 章节评论已删除");
+            System.out.println("章节评论已删除");
         } catch (Exception e) {
-            System.err.println("      ⚠️ 删除章节评论失败: " + e.getMessage());
+            System.err.println("删除章节评论失败: " + e.getMessage());
         }
     }
 
@@ -293,8 +293,7 @@ public class CourseChapterServiceImpl implements CourseChapterService {
             for (CourseChapter child : children) {
                 buildChapterTree(child);
             }
-            // 注意：这里需要在CourseChapter实体中添加children字段
-            // 由于当前实体没有children字段，这个方法主要用于演示逻辑
+
         }
     }
 

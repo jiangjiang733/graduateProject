@@ -6,7 +6,6 @@ import com.example.project.service.course.CourseCommentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,7 +13,6 @@ import java.util.Map;
 /**
  * 课程评论管理控制器
  * 负责评论的增删查操作
- * 需求: 6.1, 6.2, 6.3, 6.4, 6.5
  */
 @RestController
 @RequestMapping("/api/course/comment")
@@ -23,19 +21,6 @@ public class CourseCommentController {
 
     @Autowired
     private CourseCommentService courseCommentService;
-
-    /**
-     * POST /api/course/comment
-     * Request Body: {
-     * "courseId": "string",
-     * "chapterId": "long",
-     * "userId": "string",
-     * "userName": "string",
-     * "userType": "TEACHER",
-     * "content": "string",
-     * "parentId": "long" (optional, for replies)
-     * }
-     */
     @PostMapping
     public ResponseEntity<Map<String, Object>> addComment(@RequestBody CourseComment comment) {
         Map<String, Object> response = new HashMap<>();
@@ -161,8 +146,7 @@ public class CourseCommentController {
 
     /**
      * 删除讨论
-     * 需求 6.5: 教师可以删除讨论及其所有评论
-     * 
+     *
      * DELETE /api/course/comment/{commentId}
      */
     @DeleteMapping("/{commentId}")

@@ -12,7 +12,7 @@ public interface CourseMapper extends BaseMapper<Course> {
     /**
      * 查询所有课程（关联教师信息）
      */
-    @Select("SELECT c.*, " +
+    @Select("SELECT c.*, c.name as course_name, c.task_describe as course_description, " +
             "t.teacher_username as teacher_name, " +
             "t.teacher_head as teacher_avatar " +
             "FROM course c " +
@@ -22,7 +22,8 @@ public interface CourseMapper extends BaseMapper<Course> {
     /**
      * 根据教师ID查询课程（关联教师信息）
      */
-    @Select("SELECTt.teacher_username as teacher_name, c.*, " +
+    @Select("SELECT c.*, c.name as course_name, c.task_describe as course_description, " +
+            "t.teacher_username as teacher_name, " +
             "t.teacher_head as teacher_avatar " +
             "FROM course c " +
             "LEFT JOIN teacher_user t ON CAST(c.teacher_id AS UNSIGNED) = t.teacher_id " +
@@ -32,7 +33,7 @@ public interface CourseMapper extends BaseMapper<Course> {
     /**
      * 根据ID查询单个课程（关联教师信息）
      */
-    @Select("SELECT c.*, " +
+    @Select("SELECT c.*, c.name as course_name, c.task_describe as course_description, " +
             "t.teacher_username as teacher_name, " +
             "t.teacher_head as teacher_avatar " +
             "FROM course c " +

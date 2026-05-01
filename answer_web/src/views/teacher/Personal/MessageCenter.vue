@@ -103,15 +103,16 @@
         <div v-show="activeTab === 'enrollment'" class="sidebar-content interaction-menu">
            <div class="menu-item" :class="{ active: currentStatus === 'all' }" @click="currentStatus = 'all'">
               <el-icon class="icon-box bg-blue"><List /></el-icon>
-              <span>全部申请</span>
+              <span class="menu-label">全部申请</span>
            </div>
            <div class="menu-item" :class="{ active: currentStatus === 'pending' }" @click="currentStatus = 'pending'">
               <el-icon class="icon-box bg-amber-500"><Clock /></el-icon>
-              <span>待审核</span>
+              <span class="menu-label">待审核</span>
+              <span v-if="statistics.pending > 0" style="background: #ef4444; color: white; padding: 0 6px; border-radius: 10px; font-size: 12px; font-weight: 700; height: 18px; display: inline-flex; align-items: center; justify-content: center; margin-left: auto;">{{ statistics.pending }}</span>
            </div>
            <div class="menu-item" :class="{ active: currentStatus === 'approved' }" @click="currentStatus = 'approved'">
               <el-icon class="icon-box bg-emerald-500"><Check /></el-icon>
-              <span>已通过</span>
+              <span class="menu-label">已通过</span>
            </div>
         </div>
       </aside>
@@ -211,15 +212,20 @@
               :class="{ 'system-message-item': item.type === 'SYSTEM' }"
             >
               <div class="item-avatar-wrap">
-                <el-avatar 
-                  :size="44" 
-                  :src="item.type === 'SYSTEM' ? null : getAvatarUrl(item.userAvatar)" 
-                  shape="circle"
-                  :class="{ 'system-avatar': item.type === 'SYSTEM' }"
-                >
-                  <el-icon v-if="item.type === 'SYSTEM'"><BellFilled /></el-icon>
-                  <span v-else>{{ item.userName?.charAt(0) }}</span>
-                </el-avatar>
+                <template v-if="item.type === 'SYSTEM'">
+                  <div class="system-notify-avatar">
+                    <el-icon class="system-bell-icon"><BellFilled /></el-icon>
+                  </div>
+                </template>
+                <template v-else>
+                  <el-avatar 
+                    :size="44" 
+                    :src="getAvatarUrl(item.userAvatar)" 
+                    shape="circle"
+                  >
+                    <span>{{ item.userName?.charAt(0) }}</span>
+                  </el-avatar>
+                </template>
                 <div v-if="!item.isRead" class="unread-dot-lg"></div>
               </div>
 
@@ -243,9 +249,20 @@
                 </div>
 
                 <div class="item-actions">
-                  <el-button v-if="item.type === 'SYSTEM' && item.source === 'MESSAGE'" link type="primary" size="small" @click="handleInteractionDetail(item)">
-                    前往查看
-                  </el-button>
+                  <template v-if="item.type === 'SYSTEM' && item.source === 'MESSAGE'">
+                    <el-button v-if="isActionableMessage(item)" link type="primary" size="small" @click="handleInteractionDetail(item)">
+                      前往查看
+                    </el-button>
+                    <template v-else>
+                      <el-button v-if="!item.isRead" link type="primary" size="small" @click="handleInteractionDetail(item)">标为已读</el-button>
+                      <span v-else class="read-status-text">已读</span>
+                    </template>
+                  </template>
+                  
+                  <template v-else-if="item.type === 'SYSTEM' && item.source === 'NOTIFICATION'">
+                    <el-button v-if="!item.isRead" link type="primary" size="small" @click="handleInteractionDetail(item)">标为已读</el-button>
+                    <span v-else class="read-status-text">已读</span>
+                  </template>
                   <el-button v-if="item.type === 'COMMENT' && !item.content.includes('已删除')" link type="primary" size="small" @click="toggleQuickReply(item)">
                     {{ item.showReply ? '取消回复' : '快捷回复' }}
                   </el-button>
@@ -376,14 +393,19 @@
 
                     <div class="col-status">
                       <span :class="['status-badge', getSaasStatusClass(row.status)]">
-                        {{ getStatusText(row.status) }}
+                        {{ getStatusText(row) }}
                       </span>
                     </div>
 
                     <div class="col-action row-actions">
                        <template v-if="row.status === 'pending'">
-                          <span class="detail-text-btn" @click="handleApprove(row)">通过</span>
-                          <span class="detail-text-btn danger" @click="handleReject(row)">拒绝</span>
+                          <template v-if="row.enrollmentType === 'INVITE'">
+                             <span class="detail-text-btn danger" @click="handleRemoveStudent(row)">撤回邀请</span>
+                          </template>
+                          <template v-else>
+                             <span class="detail-text-btn" @click="handleApprove(row)">通过</span>
+                             <span class="detail-text-btn danger" @click="handleReject(row)">拒绝</span>
+                          </template>
                        </template>
                        <template v-else-if="row.status === 'approved'">
                           <span class="detail-text-btn danger" @click="handleRemoveStudent(row)">移除学生</span>
@@ -507,6 +529,7 @@ const {
   selectChatUser,
   handleSendMessage,
   isMyMessage,
+  isActionableMessage,
   handleInteractionDetail,
   toggleQuickReply,
   handleQuickReply,
@@ -568,4 +591,27 @@ onUnmounted(() => {
 
 <style scoped>
 @import '@/assets/css/teacher/message-center.css';
+
+/* System notification avatar - light gray circle + blue bell icon */
+.system-notify-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #e6f0fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid #d0e3ff;
+}
+.system-bell-icon {
+  font-size: 20px;
+  color: #1677ff;
+}
+
+.read-status-text {
+  font-size: 13px;
+  color: #9ca3af;
+  margin: 0 8px;
+}
 </style>

@@ -17,7 +17,7 @@
           <el-icon><Plus /></el-icon> 新建试题
         </el-button>
         <el-button class="glass-btn" @click="openAiDialog">
-          <el-icon><MagicStick /></el-icon> AI出题
+          AI出题
         </el-button>
         <el-button class="glass-btn" @click="loadExamData" icon="Refresh">刷新</el-button>
        
@@ -268,19 +268,17 @@
           </div>
        </template>
     </el-dialog>
-    
-    <!-- Dialog: AI Generation -->
-    <el-dialog v-model="aiDialogVisible" title="AI 智能出题" width="500px" class="glass-dialog ai-dialog">
+
+    <el-dialog v-model="aiDialogVisible" title="智能出题" width="500px" class="glass-dialog ai-dialog">
        <div class="ai-intro">
-          <el-icon><MagicStick /></el-icon>
-          <p>AI 将根据当前课程内容为您智能生成相关试题</p>
+          <p>将根据当前课程内容为您智能生成相关试题</p>
        </div>
        <el-form :model="aiForm" label-width="100px" class="ai-config-form">
           <el-form-item label="生成课程">
              <el-input v-model="aiForm.courseName" placeholder="例如：Java Web 程序设计" />
           </el-form-item>
           <el-form-item label="题目数量">
-             <el-input-number v-model="aiForm.questionCount" :min="1" :max="20" />
+             <el-input-number v-model="aiForm.questionCount" :min="1" />
           </el-form-item>
           <el-form-item label="期望题型">
              <el-checkbox-group v-model="aiForm.selectedTypes">

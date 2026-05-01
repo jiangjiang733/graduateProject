@@ -32,7 +32,7 @@ export function useEnrollmentManagement() {
     // 统计数据
     const statistics = computed(() => {
         return {
-            pending: enrollments.value.filter(e => e.status === 'pending').length,
+            pending: enrollments.value.filter(e => e.status === 'pending' && e.enrollmentType !== 'INVITE').length,
             approved: enrollments.value.filter(e => e.status === 'approved').length,
             rejected: enrollments.value.filter(e => e.status === 'rejected').length
         }
@@ -46,7 +46,12 @@ export function useEnrollmentManagement() {
 
         // Status Filter
         if (currentStatus.value !== 'all') {
-            result = result.filter(e => e.status === currentStatus.value)
+            if (currentStatus.value === 'pending') {
+                // 待审核列表只展示需要教师审核的（排除教师发出的邀请，因为那需要学生审核）
+                result = result.filter(e => e.status === 'pending' && e.enrollmentType !== 'INVITE')
+            } else {
+                result = result.filter(e => e.status === currentStatus.value)
+            }
         }
 
         // Keyword Filter
@@ -123,6 +128,16 @@ export function useEnrollmentManagement() {
                         approving: false,
                         rejecting: false
                     }
+                    
+                    let courseName = item.courseName
+                    if (!courseName && item.courseId) {
+                        const matchedCourse = courses.value.find(c => c.id === item.courseId || c.courseId === item.courseId)
+                        if (matchedCourse) {
+                            courseName = matchedCourse.courseName || matchedCourse.name
+                        }
+                    }
+                    enrichedItem.courseName = courseName
+                    
                     try {
                         const profileRes = await getProfile(item.studentId)
                         if (profileRes.success && profileRes.data) {
@@ -312,9 +327,12 @@ export function useEnrollmentManagement() {
     }
 
     // 获取状态文本
-    const getStatusText = (status) => {
+    const getStatusText = (row) => {
+        const status = typeof row === 'string' ? row : row.status
+        if (status === 'pending') {
+            return (typeof row === 'object' && row.enrollmentType === 'INVITE') ? '待接受' : '待审核'
+        }
         const texts = {
-            pending: '待审核',
             approved: '已入班',
             rejected: '已拒绝'
         }

@@ -198,7 +198,7 @@ export function useHomeworkManagement(autoLoad = true, onSuccess = null) {
         editQuestionDialogVisible.value = true
     }
 
-    const saveEditQuestion = () => {
+    const saveEditQuestion = async () => {
         if (!editingQuestion.questionContent) {
             return ElMessage.warning('请输入题目内容')
         }
@@ -219,11 +219,26 @@ export function useHomeworkManagement(autoLoad = true, onSuccess = null) {
 
         if (editingQuestionIndex.value === -1) {
             homeworkForm.questions.push(questionData)
-            ElMessage.success('已添加新题目')
+            ElMessage.success('题目已添加至列表')
+
+            // 切切实实存入题库逻辑引导
+            ElMessageBox.confirm(
+                '该试题已添加到作业列表中。是否同时也将其【切实】存入题库？存入后，其他作业或考试也可通过“引用题库”引用本题。',
+                '同步到公共题库',
+                {
+                    confirmButtonText: '确定存入题库',
+                    cancelButtonText: '仅保留在作业',
+                    type: 'success',
+                }
+            ).then(async () => {
+                await saveToBank(questionData)
+            }).catch(() => {
+                ElMessage.info('已选择：仅保留在当前作业')
+            })
         } else {
             const q = homeworkForm.questions[editingQuestionIndex.value]
             Object.assign(q, questionData)
-            ElMessage.success('题目已修改')
+            ElMessage.success('题目内容已在作业内修改')
         }
 
         editQuestionDialogVisible.value = false
@@ -245,18 +260,27 @@ export function useHomeworkManagement(autoLoad = true, onSuccess = null) {
             const postData = {
                 type: q.questionType,
                 content: q.questionContent,
-                options: q.questionOptions,
+                options: typeof q.questionOptions === 'object' ? JSON.stringify(q.questionOptions) : q.questionOptions,
                 answer: q.correctAnswer || q.answer,
-                score: q.score,
                 analysis: q.analysis,
                 courseId: homeworkForm.courseId,
-                difficulty: 1, // 默认难度
-                creatorId: teacherId
+                teacherId: Number(teacherId)
             }
 
             const res = await createQuestion(postData)
             if (res.success) {
                 ElMessage.success('已成功存入题库')
+                q._savedToBank = true
+                
+                // --- 重点：如果当前作业已存在(ID不为空)，则静默同步一次作业数据，确保持久化 _savedToBank 标记 ---
+                if (homeworkForm.id) {
+                    console.log('正在静默同步作业题目入库状态...')
+                    const syncData = new FormData()
+                    syncData.append('questionList', JSON.stringify(homeworkForm.questions))
+                    updateLabReport(homeworkForm.id, syncData).then(syncRes => {
+                        if(syncRes.success) console.log('入库标记已成功同步至作业记录')
+                    }).catch(e => console.warn('静默同步入库状态失败', e))
+                }
             } else {
                 ElMessage.error(res.message || '存入题库失败')
             }
@@ -588,7 +612,15 @@ export function useHomeworkManagement(autoLoad = true, onSuccess = null) {
             formData.append('teacherId', teacherId)
             formData.append('reportTitle', homeworkForm.title)
             formData.append('reportDescription', homeworkForm.description)
-            formData.append('deadline', homeworkForm.deadline)
+            // 格式化日期以免后端解析ISO异常
+            let formattedDeadline = homeworkForm.deadline
+            if (formattedDeadline && formattedDeadline.includes('T')) {
+                const d = new Date(formattedDeadline)
+                // Use local string like 2026-04-03 16:00:00
+                const pad = n => n.toString().padStart(2, '0')
+                formattedDeadline = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+            }
+            formData.append('deadline', formattedDeadline)
 
             // 确保总分为数字，如果为空则传 0 或不传
             if (homeworkForm.totalScore !== null && homeworkForm.totalScore !== '') {
@@ -718,7 +750,14 @@ export function useHomeworkManagement(autoLoad = true, onSuccess = null) {
             formData.append('teacherId', teacherId)
             formData.append('reportTitle', homeworkForm.title)
             formData.append('reportDescription', homeworkForm.description)
-            formData.append('deadline', homeworkForm.deadline)
+            // 格式化日期以免后端解析ISO异常
+            let formattedDeadline = homeworkForm.deadline
+            if (formattedDeadline && formattedDeadline.includes('T')) {
+                const d = new Date(formattedDeadline)
+                const pad = n => n.toString().padStart(2, '0')
+                formattedDeadline = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+            }
+            formData.append('deadline', formattedDeadline)
 
             if (homeworkForm.totalScore !== null && homeworkForm.totalScore !== '') {
                 formData.append('totalScore', homeworkForm.totalScore)
@@ -904,7 +943,6 @@ export function useHomeworkManagement(autoLoad = true, onSuccess = null) {
         aiDialogVisible,
         aiLoading,
         aiForm,
-        openAiDialog,
         openAiDialog,
         handleAiGenerate,
         removeHomeworkQuestion,

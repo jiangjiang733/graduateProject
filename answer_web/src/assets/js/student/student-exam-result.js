@@ -41,15 +41,20 @@ export function useStudentExamResult() {
 
     // 获取某题的得分 (helper for getPartScore and template)
     const getQuestionScore = (q) => {
+        if (studentExam.value.status !== 3) return '待批改'
         const ans = answers.value.find(a => Number(a.questionId) === Number(q.questionId))
         return ans?.score || 0
     }
 
     // 获取题型分值统计
     const getPartScore = (types) => {
+        if (studentExam.value.status !== 3) return '-'
         return questions.value
             .filter(q => types.includes(q.questionType))
-            .reduce((sum, q) => sum + getQuestionScore(q), 0)
+            .reduce((sum, q) => {
+                const s = getQuestionScore(q)
+                return sum + (s === '待批改' ? 0 : Number(s))
+            }, 0)
     }
 
     // 解析选项
@@ -73,10 +78,20 @@ export function useStudentExamResult() {
         return ans?.studentAnswer || ''
     }
 
+    // 获取教师评语
+    const getTeacherComment = (q) => {
+        const ans = answers.value.find(a => Number(a.questionId) === Number(q.questionId))
+        return ans?.teacherComment || ''
+    }
+
     // 题目对错状态标识
     const getAnswerStatus = (q) => {
-        const score = getQuestionScore(q)
-        return Number(score) === Number(q.score) ? { type: 'success' } : { type: 'danger' }
+        if (studentExam.value.status !== 3) return { type: 'unknown' }
+        const score = Number(getQuestionScore(q))
+        const qScore = Number(q.score)
+        if (score === qScore) return { type: 'success' }
+        if (score > 0 && score < qScore) return { type: 'warning' }
+        return { type: 'danger' }
     }
 
     // 判断某选项是否被选中
@@ -87,15 +102,15 @@ export function useStudentExamResult() {
     }
 
     // 判断某选项是否为正确答案
-    const isCorrectOption = (q, key) => q.answer?.includes(key)
+    const isCorrectOption = (q, key) => studentExam.value.status === 3 && q.answer?.includes(key)
 
     // 判断某选项是否选错
-    const isWrongOption = (q, key) => isSelectedOption(q, key) && !isCorrectOption(q, key)
+    const isWrongOption = (q, key) => studentExam.value.status === 3 && isSelectedOption(q, key) && !isCorrectOption(q, key)
 
     // 动态绑定选项类名
     const getOptClass = (q, key) => ({
-        'is-correct': isCorrectOption(q, key),
-        'is-wrong': isWrongOption(q, key),
+        'is-correct': studentExam.value.status === 3 && isCorrectOption(q, key),
+        'is-wrong': studentExam.value.status === 3 && isWrongOption(q, key),
         'is-selected': isSelectedOption(q, key)
     })
 
@@ -163,6 +178,7 @@ export function useStudentExamResult() {
         getPartScore,
         getOptions,
         getStudentAnswer,
+        getTeacherComment,
         getQuestionScore,
         isCorrectOption,
         isWrongOption,

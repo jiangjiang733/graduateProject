@@ -32,6 +32,9 @@ public class StudentExamController {
         }
     }
 
+    @Autowired
+    private com.example.project.mapper.exam.StudentExamMapper studentExamMapper;
+
     /**
      * 学生获取考试详情（需要验证选课资格）
      */
@@ -46,11 +49,32 @@ public class StudentExamController {
                 return Result.error("您未选修此课程，无法参加考试");
             }
 
+            // 检查是否已参与或已交卷
+            com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<com.example.project.entity.exam.StudentExam> wrapper = new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
+            wrapper.eq("exam_id", examId).eq("student_id", studentId);
+            com.example.project.entity.exam.StudentExam studentExam = studentExamMapper.selectOne(wrapper);
+            
+            if (studentExam != null && studentExam.getStatus() >= 2) {
+                return Result.error("作答已提交，无需继续在此页面作答（除退回外不得再次作答）");
+            }
+            
+            if (studentExam == null) {
+                studentExam = new com.example.project.entity.exam.StudentExam();
+                studentExam.setExamId(examId);
+                studentExam.setStudentId(studentId);
+                studentExam.setStartTime(new java.util.Date());
+                studentExam.setStatus(1); // 1-进行中
+                studentExamMapper.insert(studentExam);
+            }
+
             // 获取考试详情
             Map<String, Object> examWithQuestions = examService.getExamWithQuestions(examId);
             if (examWithQuestions.get("exam") == null) {
                 return Result.error("考试不存在");
             }
+            
+            // 将学生作答记录一并返回，以便前端使用基于此记录的startTime记时
+            examWithQuestions.put("studentExam", studentExam);
 
             return Result.success(examWithQuestions);
         } catch (Exception e) {

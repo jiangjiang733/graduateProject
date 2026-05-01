@@ -3,7 +3,6 @@ package com.example.project.interceptor;
 import com.example.project.exception.UnauthorizedException;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
-
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -25,7 +24,7 @@ public class PermissionInterceptor implements HandlerInterceptor {
         // 获取请求路径
         String requestURI = request.getRequestURI();
 
-        // 放行登录、注册等公开接口
+        // 公开接口
         if (requestURI.contains("/login") ||
                 requestURI.contains("/register") ||
                 requestURI.contains("/uploads/") ||
